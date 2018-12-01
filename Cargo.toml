@@ -5,3 +5,4 @@ authors = ["Chris Butler <chrisbutler296@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+failure = "*"
