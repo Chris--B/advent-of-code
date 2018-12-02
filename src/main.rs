@@ -46,7 +46,7 @@ fn run1() -> Result<(), failure::Error> {
 }
 
 fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-01.txt")?;
+    let file = fs::File::open("input-02.txt")?;
     let input = io::BufReader::new(file);
 
     // Read each line as a String.
