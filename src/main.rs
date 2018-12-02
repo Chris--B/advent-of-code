@@ -26,16 +26,15 @@ fn run1() -> Result<(), failure::Error> {
     let file = fs::File::open("input-01.txt")?;
     let input = io::BufReader::new(file);
 
-    let mut total_twos = 0;
-    let mut total_threes = 0;
-    for line in input.lines() {
-        let box_id = line?;
-        let (twos, threes) = checksum_id(&box_id);
-        if twos { total_twos += 1; }
-        if threes { total_threes += 1; }
-    }
-
-    println!("{}", total_twos * total_threes);
+    let (twos, threes) = input
+        .lines()
+        .map(|line| line.unwrap())
+        .map(|id| checksum_id(&id))
+        .fold((0, 0), |accum, p| {
+            (accum.0 + p.0 as u32,
+             accum.1 + p.1 as u32)
+        });
+    println!("{}", twos * threes);
 
     Ok(())
 }
