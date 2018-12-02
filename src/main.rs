@@ -5,7 +5,7 @@ use std::io;
 use std::io::BufRead;
 
 fn main() {
-    match run1() {
+    match run2() {
         Ok(()) => {},
         Err(ref err) => eprintln!("{:?}", err),
     }
@@ -28,6 +28,36 @@ fn run1() -> Result<(), failure::Error> {
 
     Ok(())
 }
+
+fn run2() -> Result<(), failure::Error> {
+    let file = fs::File::open("input-01.txt")?;
+    let input = io::BufReader::new(file);
+
+    let mut box_ids = vec![];
+    for line in input.lines() {
+        let box_id = line?;
+        box_ids.push(box_id);
+    }
+
+    let mut pairs = vec![];
+    for a in box_ids.iter() {
+        for b in box_ids.iter() {
+            if a != b {
+                pairs.push((a, b));
+            }
+        }
+    }
+
+    pairs.sort_unstable_by_key(|p| {
+        let (a, b) = p;
+        strsim::hamming(a, b).unwrap()
+    });
+
+    println!("{:?}", pairs[0]);
+
+    Ok(())
+}
+
 
 fn checksum_id(box_id: &str) -> (bool, bool) {
     let mut counts = HashMap::new();
