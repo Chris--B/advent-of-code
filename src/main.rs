@@ -1,11 +1,17 @@
-#![allow(dead_code)]
 
-use std::collections::HashMap;
-use std::fs;
-use std::io;
-use std::io::BufRead;
+use std::{
+    env,
+    fs,
+    collections::HashMap,
+    io::{
+        self,
+        BufRead,
+    },
+};
+
 use itertools::Itertools;
-use std::env;
+
+use strsim;
 
 fn main() {
     let run = env::args().nth(1).unwrap_or("1".to_string());
@@ -93,10 +99,10 @@ fn checksum_id(box_id: &str) -> (bool, bool) {
 #[test]
 fn check_checksum_id() {
     assert_eq!(checksum_id("abcdef"), (false, false));
-    assert_eq!(checksum_id("bababc"), (true, true));
-    assert_eq!(checksum_id("abbcde"), (true, false));
+    assert_eq!(checksum_id("bababc"), (true,  true));
+    assert_eq!(checksum_id("abbcde"), (true,  false));
     assert_eq!(checksum_id("abcccd"), (false, true));
-    assert_eq!(checksum_id("aabcdd"), (true, false));
-    assert_eq!(checksum_id("abcdee"), (true, false));
+    assert_eq!(checksum_id("aabcdd"), (true,  false));
+    assert_eq!(checksum_id("abcdee"), (true,  false));
     assert_eq!(checksum_id("ababab"), (false, true));
 }
