@@ -99,7 +99,7 @@ impl Claim {
 }
 
 fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
+    let run = env::args().nth(1).unwrap_or("2".to_string());
     if run == "1" {
         match run1() {
             Ok(()) => {},
@@ -142,7 +142,30 @@ fn run1() -> Result<(), failure::Error> {
 
 fn run2() -> Result<(), failure::Error> {
     let file = fs::File::open("input-2.txt")?;
-    let _input = io::BufReader::new(file);
+    let input = io::BufReader::new(file);
+
+    let mut fabric = collections::HashMap::new();
+    let claims: Vec<Claim> = input.lines()
+        .map(|l| l.unwrap())
+        .map(|l| l.parse::<Claim>().unwrap())
+        .collect();
+
+    for claim in claims.iter() {
+        for point in claim.sq_inches() {
+            let entry = fabric.entry(point).or_insert(0);
+            *entry += 1;
+        }
+    }
+
+    'claim:
+    for claim in claims.iter() {
+        for point in claim.sq_inches() {
+            if fabric.get(&point).unwrap() != &1 {
+                continue 'claim;
+            }
+        }
+        println!("{:?}", claim);
+    }
 
     Ok(())
 }
