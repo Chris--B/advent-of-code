@@ -76,7 +76,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "puzzle-02"
+name = "puzzle-03"
 version = "0.1.0"
 dependencies = [
  "failure 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
