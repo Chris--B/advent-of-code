@@ -11,6 +11,87 @@ use std::{
     str::FromStr,
 };
 
+use failure::bail;
+use regex::Regex;
+
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+struct TimeStamp {
+    year:   u32,
+    month:  u8,
+    day:    u8,
+    hour:   u8,
+    minute: u8,
+}
+
+impl FromStr for TimeStamp {
+    type Err = failure::Error;
+    fn from_str(s: &str) -> Result<TimeStamp, failure::Error> {
+        lazy_static::lazy_static! {
+            static ref EXPR: Regex = Regex::new(r#"\[(\d+)-(\d+)-(\d+)+ (\d{2}):(\d{2})\]"#).unwrap();
+        }
+        let caps = EXPR.captures(s).expect("No regex matches?");
+
+        let year:   u32 = caps.get(1)
+                              .expect("regex fail on year").as_str().parse()?;
+        let month:  u8  = caps.get(2)
+                              .expect("regex fail on month").as_str().parse()?;
+        let day:    u8  = caps.get(3)
+                              .expect("regex fail on day").as_str().parse()?;
+        let hour:   u8  = caps.get(4)
+                              .expect("regex fail on hour").as_str().parse()?;
+        let minute: u8  = caps.get(5)
+                              .expect("regex fail on minute").as_str().parse()?;
+
+        assert_eq!(year, 1518);
+
+        Ok(TimeStamp {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+        })
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum Event {
+    ShiftStart(TimeStamp, u32),
+    FallsAsleep(TimeStamp),
+    WakesUp(TimeStamp),
+}
+
+impl Event {
+    fn timestamp(&self) -> TimeStamp {
+        match self {
+            Event::ShiftStart(time, _) => *time,
+            Event::FallsAsleep(time)   => *time,
+            Event::WakesUp(time)       => *time,
+        }
+    }
+}
+
+impl FromStr for Event {
+    type Err = failure::Error;
+    fn from_str(s: &str) -> Result<Event, failure::Error> {
+        let time: TimeStamp = s.parse()?;
+        if s.contains("falls") {
+            Ok(Event::FallsAsleep(time))
+        } else if s.contains("wakes") {
+            Ok(Event::WakesUp(time))
+        } else {
+            lazy_static::lazy_static! {
+                static ref EXPR: Regex = Regex::new(r#"Guard #(\d+)"#).unwrap();
+            }
+
+            let id = EXPR.captures(s).unwrap()
+                         .get(1).unwrap().as_str()
+                         .parse()?;
+            Ok(Event::ShiftStart(time, id))
+        }
+    }
+}
+
 fn main() {
     let run = env::args().nth(1).unwrap_or("1".to_string());
     if run == "1" {
@@ -29,6 +110,20 @@ fn main() {
 fn run1() -> Result<(), failure::Error> {
     let file = fs::File::open("input-1.txt")?;
     let input = io::BufReader::new(file);
+
+    let mut events: Vec<Event> = input
+        .lines()
+        .map(|line| line.unwrap())
+        .map(|line| line.parse().unwrap())
+        .collect();
+    events.sort_by_key(|e| e.timestamp());
+
+    println!("Found {} events", events.len());
+    for event in events.iter().take(10) {
+        println!("{:?}", event);
+    }
+
+    //
 
     Ok(())
 }
