@@ -93,7 +93,7 @@ impl FromStr for Event {
 }
 
 fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
+    let run = env::args().nth(1).unwrap_or("2".to_string());
     if run == "1" {
         match run1() {
             Ok(()) => {},
@@ -193,8 +193,79 @@ fn run1() -> Result<(), failure::Error> {
 }
 
 fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-2.txt")?;
+    let file = fs::File::open("input-1.txt")?;
     let input = io::BufReader::new(file);
 
+    let mut events: Vec<Event> = input
+        .lines()
+        .map(|line| line.unwrap())
+        .map(|line| line.parse().unwrap())
+        .collect();
+    events.sort_by_key(|e| e.timestamp());
+
+    println!("Found {} events", events.len());
+
+    if false {
+        let mut id = match events[0] {
+            Event::ShiftStart(_, id) => id,
+            _ => bail!("No starting shift?"),
+        };
+        for event in events.iter() {
+            if let Event::ShiftStart(_, new_id) = event {
+                id = *new_id;
+            }
+            println!("#{:<4} {:>02}-{:>02}",
+                     id,
+                     event.timestamp().hour,
+                     event.timestamp().minute);
+        }
+        println!("");
+    }
+
+    let mut asleep_map = collections::HashMap::new();
+    let mut id = match events[0] {
+        Event::ShiftStart(_, id) => id,
+        _ => bail!("No starting shift?"),
+    };
+    let mut last_minute = 0;
+    for event in events.iter() {
+        if let Event::ShiftStart(_, new_id) = event {
+
+            id = *new_id;
+        }
+        let minute: usize;
+        if event.timestamp().hour == 23 {
+            minute = 0;
+        } else {
+            minute = event.timestamp().minute as usize;
+        };
+
+        let minutes = asleep_map.entry(id).or_insert([0u32; 60]);
+        match event {
+            Event::ShiftStart(..)  => {
+                // Awake
+            },
+            Event::FallsAsleep(..) => {
+                last_minute = minute;
+            },
+            Event::WakesUp(..)     => {
+                for m in last_minute..minute {
+                    minutes[m] += 1;
+                }
+            },
+        }
+    }
+
+    let (best_id, best_minute, best_count) = asleep_map
+        .iter()
+        .map(|(id, minutes)| {
+            let (minute, count) = minutes.iter()
+                .enumerate()
+                .max_by_key(|(i, count)| *count).unwrap();
+            (id, minute as u32, count)
+        })
+        .max_by_key(|(id, minute, count)| *count).unwrap();
+    println!("Guard #{} @ minute {}", best_id, best_minute);
+    println!("Final: {}", best_id * best_minute);
     Ok(())
 }
