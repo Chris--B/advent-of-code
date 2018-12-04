@@ -119,11 +119,75 @@ fn run1() -> Result<(), failure::Error> {
     events.sort_by_key(|e| e.timestamp());
 
     println!("Found {} events", events.len());
-    for event in events.iter().take(10) {
-        println!("{:?}", event);
+
+    if false {
+        let mut id = match events[0] {
+            Event::ShiftStart(_, id) => id,
+            _ => bail!("No starting shift?"),
+        };
+        for event in events.iter() {
+            if let Event::ShiftStart(_, new_id) = event {
+                id = *new_id;
+            }
+            println!("#{:<4} {:>02}-{:>02}",
+                     id,
+                     event.timestamp().hour,
+                     event.timestamp().minute);
+        }
+        println!("");
     }
 
-    //
+    let mut asleep_map = collections::HashMap::new();
+    let mut id = match events[0] {
+        Event::ShiftStart(_, id) => id,
+        _ => bail!("No starting shift?"),
+    };
+    let mut last_minute = 0;
+    for event in events.iter() {
+        if let Event::ShiftStart(_, new_id) = event {
+
+            id = *new_id;
+        }
+        let minute: usize;
+        if event.timestamp().hour == 23 {
+            minute = 0;
+        } else {
+            minute = event.timestamp().minute as usize;
+        };
+
+        let minutes = asleep_map.entry(id).or_insert([0u32; 60]);
+        match event {
+            Event::ShiftStart(..)  => {
+                // Awake
+            },
+            Event::FallsAsleep(..) => {
+                last_minute = minute;
+            },
+            Event::WakesUp(..)     => {
+                for m in last_minute..minute {
+                    minutes[m] += 1;
+                }
+            },
+        }
+    }
+
+    let sleepy_guard = asleep_map.iter()
+        .max_by_key::<u32, _>(|(k, v)| v.iter().sum()).unwrap()
+        .0;
+    let best_minute = asleep_map
+        .get(&sleepy_guard).unwrap()
+        .iter()
+        .enumerate()
+        .max_by_key(|(i, count)| *count).unwrap()
+        .0 as u32;
+    println!("Guard #{} @ minute {}", sleepy_guard, best_minute);
+    println!("          {}",
+             asleep_map.get(&sleepy_guard).unwrap()
+                .iter()
+                .map(|count| format!(" {:>2}", count))
+                .collect::<String>());
+
+    println!("Final: {}", sleepy_guard * best_minute);
 
     Ok(())
 }
