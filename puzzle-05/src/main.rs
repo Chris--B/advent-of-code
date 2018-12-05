@@ -2,7 +2,6 @@
 use std::{
     env,
     fs,
-    collections,
     io::{
         self,
         Read,

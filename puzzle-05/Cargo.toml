@@ -6,7 +6,3 @@ edition = "2018"
 
 [dependencies]
 failure = "*"
-itertools = "*"
-lazy_static = "*"
-regex = "1"
-strsim = "*"
