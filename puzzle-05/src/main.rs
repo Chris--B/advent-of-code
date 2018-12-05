@@ -46,7 +46,8 @@ fn run2() -> Result<(), failure::Error> {
     println!("Units: {}", optimize(units.as_str().trim()).len());
     let after = time::Instant::now();
 
-    println!("{}", after.duration_since(before).subsec_millis());
+    let runtime = after.duration_since(before);
+    println!("Runtime: {:.3}ms", runtime.subsec_nanos() as f64 * 1e-6);
 
     Ok(())
 }
@@ -93,22 +94,15 @@ fn collapse(mut cur: impl Iterator<Item=char>) -> String {
 }
 
 fn optimize(polymer: &str) -> String {
-    let mut units = collections::HashSet::new();
-    for unit in polymer.chars() {
-        units.insert(unit.to_ascii_lowercase());
-    }
-    let units = units;
-    let trial_polymers: Vec<String> = units
-    .iter()
+    "abcdefghijklmnopqrstuvwxyz"
+    .chars()
     .map(|unit| {
         let trial_polymer = polymer
             .chars()
-            .filter(|c| *c != *unit && *c != unit.to_ascii_uppercase());
+            .filter(|c| *c != unit && *c != unit.to_ascii_uppercase());
         collapse(trial_polymer)
     })
-    .collect();
-
-    trial_polymers.iter().min_by_key(|polymer| polymer.len()).unwrap().clone()
+    .min_by_key(|polymer| polymer.len()).unwrap()
 }
 
 #[test]
