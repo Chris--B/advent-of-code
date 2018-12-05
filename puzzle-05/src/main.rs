@@ -94,6 +94,9 @@ fn collapse(mut cur: impl Iterator<Item=char>) -> String {
 }
 
 fn optimize(polymer: &str) -> String {
+    // Save some work - collapse before further collapsing.
+    let polymer = &collapse(polymer.chars());
+
     "abcdefghijklmnopqrstuvwxyz"
     .chars()
     .map(|unit| {
