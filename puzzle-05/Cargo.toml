@@ -1,0 +1,12 @@
+[package]
+name = "puzzle-05"
+version = "0.1.0"
+authors = ["Chris Butler <chrisbutler296@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "*"
+itertools = "*"
+lazy_static = "*"
+regex = "1"
+strsim = "*"
