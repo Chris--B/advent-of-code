@@ -15,7 +15,7 @@ use std::{
 use failure::bail;
 
 fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
+    let run = env::args().nth(1).unwrap_or("2".to_string());
     if run == "1" {
         match run1() {
             Ok(()) => {},
@@ -35,14 +35,18 @@ fn run1() -> Result<(), failure::Error> {
     let mut units = String::new();
     input.read_to_string(&mut units);
 
-    println!("Units: {}", collapse_polymer(units.as_str().trim()).len());
+    println!("Units: {}", collapse(units.as_str().trim()).len());
 
     Ok(())
 }
 
 fn run2() -> Result<(), failure::Error> {
     let file = fs::File::open("input.txt")?;
-    let input = io::BufReader::new(file);
+    let mut input = io::BufReader::new(file);
+    let mut units = String::new();
+    input.read_to_string(&mut units);
+
+    println!("Units: {}", optimize(units.as_str().trim()).len());
 
     Ok(())
 }
@@ -55,7 +59,7 @@ fn is_lower(c: char) -> bool {
     c == c.to_ascii_lowercase()
 }
 
-fn collapse_polymer(polymer: &str) -> String {
+fn collapse(polymer: &str) -> String {
     let mut res = String::new();
     let mut cur = polymer.chars();
     res.push(cur.next().unwrap());
@@ -63,15 +67,19 @@ fn collapse_polymer(polymer: &str) -> String {
         let mut dirty = false;
         loop {
             if let Some(next) = cur.next() {
-                let a: char = res.chars().last().unwrap();
-                let b: char = next;
-                if (is_lower(a) && is_upper(b) && a.to_ascii_uppercase() == b) ||
-                   (is_upper(a) && is_lower(b) && a.to_ascii_lowercase() == b)
-                {
-                    res.pop();
+                if res.is_empty() {
+                    res.push(next);
                 } else {
-                    dirty = true;
-                    res.push(next)
+                    let a: char = res.chars().last().unwrap();
+                    let b: char = next;
+                    if (is_lower(a) && is_upper(b) && a.to_ascii_uppercase() == b) ||
+                       (is_upper(a) && is_lower(b) && a.to_ascii_lowercase() == b)
+                    {
+                        res.pop();
+                    } else {
+                        dirty = true;
+                        res.push(next)
+                    }
                 }
             } else {
                 break;
@@ -85,11 +93,32 @@ fn collapse_polymer(polymer: &str) -> String {
     res
 }
 
+fn optimize(polymer: &str) -> String {
+    let mut units = collections::HashSet::new();
+    for unit in polymer.chars() {
+        units.insert(unit.to_ascii_lowercase());
+    }
+    let units = units;
+
+    let trial_polymers: Vec<String> = units
+    .iter()
+    .map(|unit| {
+        let trial_polymer: String = polymer
+            .chars()
+            .filter(|c| *c != *unit && *c != unit.to_ascii_uppercase())
+            .collect();
+        collapse(&trial_polymer)
+    })
+    .collect();
+
+    trial_polymers.iter().min_by_key(|polymer| polymer.len()).unwrap().clone()
+}
+
 #[test]
 fn check() {
-    assert_eq!(collapse_polymer("aA"),     "");
-    assert_eq!(collapse_polymer("abBA"),   "");
-    assert_eq!(collapse_polymer("abAB"),   "abAB");
-    assert_eq!(collapse_polymer("aabAAB"), "aabAAB");
-    assert_eq!(collapse_polymer("dabAcCaCBAcCcaDA"), "dabCBAcaDA");
+    assert_eq!(collapse("aA"),     "");
+    assert_eq!(collapse("abBA"),   "");
+    assert_eq!(collapse("abAB"),   "abAB");
+    assert_eq!(collapse("aabAAB"), "aabAAB");
+    assert_eq!(collapse("dabAcCaCBAcCcaDA"), "dabCBAcaDA");
 }
