@@ -129,7 +129,7 @@ fn run1() -> Result<(), failure::Error> {
         });
 
     let mut overlaps = 0;
-    for (point, count) in fabric.iter() {
+    for (_point, count) in fabric.iter() {
         if *count > 1 {
             // println!("{:?}", point);
             overlaps += 1;

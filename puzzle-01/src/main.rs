@@ -8,9 +8,17 @@ use std::{
 use failure;
 
 fn main() {
-    match run2() {
-        Ok(()) => {},
-        Err(ref err) => eprintln!("{:?}", err),
+    let run = std::env::args().nth(1).unwrap_or("2".to_string());
+    if run == "1" {
+        match run1() {
+            Ok(()) => {},
+            Err(ref err) => eprintln!("{:?}", err),
+        }
+    } else if run == "2" {
+        match run2() {
+            Ok(()) => {},
+            Err(ref err) => eprintln!("{:?}", err),
+        }
     }
 }
 

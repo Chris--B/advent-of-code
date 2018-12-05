@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables)]
-
 use std::{
     env,
     fs,
@@ -172,13 +170,13 @@ fn run1() -> Result<(), failure::Error> {
     }
 
     let sleepy_guard = asleep_map.iter()
-        .max_by_key::<u32, _>(|(k, v)| v.iter().sum()).unwrap()
+        .max_by_key::<u32, _>(|(_k, v)| v.iter().sum()).unwrap()
         .0;
     let best_minute = asleep_map
         .get(&sleepy_guard).unwrap()
         .iter()
         .enumerate()
-        .max_by_key(|(i, count)| *count).unwrap()
+        .max_by_key(|(_i, count)| *count).unwrap()
         .0 as u32;
     println!("Guard #{} @ minute {}", sleepy_guard, best_minute);
     println!("          {}",
@@ -256,15 +254,15 @@ fn run2() -> Result<(), failure::Error> {
         }
     }
 
-    let (best_id, best_minute, best_count) = asleep_map
+    let (best_id, best_minute, _best_count) = asleep_map
         .iter()
         .map(|(id, minutes)| {
             let (minute, count) = minutes.iter()
                 .enumerate()
-                .max_by_key(|(i, count)| *count).unwrap();
+                .max_by_key(|(_i, count)| *count).unwrap();
             (id, minute as u32, count)
         })
-        .max_by_key(|(id, minute, count)| *count).unwrap();
+        .max_by_key(|(_id, _minute, count)| *count).unwrap();
     println!("Guard #{} @ minute {}", best_id, best_minute);
     println!("Final: {}", best_id * best_minute);
     Ok(())
