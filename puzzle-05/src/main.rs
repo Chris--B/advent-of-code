@@ -1,4 +1,3 @@
-#![allow(unused_imports, unused_variables)]
 
 use std::{
     env,
@@ -7,12 +6,9 @@ use std::{
     io::{
         self,
         Read,
-        BufRead,
     },
-    str::FromStr,
+    time,
 };
-
-use failure::bail;
 
 fn main() {
     let run = env::args().nth(1).unwrap_or("2".to_string());
@@ -33,9 +29,9 @@ fn run1() -> Result<(), failure::Error> {
     let file = fs::File::open("input.txt")?;
     let mut input = io::BufReader::new(file);
     let mut units = String::new();
-    input.read_to_string(&mut units);
+    input.read_to_string(&mut units)?;
 
-    println!("Units: {}", collapse(units.as_str().trim()).len());
+    println!("Units: {}", collapse(units.as_str().trim().chars()).len());
 
     Ok(())
 }
@@ -44,9 +40,13 @@ fn run2() -> Result<(), failure::Error> {
     let file = fs::File::open("input.txt")?;
     let mut input = io::BufReader::new(file);
     let mut units = String::new();
-    input.read_to_string(&mut units);
+    input.read_to_string(&mut units)?;
 
+    let before = time::Instant::now();
     println!("Units: {}", optimize(units.as_str().trim()).len());
+    let after = time::Instant::now();
+
+    println!("{}", after.duration_since(before).subsec_millis());
 
     Ok(())
 }
@@ -59,9 +59,8 @@ fn is_lower(c: char) -> bool {
     c == c.to_ascii_lowercase()
 }
 
-fn collapse(polymer: &str) -> String {
+fn collapse(mut cur: impl Iterator<Item=char>) -> String {
     let mut res = String::new();
-    let mut cur = polymer.chars();
     res.push(cur.next().unwrap());
     loop {
         let mut dirty = false;
@@ -99,15 +98,13 @@ fn optimize(polymer: &str) -> String {
         units.insert(unit.to_ascii_lowercase());
     }
     let units = units;
-
     let trial_polymers: Vec<String> = units
     .iter()
     .map(|unit| {
-        let trial_polymer: String = polymer
+        let trial_polymer = polymer
             .chars()
-            .filter(|c| *c != *unit && *c != unit.to_ascii_uppercase())
-            .collect();
-        collapse(&trial_polymer)
+            .filter(|c| *c != *unit && *c != unit.to_ascii_uppercase());
+        collapse(trial_polymer)
     })
     .collect();
 
@@ -116,9 +113,9 @@ fn optimize(polymer: &str) -> String {
 
 #[test]
 fn check() {
-    assert_eq!(collapse("aA"),     "");
-    assert_eq!(collapse("abBA"),   "");
-    assert_eq!(collapse("abAB"),   "abAB");
-    assert_eq!(collapse("aabAAB"), "aabAAB");
-    assert_eq!(collapse("dabAcCaCBAcCcaDA"), "dabCBAcaDA");
+    assert_eq!(collapse("aA".chars()),     "");
+    assert_eq!(collapse("abBA".chars()),   "");
+    assert_eq!(collapse("abAB".chars()),   "abAB");
+    assert_eq!(collapse("aabAAB".chars()), "aabAAB");
+    assert_eq!(collapse("dabAcCaCBAcCcaDA".chars()), "dabCBAcaDA");
 }
