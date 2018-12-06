@@ -5,10 +5,8 @@ use std::{
     fs,
     io::{
         self,
-        Read,
         BufRead,
     },
-    time,
 };
 
 fn main() {
@@ -28,7 +26,7 @@ fn main() {
 
 fn run1() -> Result<(), failure::Error> {
     let file = fs::File::open("input.txt")?;
-    let mut input = io::BufReader::new(file);
+    let input = io::BufReader::new(file);
 
     let all_coords: Vec<(u32, u32)> = input
         .lines()
@@ -55,14 +53,11 @@ fn run1() -> Result<(), failure::Error> {
 
     // Map point in grid -> point in coord list
     let mut closest = HashMap::<(u32, u32), (u32, u32)>::new();
-    let mut xxx = 0;
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             if let Some(coord) = closest_point(&all_coords, (x, y)) {
                 closest.insert((x, y), coord);
             } else {
-                // println!("{}, {}", x, y);
-                xxx += 1;
             }
         }
     }
@@ -84,12 +79,6 @@ fn run1() -> Result<(), failure::Error> {
         }
     }
 
-    // println!("Finite Area Points:");
-    for (x, y) in coords.iter() {
-        // println!("({}, {})", x, y);
-    }
-    // println!("closest.len() == {}", closest.len());
-    // println!("xxx           == {}", xxx);
     // Map point in `coords` to its area.
     let mut areas = HashMap::<(u32, u32), usize>::new();
 
@@ -100,12 +89,7 @@ fn run1() -> Result<(), failure::Error> {
         let entry = areas.entry(*coord).or_insert(0);
         *entry += 1;
     }
-    // println!("");
 
-    // println!("Areas:");
-    for (coord, area) in areas.iter() {
-        // println!("  {:>3}, {:>3} -> {:>3}", coord.0, coord.1, area);
-    }
     let answer = areas.iter().map(|(_coord, area)| area).max().unwrap_or(&0);
     println!("Answer {}", answer);
 
@@ -118,10 +102,6 @@ fn man_dist(a: (u32, u32), b: (u32, u32)) -> usize {
 }
 
 fn closest_point(points: &[(u32, u32)], other: (u32, u32)) -> Option<(u32, u32)> {
-    let mut closest_point = points[0];
-    let mut closest_dist  = man_dist(closest_point, other);
-
-
     let mut distances: Vec<_> = points
         .iter()
         .map(|p| (man_dist(other, *p) as isize, p))
@@ -139,7 +119,7 @@ fn closest_point(points: &[(u32, u32)], other: (u32, u32)) -> Option<(u32, u32)>
 
 fn run2() -> Result<(), failure::Error> {
     let file = fs::File::open("input.txt")?;
-    let mut input = io::BufReader::new(file);
+    let input = io::BufReader::new(file);
 
     let coords: Vec<(u32, u32)> = input
         .lines()
