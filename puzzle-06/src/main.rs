@@ -12,7 +12,7 @@ use std::{
 };
 
 fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
+    let run = env::args().nth(1).unwrap_or("2".to_string());
     if run == "1" {
         match run1() {
             Ok(()) => {},
@@ -139,7 +139,39 @@ fn closest_point(points: &[(u32, u32)], other: (u32, u32)) -> Option<(u32, u32)>
 
 fn run2() -> Result<(), failure::Error> {
     let file = fs::File::open("input.txt")?;
-    let _input = io::BufReader::new(file);
+    let mut input = io::BufReader::new(file);
+
+    let coords: Vec<(u32, u32)> = input
+        .lines()
+        .map(|line| line.unwrap())
+        .map(|line| {
+            let mut it = line.split(',');
+            let a = it.next().unwrap().trim().parse().unwrap();
+            let b = it.next().unwrap().trim().parse().unwrap();
+            (a, b)
+        })
+        .collect();
+
+    let (min_x, min_y) = coords.iter().cloned().fold((0, 0), |(ax, ay), (x, y)| {
+        (ax.min(x), ay.min(y))
+    });
+    let (max_x, max_y) = coords.iter().cloned().fold((0, 0), |(ax, ay), (x, y)| {
+        (ax.max(x), ay.max(y))
+    });
+    println!("Bounds: ({}, {}) ~ ({}, {})", min_x, min_y, max_x, max_y);
+
+    let mut safeties = HashMap::<(u32, u32), usize>::new();
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let safety = safeties.entry((x, y)).or_insert(0);
+            for coord in coords.iter() {
+                *safety += man_dist(*coord, (x, y));
+            }
+        }
+    }
+
+    let answer = safeties.values().filter(|c| **c < 10_000).count();
+    println!("Answer {}", answer);
 
     Ok(())
 }
