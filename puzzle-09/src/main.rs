@@ -1,13 +1,7 @@
 
 use std::{
     collections::*,
-    iter::FromIterator,
     env,
-    fs,
-    io::{
-        self,
-        BufRead,
-    },
 };
 
 fn main() {
@@ -138,9 +132,6 @@ fn marble_game(n_players: u32, n_marbles: u32) -> Highscore {
 }
 
 fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let _input = io::BufReader::new(file);
-
     assert_eq!(marble_game(9, 26), Highscore { player_id: 5, score: 32, });
 
     print!("Checking marble_game(10, 1618).score == 8317");
@@ -165,8 +156,8 @@ fn run1() -> Result<(), failure::Error> {
 }
 
 fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let _input = io::BufReader::new(file);
+    // Input
+    println!("{:#?}", marble_game(491, 7105800));
 
     Ok(())
 }
