@@ -24,7 +24,7 @@ fn main() {
 //      Counter-Clockwise = -1
 //
 
-type Circle = Vec<Marble>;
+type Circle = VecDeque<Marble>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct Highscore {
@@ -53,20 +53,20 @@ fn print_state(circle: &Circle, curr: usize, player: u32) {
     assert!(curr <= circle.len());
 
     if player != 0 {
-        // print!("[{}]  ", player);
+        print!("[{}]  ", player);
     } else {
-        // print!("[-]  ", );
+        print!("[-]  ", );
     }
 
     for (i, marble) in circle.iter().enumerate() {
         if i == curr {
             let s = format!("({})", marble.0);
-            // print!("{:>4} ", s);
+            print!("{:>4} ", s);
         } else {
-            // print!(" {:>2}  ", marble.0);
+            print!(" {:>2}  ", marble.0);
         }
     }
-    // println!("");
+    println!("");
 }
 
 fn wrap(index: usize, diff: isize, len: usize) -> usize {
@@ -78,7 +78,7 @@ fn wrap(index: usize, diff: isize, len: usize) -> usize {
 
 fn marble_game(n_players: u32, n_marbles: u32) -> Highscore {
     let mut player_scores = vec![0_u32; n_players as usize];
-    let mut circle:     Circle = vec![];
+    let mut circle:     Circle = VecDeque::new();
     let mut remaining = BinaryHeap::new();
     let mut curr:       usize = 0;
 
@@ -87,8 +87,8 @@ fn marble_game(n_players: u32, n_marbles: u32) -> Highscore {
     }
 
     // Start the game.
-    circle.push(Marble(0));
-    print_state(&circle, curr, 0 /*No player's turn*/);
+    circle.insert(0, Marble(0));
+    // print_state(&circle, curr, 0 /*No player's turn*/);
 
     // Players take turns in order.
     for turn in 0..n_marbles {
@@ -108,12 +108,12 @@ fn marble_game(n_players: u32, n_marbles: u32) -> Highscore {
                 let score = &mut player_scores[player_id as usize - 1];
                 *score += next_marble.0;
                 let other = wrap(curr, -7, circle.len());
-                *score += circle.remove(other).0;
+                *score += circle.remove(other).unwrap().0;
                 curr = other;
             }
         }
 
-        print_state(&circle, curr, player_id);
+        // print_state(&circle, curr, player_id);
 
         // Game ends when there are no more marbles to play.
         if remaining.is_empty() {
