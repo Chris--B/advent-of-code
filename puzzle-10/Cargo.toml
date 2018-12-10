@@ -10,3 +10,7 @@ strsim = "*"
 itertools = "*"
 regex = "1"
 lazy_static = "*"
+
+[dependencies.image]
+version = "*"
+features = ["png"]
