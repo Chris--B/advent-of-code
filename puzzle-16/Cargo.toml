@@ -1,0 +1,24 @@
+[package]
+name = "puzzle-16"
+version = "0.1.0"
+authors = ["Chris Butler <chrisbutler296@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "*"
+strsim = "*"
+itertools = "*"
+lazy_static = "*"
+regex = "1"
+quote = "0.6"
+
+[dependencies.syn]
+version = "0.15"
+features = ["full", "extra-traits"]
+
+[[bin]]
+name = "puzzle-16"
+
+[lib]
+name = "opcode_macro"
+proc-macro = true

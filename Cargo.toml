@@ -11,4 +11,5 @@ members = [
     # "puzzle-08",
     "puzzle-09",
     "puzzle-10",
+    "puzzle-16",
 ]
