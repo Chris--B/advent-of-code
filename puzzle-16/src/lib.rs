@@ -1,5 +1,6 @@
 // proc_macro is special, and needs this extern crate.
 extern crate proc_macro;
+extern crate proc_macro2;
 
 use proc_macro::*;
 use quote::quote;
@@ -65,38 +66,65 @@ fn parse_toks_to_entries(toks: &mut impl Iterator<Item=TokenTree>)
     }
 }
 
+#[derive(Debug)]
+struct OpcodeEntry {
+    name: proc_macro2::Ident,
+    body: proc_macro2::Group,
+}
+
+impl syn::parse::Parse for OpcodeEntry {
+    fn parse(buf: &syn::parse::ParseBuffer)
+        -> Result<OpcodeEntry, syn::Error>
+    {
+        let name: proc_macro2::Ident   = buf.parse()?;
+        let punct0: proc_macro2::Punct = buf.parse()?;
+        assert_eq!(punct0.as_char(), '=');
+        let punct1: proc_macro2::Punct = buf.parse()?;
+        assert_eq!(punct1.as_char(), '>');
+
+        let body: proc_macro2::Group = buf.parse()?;
+
+        Ok(OpcodeEntry {
+            name,
+            body,
+        })
+    }
+}
+
+struct OpcodeEntries {
+    entries: Vec<OpcodeEntry>
+}
+
+impl syn::parse::Parse for OpcodeEntries {
+    fn parse(buf: &syn::parse::ParseBuffer)
+        -> Result<OpcodeEntries, syn::Error>
+    {
+        let mut entries = vec![];
+        loop {
+            match OpcodeEntry::parse(buf) {
+                Ok(entry) => entries.push(entry),
+                Err(_)    => break,
+            }
+        }
+        Ok(OpcodeEntries {
+            entries,
+        })
+    }
+}
+
 #[proc_macro]
 pub fn opcodes(token_stream: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let token_stream: TokenStream = token_stream.into();
-    if true {
-        eprintln!("token_stream as String:");
-        eprintln!("{}", token_stream.to_string());
-        eprintln!("-----------------------");
-    }
+    let entries = syn::parse_macro_input!(token_stream as OpcodeEntries).entries;
 
-    if true {
-        eprintln!("token_stream per token:");
-        for token in token_stream.clone().into_iter() {
-            eprintln!("  {:?}", token);
+    let name = &entries[0].name;
+    let names = entries.iter().map(|e| e.name);
+    let enum_decl: TokenStream = quote!{
+        #[derive(Copy, Clone, Debug)]
+        enum Opcode2 {
+            #(#names,)+
         }
-        eprintln!("-----------------------");
-    }
-
-    let mut entries = vec![];
-    let mut toks = token_stream.into_iter().peekable();
-    while toks.peek().is_some() {
-        entries.push(parse_toks_to_entries(&mut toks));
-    }
-    eprintln!("Found {} opcodes", entries.len());
-
-    // let entry_names = entries.iter().map(|e| e.name);
-    // let enum_decl: TokenStream = quote!{
-    //     #[derive(Copy, Clone, Debug)]
-    //     enum Opcode {
-    //         #(#entry_names,)
-    //     }
-    // }.into();
+    }.into();
     // eprintln!("{:#?}", enum_decl);
 
-    panic!("Bye bye!");
+    enum_decl
 }
