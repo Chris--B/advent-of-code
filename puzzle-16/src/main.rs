@@ -93,19 +93,38 @@ enum Opcode {
 
     Setr, // regs[instr.c] = regs[instr.a]
     Seti, // regs[instr.c] = instr.a
+
+    Gtir, // regs[instr.c] = (instr.a       > regs[instr.b] ) as u8,
+    Gtri, // regs[instr.c] = (regs[instr.a] > instr.b       ) as u8,
+    Gtrr, // regs[instr.c] = (regs[instr.a] > regs[instr.b] ) as u8,
+
+    Eqir, // regs[instr.c] = (instr.a       == regs[instr.b]) as u8,
+    Eqri, // regs[instr.c] = (regs[instr.a] == instr.b      ) as u8,
+    Eqrr, // regs[instr.c] = (regs[instr.a] == regs[instr.b]) as u8,
 }
 
 fn exec(mut regs: [u8; 4], op: Opcode, instr: Instr) -> [u8; 4] {
+    let instr_a = instr.a as usize;
+    let instr_b = instr.b as usize;
+    let instr_c = instr.c as usize;
+
     match op {
-        Opcode::Addr => regs[instr.c as usize] = regs[instr.a as usize] + regs[instr.b as usize],
-        Opcode::Addi => regs[instr.c as usize] = regs[instr.a as usize] + instr.b,
-        Opcode::Mulr => regs[instr.c as usize] = regs[instr.a as usize] * regs[instr.b as usize],
-        Opcode::Muli => regs[instr.c as usize] = regs[instr.a as usize] * instr.b,
-        Opcode::Banr => regs[instr.c as usize] = regs[instr.a as usize] & regs[instr.b as usize],
-        Opcode::Bani => regs[instr.c as usize] = regs[instr.a as usize] & instr.b,
-        Opcode::Borr => regs[instr.c as usize] = regs[instr.a as usize] | regs[instr.b as usize],
-        Opcode::Bori => regs[instr.c as usize] = regs[instr.a as usize] | instr.b,
-        _            => eprintln!("Unhandled op: {:?}", op),
+        Opcode::Setr => regs[instr_c] = regs[instr_a],
+        Opcode::Seti => regs[instr_c] = instr.a,
+        Opcode::Addr => regs[instr_c] = regs[instr_a]  +  regs[instr_b as usize],
+        Opcode::Addi => regs[instr_c] = regs[instr_a]  +  instr.b,
+        Opcode::Mulr => regs[instr_c] = regs[instr_a]  *  regs[instr_b as usize],
+        Opcode::Muli => regs[instr_c] = regs[instr_a]  *  instr.b,
+        Opcode::Banr => regs[instr_c] = regs[instr_a]  &  regs[instr_b as usize],
+        Opcode::Bani => regs[instr_c] = regs[instr_a]  &  instr.b,
+        Opcode::Borr => regs[instr_c] = regs[instr_a]  |  regs[instr_b as usize],
+        Opcode::Bori => regs[instr_c] = regs[instr_a]  |  instr.b,
+        Opcode::Gtir => regs[instr_c] = (instr.a       >  regs[instr_b] ) as u8,
+        Opcode::Gtri => regs[instr_c] = (regs[instr_a] >  instr.b       ) as u8,
+        Opcode::Gtrr => regs[instr_c] = (regs[instr_a] >  regs[instr_b] ) as u8,
+        Opcode::Eqir => regs[instr_c] = (instr.a       == regs[instr_b]) as u8,
+        Opcode::Eqri => regs[instr_c] = (regs[instr_a] == instr.b      ) as u8,
+        Opcode::Eqrr => regs[instr_c] = (regs[instr_a] == regs[instr_b]) as u8,
     }
     regs
 }
