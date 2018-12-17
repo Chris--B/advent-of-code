@@ -11,8 +11,6 @@ use std::{
     str,
 };
 
-extern crate opcode_macro;
-
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -95,20 +93,6 @@ enum Opcode {
 
     Setr, // regs[instr.c] = regs[instr.a]
     Seti, // regs[instr.c] = instr.a
-}
-
-opcode_macro::opcodes!{
-    Addr => { r[c] = r[a] + r[b]; }
-    Addi => { r[c] = r[a] + b;    }
-    // Mulr => { r[c] = r[a] * r[b]; }
-    // Muli => { r[c] = r[a] * b;    }
-    // Banr => { r[c] = r[a] & r[b]; }
-    // Bani => { r[c] = r[a] & b;    }
-    // Borr => { r[c] = r[a] | r[b]; }
-    // Bori => { r[c] = r[a] | b;    }
-
-    // Setr => { r[c] = r[a];        }
-    // Seti => { r[c] = a;           }
 }
 
 fn exec(mut regs: [u8; 4], op: Opcode, instr: Instr) -> [u8; 4] {
