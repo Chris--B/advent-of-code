@@ -40,6 +40,7 @@ impl str::FromStr for Instr {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 struct UnknownOpcode {
     before: [u8; 4],
     after:  [u8; 4],
@@ -82,53 +83,54 @@ fn parse_u8x4(s: &str) -> [u8; 4] {
 
 #[derive(Copy, Clone, Debug)]
 enum Opcode {
-    Addr, // regs[instr.c] = regs[instr.a] + regs[instr.b];
-    Addi, // regs[instr.c] = regs[instr.a] + instr.b;
-    Mulr, // regs[instr.c] = regs[instr.a] * regs[instr.b];
-    Muli, // regs[instr.c] = regs[instr.a] * instr.b;
-    Banr, // regs[instr.c] = regs[instr.a] & regs[instr.b];
-    Bani, // regs[instr.c] = regs[instr.a] & instr.b;
-    Borr, // regs[instr.c] = regs[instr.a] | regs[instr.b];
-    Bori, // regs[instr.c] = regs[instr.a] | instr.b;
-
-    Setr, // regs[instr.c] = regs[instr.a]
-    Seti, // regs[instr.c] = instr.a
-
-    Gtir, // regs[instr.c] = (instr.a       > regs[instr.b] ) as u8,
-    Gtri, // regs[instr.c] = (regs[instr.a] > instr.b       ) as u8,
-    Gtrr, // regs[instr.c] = (regs[instr.a] > regs[instr.b] ) as u8,
-
-    Eqir, // regs[instr.c] = (instr.a       == regs[instr.b]) as u8,
-    Eqri, // regs[instr.c] = (regs[instr.a] == instr.b      ) as u8,
-    Eqrr, // regs[instr.c] = (regs[instr.a] == regs[instr.b]) as u8,
+    Addr,
+    Addi,
+    Mulr,
+    Muli,
+    Banr,
+    Bani,
+    Borr,
+    Bori,
+    Setr,
+    Seti,
+    Gtir,
+    Gtri,
+    Gtrr,
+    Eqir,
+    Eqri,
+    Eqrr,
 }
 
-fn exec(mut regs: [u8; 4], op: Opcode, instr: Instr) -> [u8; 4] {
-    let instr_a = instr.a as usize;
-    let instr_b = instr.b as usize;
-    let instr_c = instr.c as usize;
+fn exec(mut r: [u8; 4], op: Opcode, instr: Instr) -> [u8; 4] {
+    let a = instr.a as usize;
+    let b = instr.b as usize;
+    let c = instr.c as usize;
 
     match op {
-        Opcode::Setr => regs[instr_c] = regs[instr_a],
-        Opcode::Seti => regs[instr_c] = instr.a,
-        Opcode::Addr => regs[instr_c] = regs[instr_a]  +  regs[instr_b as usize],
-        Opcode::Addi => regs[instr_c] = regs[instr_a]  +  instr.b,
-        Opcode::Mulr => regs[instr_c] = regs[instr_a]  *  regs[instr_b as usize],
-        Opcode::Muli => regs[instr_c] = regs[instr_a]  *  instr.b,
-        Opcode::Banr => regs[instr_c] = regs[instr_a]  &  regs[instr_b as usize],
-        Opcode::Bani => regs[instr_c] = regs[instr_a]  &  instr.b,
-        Opcode::Borr => regs[instr_c] = regs[instr_a]  |  regs[instr_b as usize],
-        Opcode::Bori => regs[instr_c] = regs[instr_a]  |  instr.b,
-        Opcode::Gtir => regs[instr_c] = (instr.a       >  regs[instr_b] ) as u8,
-        Opcode::Gtri => regs[instr_c] = (regs[instr_a] >  instr.b       ) as u8,
-        Opcode::Gtrr => regs[instr_c] = (regs[instr_a] >  regs[instr_b] ) as u8,
-        Opcode::Eqir => regs[instr_c] = (instr.a       == regs[instr_b]) as u8,
-        Opcode::Eqri => regs[instr_c] = (regs[instr_a] == instr.b      ) as u8,
-        Opcode::Eqrr => regs[instr_c] = (regs[instr_a] == regs[instr_b]) as u8,
-    }
-    regs
-}
+        Opcode::Addi => r[c] = r[a]  +  b as u8,
+        Opcode::Muli => r[c] = r[a]  *  b as u8,
+        Opcode::Bani => r[c] = r[a]  &  b as u8,
+        Opcode::Bori => r[c] = r[a]  |  b as u8,
+        Opcode::Seti => r[c] = a as u8,
 
+        Opcode::Addr => r[c] = r[a]  +  r[b],
+        Opcode::Mulr => r[c] = r[a]  *  r[b],
+        Opcode::Banr => r[c] = r[a]  &  r[b],
+        Opcode::Borr => r[c] = r[a]  |  r[b],
+        Opcode::Setr => r[c] = r[a],
+
+        Opcode::Gtri => r[c] = if r[a] >  b as u8 { 1 } else { 0 },
+        Opcode::Eqri => r[c] = if r[a] == b as u8 { 1 } else { 0 },
+
+        Opcode::Gtir => r[c] = if a as u8 >  r[b] { 1 } else { 0 },
+        Opcode::Eqir => r[c] = if a as u8 == r[b] { 1 } else { 0 },
+
+        Opcode::Gtrr => r[c] = if r[a] >  r[b] { 1 } else { 0 },
+        Opcode::Eqrr => r[c] = if r[a] == r[b] { 1 } else { 0 },
+    }
+
+   r
+}
 
 fn guess_opcode(unknown: UnknownOpcode) -> Vec<Opcode> {
     let before = unknown.before;
@@ -146,6 +148,12 @@ fn guess_opcode(unknown: UnknownOpcode) -> Vec<Opcode> {
         Opcode::Bori,
         Opcode::Setr,
         Opcode::Seti,
+        Opcode::Gtir,
+        Opcode::Gtri,
+        Opcode::Gtrr,
+        Opcode::Eqir,
+        Opcode::Eqri,
+        Opcode::Eqrr,
     ];
 
     let mut possible = vec![];
@@ -174,8 +182,21 @@ fn main() {
 }
 
 fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
+    let file = fs::File::open("input-1.txt")?;
     let input = io::BufReader::new(file);
+
+    let starter_unknown = UnknownOpcode {
+        before: [3, 2, 1, 1],
+        instr:  Instr { opcode: 9, a: 2, b: 1, c: 2},
+        after:  [3, 2, 2, 1]
+    };
+    let behaves_like = guess_opcode(starter_unknown);
+    println!("{:#?} behaves like {} opcodes:",
+             starter_unknown,
+             behaves_like.len());
+    for op in behaves_like {
+        println!("  {:?}", op);
+    }
 
     let lines: Vec<String> = input
         .lines()
@@ -184,27 +205,33 @@ fn run1() -> Result<(), failure::Error> {
 
     let unknowns: Vec<UnknownOpcode> = lines
         .chunks_exact(4)
-        .take_while(|thing| !thing[0].is_empty() || !thing[1].is_empty())
         .map(|thing| {
             assert_eq!(thing[3], "");
             assert!(thing[0].starts_with("Before: ["));
-
             assert!(thing[2].starts_with("After:  ["));
 
             UnknownOpcode::parse_from_input( &thing[0], &thing[1], &thing[2])
         })
         .collect();
-    println!("Found {} unknowns to test", unknowns.len());
 
-    let behaves_like = guess_opcode(UnknownOpcode {
-        before: [3, 2, 1, 1],
-        instr: Instr { opcode: 9, a: 2, b: 1, c: 2},
-        after:  [3, 2, 2, 1]
-    });
-    println!("Behaves like: {} opcodes:", behaves_like.len());
-    for op in behaves_like {
-        println!("  {:?}", op);
+    println!("Found {} unknowns to test.", unknowns.len());
+    let mut count = 0;
+    for unknown in unknowns.iter() {
+        let ops = guess_opcode(*unknown);
+        assert_ne!(ops.len(), 0);
+        if ops.len() >= 3 {
+            // println!("Before: {:?}", unknown.before);
+            // println!("{:?}",         unknown.instr);
+            // println!("After:  {:?}", unknown.after);
+            // println!("{:?}", ops);
+            // println!("");
+
+            count += 1;
+        }
     }
+    println!("Unknowns with 3 or more potential opcodes: {}/{}",
+             count,
+             unknowns.len());
 
     Ok(())
 }
