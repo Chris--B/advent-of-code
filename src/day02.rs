@@ -67,3 +67,25 @@ fn check_intcode_runner() {
     run_intcode(&mut prog1);
     assert_eq!(prog1, [2, 0, 0, 0, 99]);
 }
+
+#[aoc(day2, part2)]
+pub fn p2_simple(input: &[u32]) -> u32 {
+    let mut mem = vec![0; input.len()];
+
+    for noun in 0..=99 {
+        for verb in 0..=99 {
+            mem.copy_from_slice(input);
+
+            mem[1] = noun;
+            mem[2] = verb;
+
+            run_intcode(&mut mem);
+
+            if mem[0] == 19690720 {
+                return 100 * noun + verb;
+            }
+        }
+    }
+
+    panic!("No noun/verb pair found")
+}
