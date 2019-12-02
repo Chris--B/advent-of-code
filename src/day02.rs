@@ -68,7 +68,9 @@ fn check_intcode_runner() {
     assert_eq!(prog1, [2, 0, 0, 0, 99]);
 }
 
-#[aoc(day2, part2)]
+const MOON_LANDING: u32 = 19690720;
+
+#[aoc(day2, part2, bruteforce)]
 pub fn p2_simple(input: &[u32]) -> u32 {
     let mut mem = vec![0; input.len()];
 
@@ -81,11 +83,41 @@ pub fn p2_simple(input: &[u32]) -> u32 {
 
             run_intcode(&mut mem);
 
-            if mem[0] == 19690720 {
+            if mem[0] == MOON_LANDING {
                 return 100 * noun + verb;
             }
         }
     }
 
     panic!("No noun/verb pair found")
+}
+
+#[aoc(day2, part2, analytic)]
+pub fn p2_analytic(input: &[u32]) -> u32 {
+    // It can be observed that this program acts as a linear function of
+    // its `noun` and `verb` inputs and an unknown constant:
+    //
+    //   X * n + Y * v + b == VALUE
+    //
+
+    fn run_sim(noun: u32, verb: u32, input: &[u32]) -> u32 {
+        let mut mem = vec![0; input.len()];
+        mem.copy_from_slice(input);
+
+        mem[1] = noun;
+        mem[2] = verb;
+
+        run_intcode(&mut mem);
+
+        mem[0]
+    }
+
+    let b = run_sim(0, 0, input);
+    let x = run_sim(1, 0, input) - b;
+
+    // uh... math?
+    let n = MOON_LANDING / x;
+    let v = MOON_LANDING % x - b;
+
+    100 * n + v
 }
