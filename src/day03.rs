@@ -16,11 +16,45 @@ impl Point {
     }
 }
 
-type Wire = std::collections::HashSet<Point>;
+use std::collections::HashSet;
+
+pub struct Wire {
+    set: HashSet<Point>,
+    list: Vec<Point>,
+}
+
+impl Wire {
+    fn new() -> Wire {
+        Wire {
+            set: HashSet::new(),
+            list: Vec::new(),
+        }
+    }
+
+    fn insert(&mut self, p: Point) {
+        self.set.insert(p);
+        self.list.push(p);
+    }
+
+    fn intersection<'a>(&'a self, other: &'a Wire) -> impl Iterator<Item = &'a Point> {
+        self.set.intersection(&other.set)
+    }
+
+    fn steps_for(&self, p: &Point) -> usize {
+        assert!(self.set.contains(p));
+        for (i, q) in self.list.iter().enumerate() {
+            if p == q {
+                return i as usize + 1; // 1-indexed result
+            }
+        }
+
+        panic!("Point not found in list: {:#?}", p);
+    }
+}
 
 #[cfg(test)]
 #[test]
-fn check_wire_pair_0() {
+fn check_p1_wire_pair_0() {
     let wire_pair = r#"R8,U5,L5,D3
     U7,R6,D4,L4
     "#;
@@ -30,7 +64,7 @@ fn check_wire_pair_0() {
 
 #[cfg(test)]
 #[test]
-fn check_wire_pair_1() {
+fn check_p1_wire_pair_1() {
     let wire_pair = r#"R75,D30,R83,U83,L12,D49,R71,U7,L72
     U62,R66,U55,R34,D71,R55,D58,R83"#;
 
@@ -39,7 +73,7 @@ fn check_wire_pair_1() {
 
 #[cfg(test)]
 #[test]
-fn check_wire_pair_2() {
+fn check_p1_wire_pair_2() {
     let wire_pair = r#"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
     U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"#;
 
@@ -92,8 +126,44 @@ pub fn parse_input(input: &str) -> (Wire, Wire) {
 
 #[aoc(day3, part1)]
 pub fn p1_simple(input: &(Wire, Wire)) -> i32 {
-    let p = Wire::intersection(&input.0, &input.1)
-        .min_by_key(|p| p.manhattan())
-        .expect("No intersections?");
-    p.manhattan()
+    Wire::intersection(&input.0, &input.1)
+        .map(|p| p.manhattan())
+        .min()
+        .expect("No intersections?")
+}
+
+#[aoc(day3, part2)]
+pub fn p2_simple(input: &(Wire, Wire)) -> usize {
+    Wire::intersection(&input.0, &input.1)
+        .map(|p| input.0.steps_for(p) + input.1.steps_for(p))
+        .min()
+        .expect("No intersections?")
+}
+
+#[cfg(test)]
+#[test]
+fn check_p2_wire_pair_0() {
+    let wire_pair = r#"R8,U5,L5,D3
+    U7,R6,D4,L4
+    "#;
+
+    assert_eq!(p2_simple(&parse_input(wire_pair)), 30, "Failed sample #0");
+}
+
+#[cfg(test)]
+#[test]
+fn check_p2_wire_pair_1() {
+    let wire_pair = r#"R75,D30,R83,U83,L12,D49,R71,U7,L72
+    U62,R66,U55,R34,D71,R55,D58,R83"#;
+
+    assert_eq!(p2_simple(&parse_input(wire_pair)), 610, "Failed sample #1");
+}
+
+#[cfg(test)]
+#[test]
+fn check_p2_wire_pair_2() {
+    let wire_pair = r#"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51
+    U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"#;
+
+    assert_eq!(p2_simple(&parse_input(wire_pair)), 410, "Failed sample #2");
 }
