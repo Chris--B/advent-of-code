@@ -83,7 +83,7 @@ pub fn parse_range(input: &str) -> (u32, u32) {
     let hi = iter.next().unwrap().parse().expect("Invalid number for hi");
 
     // Exactly 2 inputs
-    assert!(iter.next().is_none());
+    debug_assert!(iter.next().is_none());
 
     (lo, hi)
 }
@@ -99,8 +99,10 @@ pub fn p1_simple(range: &(u32, u32)) -> usize {
         .map(|n| WipPassword::new(n))
         .filter(|pwd| &lo <= pwd && pwd <= &hi)
         .collect();
+    tasks.reserve(1_000);
     // working set to modify as we iterate over tasks
     let mut stage: Vec<WipPassword> = vec![];
+    stage.reserve(1_000);
 
     for _ in 0..5 {
         for curr_pwd in &tasks {
@@ -206,8 +208,10 @@ pub fn p2_simple(range: &(u32, u32)) -> usize {
         .map(|n| WipPassword::new(n))
         .filter(|pwd| &lo <= pwd && pwd <= &hi)
         .collect();
+    tasks.reserve(1_000);
     // working set to modify as we iterate over tasks
     let mut stage: Vec<WipPassword> = vec![];
+    stage.reserve(1_000);
 
     for _ in 0..5 {
         for curr_pwd in &tasks {
@@ -227,25 +231,6 @@ pub fn p2_simple(range: &(u32, u32)) -> usize {
 
         std::mem::swap(&mut tasks, &mut stage);
         stage.clear();
-    }
-
-    #[cfg(debug_assertions)]
-    {
-        dbg!(lo);
-        dbg!(hi);
-        for pwd in tasks
-            .iter()
-            .filter(|pwd| pwd.check() && has_double_run(&pwd.pwd))
-            .take(10)
-        {
-            let text = pwd
-                .pwd
-                .iter()
-                .map(|byte| format!("{}", byte))
-                .collect::<String>();
-            assert!(text.len() == 6);
-            eprintln!("{}", text);
-        }
     }
 
     tasks.iter().filter(|pwd| has_double_run(&pwd.pwd)).count()
