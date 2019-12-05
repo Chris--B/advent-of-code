@@ -2,8 +2,15 @@ use aoc_runner_derive::{aoc, aoc_generator};
 
 pub const OP_ADD: i32 = 1;
 pub const OP_MUL: i32 = 2;
+
 pub const OP_IN: i32 = 3;
 pub const OP_OUT: i32 = 4;
+
+pub const OP_JN: i32 = 5;
+pub const OP_JZ: i32 = 6;
+pub const OP_LT: i32 = 7;
+pub const OP_EQ: i32 = 8;
+
 pub const OP_HLT: i32 = 99;
 
 pub const PM_POS: i32 = 0;
@@ -121,9 +128,47 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
 
                 ip += 2;
             }
-            OP_HLT => {
-                break;
+            OP_JN => {
+                let pred = load_param(&mem, op.pm_arg0, mem[ip + 1]);
+                let addr = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+
+                if pred != 0 {
+                    assert!(addr > 0);
+                    ip = addr as usize;
+                } else {
+                    ip += 3;
+                }
             }
+            OP_JZ => {
+                let pred = load_param(&mem, op.pm_arg0, mem[ip + 1]);
+                let addr = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+
+                if pred == 0 {
+                    assert!(addr > 0);
+                    ip = addr as usize;
+                } else {
+                    ip += 3;
+                }
+            }
+            OP_LT => {
+                let ra = load_param(&mem, op.pm_arg0, mem[ip + 1]);
+                let rb = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+
+                let value = if ra < rb { 1 } else { 0 };
+                write_param(mem, PM_POS, mem[ip + 3], value);
+
+                ip += 4;
+            }
+            OP_EQ => {
+                let ra = load_param(&mem, op.pm_arg0, mem[ip + 1]);
+                let rb = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+
+                let value = if ra == rb { 1 } else { 0 };
+                write_param(mem, PM_POS, mem[ip + 3], value);
+
+                ip += 4;
+            }
+            OP_HLT => break,
             _ => panic!("Invalid opcode at position {}: {:?}", ip, op),
         }
     }
@@ -141,10 +186,41 @@ pub fn parse_intcode(input: &str) -> Vec<i32> {
 #[aoc(day5, part1)]
 pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
     let mut intcode = intcode.clone();
-    let input: Vec<i32> = vec![1];
+    let input = [1]; // 1 for AC
     let mut output: Vec<i32> = vec![];
 
     run_intcode(&mut intcode, &input, &mut output);
 
-    *output.last().unwrap()
+    *output.last().expect("No oputput?")
+}
+
+#[cfg(test)]
+#[test]
+fn check_branch_inst() {
+    {
+        let mut intcode = [3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8];
+        let mut output = vec![];
+        run_intcode(&mut intcode, &[9], &mut output);
+        assert_eq!(output.len(), 1, "Wrong number of  output values");
+        assert_eq!(output[0], 0);
+    }
+
+    {
+        let mut intcode = [3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8];
+        let mut output = vec![];
+        run_intcode(&mut intcode, &[8], &mut output);
+        assert_eq!(output.len(), 1, "Wrong number of  output values");
+        assert_eq!(output[0], 1);
+    }
+}
+
+#[aoc(day5, part2)]
+pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
+    let mut intcode = intcode.clone();
+    let input = [5]; // 5 for termal radiator controller
+    let mut output: Vec<i32> = vec![];
+
+    run_intcode(&mut intcode, &input, &mut output);
+
+    *output.last().expect("No oputput?")
 }
