@@ -75,7 +75,7 @@ pub fn p1_simple(input: &[OrbitPair]) -> usize {
 
 #[cfg(test)]
 #[test]
-fn check_sample() {
+fn check_sample_1() {
     let input = r#"
         COM)B
         B)C
@@ -90,4 +90,56 @@ fn check_sample() {
         K)L"#;
 
     assert_eq!(p1_simple(&parse(input)), 42);
+}
+
+fn path_to_com<'a>(
+    all_orbits: &'a HashMap<&'a SmallString, &'a SmallString>,
+    start: &'a SmallString,
+) -> HashSet<SmallString> {
+    let mut path = HashSet::<SmallString>::new();
+
+    let mut next = Some(&start);
+    while let Some(n) = next {
+        path.insert((*n).clone());
+        next = all_orbits.get(n);
+    }
+
+    path
+}
+
+#[aoc(day6, part2)]
+pub fn p2_simple(input: &[OrbitPair]) -> usize {
+    let mut all_orbits: HashMap<&SmallString, &SmallString> = HashMap::new();
+
+    for pair in input {
+        // Any object only directly orbits one other object, so use the `in_orbit` as the key
+        let already_existed = all_orbits.insert(pair.in_orbit(), pair.center());
+        assert!(already_existed.is_none());
+    }
+
+    let path_you = path_to_com(&all_orbits, &"YOU".bytes().collect::<SmallString>());
+    let path_san = path_to_com(&all_orbits, &"SAN".bytes().collect::<SmallString>());
+
+    path_you.symmetric_difference(&path_san).count() - 2
+}
+
+#[cfg(test)]
+#[test]
+fn check_sample_2() {
+    let input = r#"
+        COM)B
+        B)C
+        C)D
+        D)E
+        E)F
+        B)G
+        G)H
+        D)I
+        E)J
+        J)K
+        K)L
+        K)YOU
+        I)SAN"#;
+
+    assert_eq!(p2_simple(&parse(input)), 4);
 }
