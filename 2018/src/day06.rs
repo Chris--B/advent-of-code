@@ -9,28 +9,12 @@ use std::{
     },
 };
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("2".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
+use aoc_runner_derive::{aoc, aoc_generator};
 
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day6, part1)]
+fn run1(input: &str) -> Result<usize, failure::Error> {
     let all_coords: Vec<(u32, u32)> = input
         .lines()
-        .map(|line| line.unwrap())
         .map(|line| {
             let mut it = line.split(',');
             let a = it.next().unwrap().trim().parse().unwrap();
@@ -90,10 +74,7 @@ fn run1() -> Result<(), failure::Error> {
         *entry += 1;
     }
 
-    let answer = areas.iter().map(|(_coord, area)| area).max().unwrap_or(&0);
-    println!("Answer {}", answer);
-
-    Ok(())
+    Ok(areas.iter().map(|(_coord, area)| area).copied().max().unwrap_or(0))
 }
 
 fn man_dist(a: (u32, u32), b: (u32, u32)) -> usize {
@@ -117,13 +98,10 @@ fn closest_point(points: &[(u32, u32)], other: (u32, u32)) -> Option<(u32, u32)>
     }
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day6, part2)]
+fn run2(input: &str) -> Result<usize, failure::Error> {
     let coords: Vec<(u32, u32)> = input
         .lines()
-        .map(|line| line.unwrap())
         .map(|line| {
             let mut it = line.split(',');
             let a = it.next().unwrap().trim().parse().unwrap();
@@ -150,8 +128,5 @@ fn run2() -> Result<(), failure::Error> {
         }
     }
 
-    let answer = safeties.values().filter(|c| **c < 10_000).count();
-    println!("Answer {}", answer);
-
-    Ok(())
+    Ok(safeties.values().filter(|c| **c < 10_000).count())
 }

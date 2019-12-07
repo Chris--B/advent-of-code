@@ -9,23 +9,10 @@ use std::{
     },
 };
 
+use aoc_runner_derive::{aoc, aoc_generator};
+use failure::bail;
 use lazy_static::lazy_static;
 use regex::Regex;
-
-fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
 
 #[derive(Copy, Clone)]
 struct Point {
@@ -76,15 +63,7 @@ fn aabb(points: &[Point]) -> (i64, i64, i64, i64) {
     (minx, miny, maxx, maxy)
 }
 
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let input = io::BufReader::new(file);
-
-    let mut points = input.lines()
-        .map(|line| line.unwrap())
-        .map(|line| line.parse().unwrap())
-        .collect::<Vec<Point>>();
-
+fn render_stars(mut points: Vec<Point>) -> u32 {
     let mut t = 0;
 
     loop {
@@ -98,14 +77,16 @@ fn run1() -> Result<(), failure::Error> {
         let area = (maxx-minx) * (maxy-miny);
 
         if area > last_area {
-            println!("t = {}", t);
+            println!("Star Map @ t={}", t);
             for y in miny..=maxy {
                 for x in minx..=maxx {
                     if last_points.iter()
                         .find(|p| p.x == x && p.y == y)
                         .is_some()
                     {
-                        print!(".");
+                        // Unicode "Full Block"
+                        // See: https://www.compart.com/en/unicode/block/U+2580
+                        print!("\u{2588}");
                     } else {
                         print!(" ");
                     }
@@ -117,12 +98,25 @@ fn run1() -> Result<(), failure::Error> {
         t += 1;
     }
 
-    Ok(())
+    t
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let _input = io::BufReader::new(file);
+// #[aoc(day10, part1)]
+// fn run1(input: &str) -> Result<i32, failure::Error> {
+//     let points = input.lines()
+//         .map(|line| line.parse().unwrap())
+//         .collect::<Vec<Point>>();
+//     render_stars(points);
 
-    Ok(())
+//     // Not really a solution that we can get programatically...
+//     Ok(0)
+// }
+
+#[aoc(day10, part2)]
+fn run2(input: &str) -> Result<u32, failure::Error> {
+    let points = input.lines()
+        .map(|line| line.parse().unwrap())
+        .collect::<Vec<Point>>();
+
+    Ok(render_stars(points))
 }

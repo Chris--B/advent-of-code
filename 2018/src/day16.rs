@@ -11,6 +11,7 @@ use std::{
     str,
 };
 
+use aoc_runner_derive::{aoc, aoc_generator};
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -148,25 +149,8 @@ fn guess_opcode(ops: &[Opcode], unknown: UnknownOpcode) -> Vec<Opcode> {
     possible
 }
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{}", err),
-        }
-    }
-}
-
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-1.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day16, part1)]
+fn run1(input: &str) -> Result<u32, failure::Error> {
     let opcodes = [
         Opcode::Addr,
         Opcode::Addi,
@@ -200,11 +184,12 @@ fn run1() -> Result<(), failure::Error> {
 
     let lines: Vec<String> = input
         .lines()
-        .map(|line| line.unwrap())
+        .map(|s| s.to_string())
         .collect();
 
     let unknowns: Vec<UnknownOpcode> = lines
         .chunks_exact(4)
+        .take_while(|thing| !thing[..2].iter().all(String::is_empty))
         .map(|thing| {
             assert_eq!(thing[3], "");
             assert!(thing[0].starts_with("Before: ["));
@@ -234,15 +219,14 @@ fn run1() -> Result<(), failure::Error> {
              count,
              unknowns.len());
 
-    Ok(())
+    Ok(count)
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-2.txt")?;
-    let input = io::BufReader::new(file);
+#[aoc(day16, part2)]
+fn run2(input: &str) -> Result<u32, failure::Error> {
     let lines: Vec<String> = input
         .lines()
-        .map(|line| line.unwrap())
+        .map(|s| s.to_string())
         .collect();
 
     let samples: Vec<UnknownOpcode> = lines
@@ -317,7 +301,5 @@ fn run2() -> Result<(), failure::Error> {
         regs = exec(regs, opcode, instr);
     }
 
-    println!("{:?}", regs);
-
-    Ok(())
+    Ok(regs[0])
 }

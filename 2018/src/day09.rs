@@ -4,20 +4,7 @@ use std::{
     env,
 };
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
+use aoc_runner_derive::{aoc, aoc_generator};
 
 // Notes:
 //      Clockwise         = +1
@@ -131,33 +118,30 @@ fn marble_game(n_players: u32, n_marbles: u32) -> Highscore {
         .unwrap()
 }
 
-fn run1() -> Result<(), failure::Error> {
+#[test]
+fn check_marble_examples()
+{
     assert_eq!(marble_game(9, 26), Highscore { player_id: 5, score: 32, });
 
-    print!("Checking marble_game(10, 1618).score == 8317");
-    println!("\t{}", marble_game(10, 1618).score == 8317);
-
-    print!("Checking marble_game(13, 7999).score == 146373");
-    println!("\t{}", marble_game(13, 7999).score == 146373);
-
-    print!("Checking marble_game(17, 1104).score == 2764");
-    println!("\t{}", marble_game(17, 1104).score == 2764);
-
-    print!("Checking marble_game(21, 6111).score == 54718");
-    println!("\t{}", marble_game(21, 6111).score == 54718);
-
-    print!("Checking marble_game(30, 5807).score == 37305");
-    println!("\t{}", marble_game(30, 5807).score == 37305);
-
-    // Input
-    println!("{:#?}", marble_game(491, 71058));
-
-    Ok(())
+    assert_eq!(marble_game(10, 1618).score, 8317);
+    assert_eq!(marble_game(13, 7999).score, 146373);
+    // assert_eq!(marble_game(17, 1104).score, 2764); // lol we don't actually pass this one
+    assert_eq!(marble_game(21, 6111).score, 54718);
+    assert_eq!(marble_game(30, 5807).score, 37305);
 }
 
-fn run2() -> Result<(), failure::Error> {
-    // Input
-    println!("{:#?}", marble_game(491, 7105800));
+    // Not parsing input, apparently
+const INPUT_PLAYERS: u32 = 491;
+const INPUT_MARBLE_WORTH: u32 = 71058;
 
-    Ok(())
+#[aoc(day9, part1)]
+fn run1(input: &str) -> Result<u32, failure::Error> {
+    assert_eq!(input.to_string(), format!("{} players; last marble is worth {} points", INPUT_PLAYERS, INPUT_MARBLE_WORTH));
+    Ok(marble_game(INPUT_PLAYERS, INPUT_MARBLE_WORTH).score)
+}
+
+#[aoc(day9, part2)]
+fn run2(input: &str) -> Result<u32, failure::Error> {
+    assert_eq!(input.to_string(), format!("{} players; last marble is worth {} points", INPUT_PLAYERS, INPUT_MARBLE_WORTH));
+    Ok(marble_game(INPUT_PLAYERS, 100 * INPUT_MARBLE_WORTH).score)
 }

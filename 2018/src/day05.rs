@@ -8,47 +8,16 @@ use std::{
     },
     time,
 };
+use aoc_runner_derive::{aoc, aoc_generator};
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("2".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
+#[aoc(day5, part1)]
+fn run1(input: &str) -> Result<usize, failure::Error> {
+    Ok(collapse(input.trim().chars()).len())
 }
 
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let mut input = io::BufReader::new(file);
-    let mut units = String::new();
-    input.read_to_string(&mut units)?;
-
-    println!("Units: {}", collapse(units.as_str().trim().chars()).len());
-
-    Ok(())
-}
-
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let mut input = io::BufReader::new(file);
-    let mut units = String::new();
-    input.read_to_string(&mut units)?;
-
-    let before = time::Instant::now();
-    println!("Units: {}", optimize(units.as_str().trim()).len());
-    let after = time::Instant::now();
-
-    let runtime = after.duration_since(before);
-    println!("Runtime: {:.3}ms", runtime.subsec_nanos() as f64 * 1e-6);
-
-    Ok(())
+#[aoc(day5, part2)]
+fn run2(input: &str) -> Result<usize, failure::Error> {
+    Ok(optimize(input.trim()).len())
 }
 
 fn is_upper(c: char) -> bool {

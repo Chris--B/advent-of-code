@@ -9,6 +9,7 @@ use std::{
     str::FromStr,
 };
 
+use aoc_runner_derive::{aoc, aoc_generator};
 use failure::bail;
 use regex::Regex;
 
@@ -90,28 +91,10 @@ impl FromStr for Event {
     }
 }
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("2".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
-
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-1.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day4, part1)]
+fn run1(input: &str) -> Result<u32, failure::Error> {
     let mut events: Vec<Event> = input
         .lines()
-        .map(|line| line.unwrap())
         .map(|line| line.parse().unwrap())
         .collect();
     events.sort_by_key(|e| e.timestamp());
@@ -185,18 +168,13 @@ fn run1() -> Result<(), failure::Error> {
                 .map(|count| format!(" {:>2}", count))
                 .collect::<String>());
 
-    println!("Final: {}", sleepy_guard * best_minute);
-
-    Ok(())
+    Ok(sleepy_guard * best_minute)
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-1.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day4, part2)]
+fn run2(input: &str) -> Result<u32, failure::Error> {
     let mut events: Vec<Event> = input
         .lines()
-        .map(|line| line.unwrap())
         .map(|line| line.parse().unwrap())
         .collect();
     events.sort_by_key(|e| e.timestamp());
@@ -264,6 +242,5 @@ fn run2() -> Result<(), failure::Error> {
         })
         .max_by_key(|(_id, _minute, count)| *count).unwrap();
     println!("Guard #{} @ minute {}", best_id, best_minute);
-    println!("Final: {}", best_id * best_minute);
-    Ok(())
+    Ok(best_id * best_minute)
 }

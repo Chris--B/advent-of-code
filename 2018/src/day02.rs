@@ -9,55 +9,27 @@ use std::{
     },
 };
 
+use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
-
 use strsim;
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
-
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-01.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day2, part1)]
+fn run1(input: &str) -> Result<u32, failure::Error> {
     let (twos, threes) = input
         .lines()
-        .map(|line| line.unwrap())
         .map(|id| checksum_id(&id))
         .fold((0, 0), |accum, p| {
             (accum.0 + p.0 as u32,
              accum.1 + p.1 as u32)
         });
-    println!("{}", twos * threes);
 
-    Ok(())
+    Ok(twos * threes)
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-02.txt")?;
-    let input = io::BufReader::new(file);
-
-    // Read each line as a String.
-    // e.g. "oeylbtcxjqnzhgkyylfapviusr"
-    let box_ids: Vec<String> = input
-        .lines()
-        .map(|line| line.map_err(|e| e.into()))
-        .collect::<Result<_, failure::Error>>()?;
-
+#[aoc(day2, part2)]
+fn run2(input: &str) -> Result<String, failure::Error> {
     // Create all pairs of all lines, and then filter them
-    let ids = box_ids.iter().map(String::as_str);
+    let ids = input.lines();
     let pairs: Vec<_> = ids.clone()
         .cartesian_product(ids)
         // The "<" here removes duplicate pairs
@@ -78,11 +50,9 @@ fn run2() -> Result<(), failure::Error> {
         .collect::<Vec<u8>>()
     ).unwrap();
     assert_eq!(pair.0.len(), result.len()+1);
-    println!("{}", result);
 
-    Ok(())
+    Ok(result)
 }
-
 
 fn checksum_id(box_id: &str) -> (bool, bool) {
     let mut counts = HashMap::new();

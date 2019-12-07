@@ -1,6 +1,7 @@
 
 use std::{
     env,
+    fmt,
     fs,
     collections,
     io::{
@@ -9,6 +10,9 @@ use std::{
     },
     str::FromStr,
 };
+
+use aoc_runner_derive::{aoc, aoc_generator};
+use failure::bail;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 struct Claim {
@@ -98,28 +102,10 @@ impl Claim {
     }
 }
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("2".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
-
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-1.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day3, part1)]
+fn run1(input: &str) -> Result<i32, failure::Error> {
     let mut fabric = collections::HashMap::new();
     input.lines()
-        .map(|l| l.unwrap())
         .map(|l| l.parse::<Claim>().unwrap())
         .for_each(|claim| {
             for point in claim.sq_inches() {
@@ -135,18 +121,13 @@ fn run1() -> Result<(), failure::Error> {
             overlaps += 1;
         }
     }
-    println!("Overlaps: {}", overlaps);
-
-    Ok(())
+    Ok(overlaps)
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input-2.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day3, part2)]
+fn run2(input: &str) -> Result<u32, failure::Error> {
     let mut fabric = collections::HashMap::new();
     let claims: Vec<Claim> = input.lines()
-        .map(|l| l.unwrap())
         .map(|l| l.parse::<Claim>().unwrap())
         .collect();
 
@@ -164,8 +145,8 @@ fn run2() -> Result<(), failure::Error> {
                 continue 'claim;
             }
         }
-        println!("{:?}", claim);
+        return Ok(claim.id);
     }
 
-    Ok(())
+    bail!("No claims found?");
 }

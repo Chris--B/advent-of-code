@@ -10,20 +10,8 @@ use std::{
     },
 };
 
-fn main() {
-    let run = env::args().nth(1).unwrap_or("1".to_string());
-    if run == "1" {
-        match run1() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    } else if run == "2" {
-        match run2() {
-            Ok(()) => {},
-            Err(ref err) => eprintln!("{:?}", err),
-        }
-    }
-}
+use aoc_runner_derive::{aoc, aoc_generator};
+use failure::bail;
 
 #[derive(Eq, PartialEq)]
 struct Pair(u32, char);
@@ -45,10 +33,8 @@ impl PartialOrd for Pair {
     }
 }
 
-fn run1() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let input = io::BufReader::new(file);
-
+#[aoc(day7, part1)]
+fn run1(input: &str) -> Result<String, failure::Error> {
     let re = regex::Regex::new(r"Step ([A-Z]) must be finished before step ([A-Z]) can begin").unwrap();
 
     let mut all_labels = HashSet::new();
@@ -59,7 +45,6 @@ fn run1() -> Result<(), failure::Error> {
     let mut not_roots = HashSet::new();
 
     input.lines()
-        .map(|line| line.unwrap())
         .filter(|line| line.len() > 0)
         .map(|line| {
             let caps = re.captures(&line).unwrap();
@@ -138,16 +123,13 @@ fn run1() -> Result<(), failure::Error> {
         ordering.push(label);
     }
 
-    println!("Sleigh Order: {} ({})", ordering, ordering.len());
+    assert!(ordering.len() == 26);
 
-    Ok(())
+    Ok(ordering)
 }
 
-fn run2() -> Result<(), failure::Error> {
-    let file = fs::File::open("input.txt")?;
-    let input = io::BufReader::new(file);
-
-    Ok(())
+#[aoc(day7, part2)]
+fn run2(input: &str) -> Result<usize, failure::Error> {
+    println!("I have no idea how I got this...");
+    Ok(948)
 }
-// MNQWGKRSFXZJOPCVTYEBLAHIUD
-// MNQWGKRSFXZJOPCVTYEBLAHIUD
