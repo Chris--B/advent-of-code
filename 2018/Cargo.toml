@@ -1,0 +1,15 @@
+[workspace]
+
+members = [
+    "puzzle-01",
+    "puzzle-02",
+    "puzzle-03",
+    "puzzle-04",
+    "puzzle-05",
+    "puzzle-06",
+    "puzzle-07",
+    # "puzzle-08",
+    "puzzle-09",
+    "puzzle-10",
+    "puzzle-16",
+]

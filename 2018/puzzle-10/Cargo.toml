@@ -1,0 +1,16 @@
+[package]
+name = "puzzle-10"
+version = "0.1.0"
+authors = ["Chris Butler <chrisbutler296@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "*"
+strsim = "*"
+itertools = "*"
+regex = "1"
+lazy_static = "*"
+
+[dependencies.image]
+version = "*"
+features = ["png"]
