@@ -64,7 +64,7 @@ fn check_op_decode() {
     );
 }
 
-pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
+pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output: &mut Vec<i32>) {
     let mut ip: usize = 0;
 
     fn load_param(mem: &[i32], pm: i32, param: i32) -> i32 {
@@ -89,7 +89,7 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
         }
     }
 
-    let mut input_index = 0;
+    let mut input_count = 0;
 
     loop {
         let op = Op::decode(mem[ip]);
@@ -112,9 +112,13 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
                 ip += 4;
             }
             OP_IN => {
+                dbg!(&output);
+
                 // Read from input
-                let value = input[input_index];
-                input_index += 1;
+                let value = input
+                    .next()
+                    .expect(&format!("Failed to get next input: {}", input_count));
+                input_count += 1;
 
                 // Save to memory
                 write_param(mem, op.pm_arg0, mem[ip + 1], value);
@@ -182,7 +186,7 @@ fn exec_amp(intcode: &Vec<i32>, phase: i32, signal: i32) -> i32 {
 
     let input = [phase, signal];
 
-    run_intcode(&mut intcode, &input, &mut output);
+    run_intcode(&mut intcode, input.iter().cloned(), &mut output);
 
     // assert!(output.len() == 1);
     output[0]
@@ -220,6 +224,77 @@ fn check_example_1_1() {
     assert_eq!(exec_phase_seq(&intcode, &phases), 43210);
 }
 
+fn exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
+    let mut signal = 0;
+
+    let mut intcodes = [
+        intcode.clone(),
+        intcode.clone(),
+        intcode.clone(),
+        intcode.clone(),
+        intcode.clone(),
+    ];
+
+    // A
+    println!("A");
+    signal = {
+        let mut output: Vec<i32> = vec![];
+        let input = [phases[0], signal];
+        run_intcode(&mut intcodes[0], input.iter().cloned(), &mut output);
+        output[0]
+    };
+
+    // B
+    println!("B");
+    signal = {
+        let mut output: Vec<i32> = vec![];
+        let input = [phases[1], signal];
+        run_intcode(&mut intcodes[1], input.iter().cloned(), &mut output);
+        output[0]
+    };
+
+    // C
+    println!("C");
+    signal = {
+        let mut output: Vec<i32> = vec![];
+        let input = [phases[2], signal];
+        run_intcode(&mut intcodes[2], input.iter().cloned(), &mut output);
+        output[0]
+    };
+
+    // D
+    println!("D");
+    signal = {
+        let mut output: Vec<i32> = vec![];
+        let input = [phases[3], signal];
+        run_intcode(&mut intcodes[3], input.iter().cloned(), &mut output);
+        output[0]
+    };
+
+    // E
+    println!("E");
+    signal = {
+        let mut output: Vec<i32> = vec![];
+        let input = [phases[4], signal];
+        run_intcode(&mut intcodes[4], input.iter().cloned(), &mut output);
+        output[0]
+    };
+
+    signal
+}
+
+#[cfg(test)]
+#[test]
+fn check_example_2_1() {
+    let intcode = vec![
+        3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1, 28,
+        1005, 28, 6, 99, 0, 0, 5,
+    ];
+    let phases = [9, 8, 7, 6, 5];
+
+    // assert_eq!(exec_phase_seq_2(&intcode, &phases), 139_629_729);
+}
+
 #[aoc_generator(day7)]
 pub fn parse_intcode(input: &str) -> Vec<i32> {
     input
@@ -232,6 +307,15 @@ pub fn parse_intcode(input: &str) -> Vec<i32> {
 #[aoc(day7, part1)]
 pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
     (0..=4)
+        .permutations(5)
+        .map(|p| exec_phase_seq(intcode, &p))
+        .max()
+        .expect("No permutations?")
+}
+
+#[aoc(day7, part2)]
+pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
+    (5..=9)
         .permutations(5)
         .map(|p| exec_phase_seq(intcode, &p))
         .max()
