@@ -1,14 +1,26 @@
 [package]
-name = "advent_of_code"
+name = "intcode"
 version = "0.1.0"
 authors = ["Chris Butler <chrisbutler296@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "intcode"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ic-asm"
+path = "src/asm.rs"
+
+[[bin]]
+name = "ic-dis"
+path = "src/disasm.rs"
+
+[[bin]]
+name = "intcode"
+path = "src/runner.rs"
+
 [dependencies]
-aoc-runner = ""
-aoc-runner-derive = ""
 smallvec = "1"
-itertools = "0.8"
-intcode = { path = "../intcode" }
