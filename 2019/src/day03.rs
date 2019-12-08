@@ -11,7 +11,7 @@ impl Point {
         Point { x, y }
     }
 
-    fn manhattan(&self) -> i32 {
+    fn manhattan(self) -> i32 {
         self.x.abs() + self.y.abs()
     }
 }
@@ -40,10 +40,10 @@ impl Wire {
         self.set.intersection(&other.set)
     }
 
-    fn steps_for(&self, p: &Point) -> usize {
-        assert!(self.set.contains(p));
+    fn steps_for(&self, p: Point) -> usize {
+        assert!(self.set.contains(&p));
         for (i, q) in self.list.iter().enumerate() {
-            if p == q {
+            if p == *q {
                 return i as usize + 1; // 1-indexed result
             }
         }
@@ -85,7 +85,7 @@ fn parse_line(line: &str) -> Wire {
     let mut wire = Wire::new();
     let mut p = Point::xy(0, 0);
 
-    for turn in line.split(",") {
+    for turn in line.split(',') {
         let dir = turn.chars().nth(0).unwrap();
         let dist: i32 = turn[1..].parse().unwrap();
         assert!(dist != 0);
@@ -135,7 +135,7 @@ pub fn p1_simple(input: &(Wire, Wire)) -> i32 {
 #[aoc(day3, part2)]
 pub fn p2_simple(input: &(Wire, Wire)) -> usize {
     Wire::intersection(&input.0, &input.1)
-        .map(|p| input.0.steps_for(p) + input.1.steps_for(p))
+        .map(|p| input.0.steps_for(*p) + input.1.steps_for(*p))
         .min()
         .expect("No intersections?")
 }

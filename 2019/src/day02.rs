@@ -3,7 +3,7 @@ use aoc_runner_derive::{aoc, aoc_generator};
 #[aoc_generator(day2)]
 pub fn parse_intcode(input: &str) -> Vec<i32> {
     input
-        .split(",")
+        .split(',')
         .map(|line| line.trim().parse::<i32>().unwrap())
         .collect()
 }
@@ -14,7 +14,7 @@ pub fn p1_simple(input: &[i32]) -> i32 {
     mem.copy_from_slice(input);
 
     mem[1] = 12;
-    mem[2] = 02;
+    mem[2] = 2;
 
     run_intcode(&mut mem);
 
@@ -68,7 +68,8 @@ fn check_intcode_runner() {
     assert_eq!(prog1, [2, 0, 0, 0, 99]);
 }
 
-const MOON_LANDING: i32 = 19690720;
+#[allow(clippy::inconsistent_digit_grouping)]
+const MOON_LANDING: i32 = 1969_07_20;
 
 #[aoc(day2, part2, bruteforce)]
 pub fn p2_simple(input: &[i32]) -> i32 {
@@ -127,7 +128,7 @@ pub fn p1_new_vm(input: &[i32]) -> i32 {
     let mut vm = intcode::vm::Vm::with_memory_from_slice(input);
 
     vm.mem_mut()[1] = 12;
-    vm.mem_mut()[2] = 02;
+    vm.mem_mut()[2] = 2;
 
     vm.run().unwrap();
 

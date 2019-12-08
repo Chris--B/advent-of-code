@@ -117,7 +117,7 @@ pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output
                 // Read from input
                 let value = input
                     .next()
-                    .expect(&format!("Failed to get next input: {}", input_count));
+                    .unwrap_or_else(|| panic!("Failed to get next input: {}", input_count));
                 input_count += 1;
 
                 // Save to memory
@@ -180,6 +180,7 @@ pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output
     }
 }
 
+#[allow(clippy::ptr_arg)]
 fn exec_amp(intcode: &Vec<i32>, phase: i32, signal: i32) -> i32 {
     let mut intcode = intcode.clone();
     let mut output: Vec<i32> = vec![];
@@ -192,6 +193,7 @@ fn exec_amp(intcode: &Vec<i32>, phase: i32, signal: i32) -> i32 {
     output[0]
 }
 
+#[allow(clippy::ptr_arg)]
 fn exec_phase_seq(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     let mut signal = 0;
 
@@ -224,7 +226,8 @@ fn check_example_1_1() {
     assert_eq!(exec_phase_seq(&intcode, &phases), 43210);
 }
 
-fn exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
+#[allow(clippy::ptr_arg)]
+fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     let mut signal = 0;
 
     let mut intcodes = [
@@ -299,12 +302,13 @@ fn check_example_2_1() {
 pub fn parse_intcode(input: &str) -> Vec<i32> {
     input
         .trim()
-        .split(",")
+        .split(',')
         .map(|s| s.parse().unwrap())
         .collect()
 }
 
 #[aoc(day7, part1)]
+#[allow(clippy::ptr_arg)]
 pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
     (0..=4)
         .permutations(5)
@@ -314,6 +318,7 @@ pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
 }
 
 #[aoc(day7, part2)]
+#[allow(clippy::ptr_arg)]
 pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
     (5..=9)
         .permutations(5)

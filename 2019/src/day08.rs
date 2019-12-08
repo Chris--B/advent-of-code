@@ -38,10 +38,10 @@ pub fn part1(input: &[u32]) -> u32 {
     const IMAGE_WIDTH: usize = 25;
     const IMAGE_HEIGHT: usize = 6;
 
-    let (layer, counts) = input
+    let counts = input
         .chunks_exact(IMAGE_HEIGHT * IMAGE_WIDTH)
-        .map(|layer| (layer, count_digits(layer)))
-        .min_by_key(|(_layer, counts)| counts[0])
+        .map(|layer| count_digits(layer))
+        .min_by_key(|counts| counts[0])
         .unwrap();
 
     dbg!(counts[1]) * dbg!(counts[2])
@@ -81,7 +81,7 @@ pub fn part2(input: &[u32]) -> u32 {
             };
             print!("{}", display);
         }
-        println!("");
+        println!();
     }
 
     0

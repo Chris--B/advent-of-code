@@ -26,7 +26,7 @@ pub fn parse(input: &str) -> Vec<OrbitPair> {
         .trim()
         .split_whitespace()
         .map(|line| {
-            let mut iter = line.trim().split(")");
+            let mut iter = line.trim().split(')');
             OrbitPair(
                 iter.next().unwrap().bytes().collect(),
                 iter.next().unwrap().bytes().collect(),

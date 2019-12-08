@@ -178,12 +178,13 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
 pub fn parse_intcode(input: &str) -> Vec<i32> {
     input
         .trim()
-        .split(",")
+        .split(',')
         .map(|s| s.parse().unwrap())
         .collect()
 }
 
 #[aoc(day5, part1)]
+#[allow(clippy::ptr_arg)]
 pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
     let mut intcode = intcode.clone();
     let input = [1]; // 1 for AC
@@ -215,6 +216,7 @@ fn check_branch_inst() {
 }
 
 #[aoc(day5, part2)]
+#[allow(clippy::ptr_arg)]
 pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
     let mut intcode = intcode.clone();
     let input = [5]; // 5 for termal radiator controller

@@ -87,6 +87,7 @@ pub fn parse_range(input: &str) -> (u32, u32) {
 }
 
 #[aoc(day4, part1)]
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn p1_simple(range: &(u32, u32)) -> usize {
     let lo = WipPassword::from_full_pwd(range.0);
     let hi = WipPassword::from_full_pwd(range.1);
@@ -94,8 +95,8 @@ pub fn p1_simple(range: &(u32, u32)) -> usize {
 
     // Source of passwords to expand on
     let mut tasks: Vec<WipPassword> = (0..=9)
-        .map(|n| WipPassword::new(n))
-        .filter(|pwd| &lo <= pwd && pwd <= &hi)
+        .map(WipPassword::new)
+        .filter(|pwd| lo <= *pwd && *pwd <= hi)
         .collect();
     tasks.reserve(1_000);
     // working set to modify as we iterate over tasks
@@ -196,6 +197,7 @@ fn check_double_runs_2() {
 }
 
 #[aoc(day4, part2)]
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn p2_simple(range: &(u32, u32)) -> usize {
     let lo = WipPassword::from_full_pwd(range.0);
     let hi = WipPassword::from_full_pwd(range.1);
@@ -203,8 +205,8 @@ pub fn p2_simple(range: &(u32, u32)) -> usize {
 
     // Source of passwords to expand on
     let mut tasks: Vec<WipPassword> = (0..=9)
-        .map(|n| WipPassword::new(n))
-        .filter(|pwd| &lo <= pwd && pwd <= &hi)
+        .map(WipPassword::new)
+        .filter(|pwd| lo <= *pwd && *pwd <= hi)
         .collect();
     tasks.reserve(1_000);
     // working set to modify as we iterate over tasks
