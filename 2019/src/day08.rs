@@ -1,5 +1,7 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
+use std::fmt::Write;
+
 #[aoc_generator(day8)]
 pub fn parse_input(input: &str) -> Vec<u32> {
     input
@@ -48,7 +50,7 @@ pub fn part1(input: &[u32]) -> u32 {
 }
 
 #[aoc(day8, part2)]
-pub fn part2(input: &[u32]) -> u32 {
+pub fn part2(input: &[u32]) -> Result<String, std::fmt::Error> {
     const IMAGE_WIDTH: usize = 25;
     const IMAGE_HEIGHT: usize = 6;
     const IMAGE_SIZE: usize = IMAGE_HEIGHT * IMAGE_WIDTH;
@@ -70,6 +72,9 @@ pub fn part2(input: &[u32]) -> u32 {
         }
     }
 
+    let mut output = String::new();
+    write!(output, "\n")?;
+
     for row in image.chunks(IMAGE_WIDTH) {
         for p in row {
             // See: https://en.wikipedia.org/wiki/Block_Elements
@@ -79,10 +84,10 @@ pub fn part2(input: &[u32]) -> u32 {
                 COLOR_TRANSPARENT => " ",
                 _ => panic!("Invalid pixel: {}", p),
             };
-            print!("{}", display);
+            write!(output, "{}", display)?;
         }
-        println!();
+        writeln!(output, )?;
     }
 
-    0
+    Ok(output)
 }
