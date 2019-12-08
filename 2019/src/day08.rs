@@ -46,3 +46,43 @@ pub fn part1(input: &[u32]) -> u32 {
 
     dbg!(counts[1]) * dbg!(counts[2])
 }
+
+#[aoc(day8, part2)]
+pub fn part2(input: &[u32]) -> u32 {
+    const IMAGE_WIDTH: usize = 25;
+    const IMAGE_HEIGHT: usize = 6;
+    const IMAGE_SIZE: usize = IMAGE_HEIGHT * IMAGE_WIDTH;
+
+    let layers: Vec<&[u32]> = input.chunks(IMAGE_SIZE).collect();
+
+    const COLOR_BLACK: u32 = 0;
+    const COLOR_WHITE: u32 = 1;
+    const COLOR_TRANSPARENT: u32 = 2;
+
+    let mut image: Vec<u32> = vec![0; IMAGE_SIZE];
+    for (i, pixel) in image.iter_mut().enumerate() {
+        for layer in &layers {
+            let layer_pixel = layer[i];
+            if layer_pixel != COLOR_TRANSPARENT {
+                *pixel = layer_pixel;
+                break;
+            }
+        }
+    }
+
+    for row in image.chunks(IMAGE_WIDTH) {
+        for p in row {
+            // See: https://en.wikipedia.org/wiki/Block_Elements
+            let display = match *p {
+                COLOR_WHITE => "\u{2591}", // Light shade
+                COLOR_BLACK => "\u{2588}", // Full block
+                COLOR_TRANSPARENT => " ",
+                _ => panic!("Invalid pixel: {}", p),
+            };
+            print!("{}", display);
+        }
+        println!("");
+    }
+
+    0
+}
