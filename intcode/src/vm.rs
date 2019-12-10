@@ -158,8 +158,9 @@ impl Vm {
             let additional = usize::saturating_sub(new_mem.len(), self.mem.capacity());
             self.mem.reserve(additional);
             self.mem.set_len(new_mem.len());
-            self.mem.copy_from_slice(new_mem);
         }
+
+        self.mem[..new_mem.len()].copy_from_slice(new_mem);
     }
 
     /// Retrieve the current instruction pointer
@@ -245,8 +246,10 @@ impl Vm {
     /// Returns Ok(self.ip()) if the vm executes `HALT`, otherwise Err() describes what happened.
     pub fn run(&mut self) -> Result<usize, VmStopReason> {
         loop {
-            let header_raw = self.read_atom(self.ip)?;
-            let header = opcodes::Opcode::from_atom(header_raw);
+            let ip_atom = self.read_atom(self.ip)?;
+
+            let header_raw = (ip_atom % 100) as u8;
+            let header = opcodes::Opcode::from_digits(header_raw);
 
             match header {
                 Some(opcodes::Opcode::Add) => {
