@@ -35,6 +35,10 @@ pub enum Opcode {
     /// }
     Equal = 8,
 
+    /// Adjust Relative Base
+    /// arb = arb + [r1]
+    Arb = 9,
+
     /// Stop executing the vm
     Hlt = 99,
 }
@@ -45,6 +49,8 @@ pub enum ParamMode {
     Addr,
     /// The parameter respresents a literal value and should be interpreted as-is
     Imm,
+    /// The parameter represents a value offset from the current "relative base"
+    Relative,
 }
 
 impl ParamMode {
@@ -52,6 +58,7 @@ impl ParamMode {
         match digit {
             0 => Some(ParamMode::Addr),
             1 => Some(ParamMode::Imm),
+            2 => Some(ParamMode::Relative),
             _ => None,
         }
     }
@@ -68,6 +75,7 @@ impl Opcode {
             6 => Some(Opcode::JumpZero),
             7 => Some(Opcode::LessThan),
             8 => Some(Opcode::Equal),
+            9 => Some(Opcode::Arb),
 
             99 => Some(Opcode::Hlt),
             _ => None,

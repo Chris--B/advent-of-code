@@ -6,14 +6,13 @@ use crate::opcodes::{Opcode, ParamMode};
 
 use smallvec::SmallVec;
 
-use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Write;
 
 /// Individual entries in the VM's memory are represented as "atom" types
 /// This can be a signed or unsigned integer of unspecified size.
 /// We pick i64 to make sure have enough values for anything we want.
-pub type Atom = i32;
+pub type Atom = i64;
 
 /// The reason execution has stopped
 ///
@@ -21,18 +20,18 @@ pub type Atom = i32;
 #[derive(Debug, Clone)]
 pub enum VmStopReason {
     /// A `HALT` instruction was executed and exection and will not continue
-    Halted { ip: usize },
+    Halted { ip: Atom },
 
     /// An `IN` instruction was executed and the input buffer is empty
-    BlockedOnInput { ip: usize },
+    BlockedOnInput { ip: Atom },
 
     /// A known instruction was executed with illegal arguments, parameter modes, or some other
     /// invalid config.
     /// The behavior either doesn't make sense or is not well defined and execution cannot continue.
-    IllegalInstruction { ip: usize, what: String },
+    IllegalInstruction { ip: Atom, what: String },
 
     /// The vm attempted to decode an unrecognized opcode and cannot continue
-    UnknownInstruction { ip: usize, what: String },
+    UnknownInstruction { ip: Atom, what: String },
 }
 
 /// Consider stop reasons eqvuilent if they stop:
@@ -54,7 +53,7 @@ impl PartialEq for VmStopReason {
 }
 
 impl VmStopReason {
-    fn mem_out_of_bounds(ip: usize, addr: usize, addr_size: usize, kind: &str) -> VmStopReason {
+    fn mem_out_of_bounds(ip: Atom, addr: Atom, addr_size: usize, kind: &str) -> VmStopReason {
         VmStopReason::IllegalInstruction {
             ip,
             what: format!(
@@ -65,7 +64,7 @@ impl VmStopReason {
     kind:      {},
 }}
 "#,
-                ip, addr as usize, addr_size, kind
+                ip, addr as Atom, addr_size, kind
             ),
         }
     }
@@ -77,12 +76,17 @@ pub struct Vm {
     /// Instruction Pointer
     ///
     /// Points to the Atom offset in memory that the VM is about to execute
-    ip: usize,
+    ip: Atom,
+
+    /// Relative Base
+    ///
+    /// Referenced by parameter modes and opcode 9
+    rb: Atom,
 
     /// Tick count
     ///
     /// This tick is increased by 1 or more everytime an instruction is executed
-    ticks: usize,
+    ticks: Atom,
 
     /// Main Memory for the VM
     ///
@@ -117,8 +121,9 @@ impl Vm {
     /// The vm will begin executing int code at index 0
     pub fn with_memory(mem: Vec<Atom>) -> Vm {
         Vm {
-            ticks: 0,
             ip: 0,
+            rb: 0,
+            ticks: 0,
             mem,
             input_buffer: SmallVec::new(),
             output_buffer: SmallVec::new(),
@@ -131,8 +136,9 @@ impl Vm {
     /// Use this if you expect to call reset() before using the vm.
     pub fn empty() -> Vm {
         Vm {
-            ticks: 0,
             ip: 0,
+            rb: 0,
+            ticks: 0,
             mem: vec![],
             input_buffer: SmallVec::new(),
             output_buffer: SmallVec::new(),
@@ -150,26 +156,30 @@ impl Vm {
         self.input_buffer.clear();
         self.output_buffer.clear();
 
-        // We need to resize `self.mem` so that it exactly matches the size of `new_mem`,
-        // but `Vec::resize()` wastes cycles by inserting some value.
-        // We immediately overwrite that value, and benchmarks show the compiler doesn't catch that.
-        // Therefore, we reserve any additional space we need and and force the length to match
-        // This is generally `unsafe`, but we know that it's safe in this intance.
-        unsafe {
-            let additional = usize::saturating_sub(new_mem.len(), self.mem.capacity());
-            self.mem.reserve(additional);
-            self.mem.set_len(new_mem.len());
+        if self.mem.len() < new_mem.len() {
+            // We need to resize `self.mem` so that it exactly matches the size of `new_mem`,
+            // but `Vec::resize()` wastes cycles by inserting some value.
+            // We immediately overwrite that value, and benchmarks show the compiler doesn't catch that.
+            // Therefore, we reserve any additional space we need and and force the length to match
+            // This is generally `unsafe`, but we know that it's safe in this intance.
+            unsafe {
+                // TODO: Overflow guards!
+                let additional =
+                    Atom::saturating_sub(new_mem.len() as Atom, self.mem.capacity() as Atom);
+                self.mem.reserve(additional as usize);
+                self.mem.set_len(new_mem.len());
+            }
         }
 
         self.mem[..new_mem.len()].copy_from_slice(new_mem);
     }
 
     /// Retrieve the current instruction pointer
-    pub fn ip(&self) -> usize {
+    pub fn ip(&self) -> Atom {
         self.ip
     }
 
-    pub fn ticks(&self) -> usize {
+    pub fn ticks(&self) -> Atom {
         self.ticks
     }
 
@@ -213,53 +223,84 @@ impl Vm {
 
     /// Internal method to read an atom from a vm address
     // Does bounds checking
-    fn read_atom(&self, addr: usize) -> Result<Atom, VmStopReason> {
-        match self.mem.get(addr) {
-            Some(atom) => Ok(*atom),
-            None => Err(VmStopReason::mem_out_of_bounds(
+    fn read_atom(&mut self, addr: Atom) -> Result<Atom, VmStopReason> {
+        if addr >= 0 {
+            let addr = addr as usize;
+
+            if addr >= self.mem.len() {
+                self.mem.resize_with(addr + 1, Atom::default);
+            }
+
+            Ok(self.mem[addr])
+        } else {
+            Err(VmStopReason::mem_out_of_bounds(
                 self.ip,
                 addr,
                 self.mem.len(),
                 "read",
-            )),
+            ))
         }
     }
 
     /// Internal method to write an atom to a vm address
     // Does bounds checking
-    fn write_atom(&mut self, addr: usize, atom: Atom) -> Result<(), VmStopReason> {
-        match self.mem.get_mut(addr) {
-            Some(loc) => {
-                *loc = atom;
-                Ok(())
+    fn write_atom(&mut self, addr: Atom, atom: Atom) -> Result<(), VmStopReason> {
+        if addr >= 0 {
+            let addr = addr as usize;
+
+            if addr >= self.mem.len() {
+                self.mem.resize_with(addr + 1, Atom::default);
             }
-            None => Err(VmStopReason::mem_out_of_bounds(
+
+            self.mem[addr] = atom;
+
+            Ok(())
+        } else {
+            Err(VmStopReason::mem_out_of_bounds(
                 self.ip,
                 addr,
                 self.mem.len(),
                 "write",
-            )),
+            ))
         }
     }
 
     /// Fetches an atom according to the ParamMode
     /// This may result in one or more memory accesses
     fn fetch_param(&mut self, addr: Atom, mode: ParamMode) -> Result<Atom, VmStopReason> {
-        let param = self.read_atom(addr.try_into().unwrap())?;
+        let param = self.read_atom(addr as Atom)?;
 
         match mode {
             // Fetch value from memory
-            ParamMode::Addr => self.read_atom(param as usize),
+            ParamMode::Addr => self.read_atom(param as Atom),
 
             // Use immediate value
             ParamMode::Imm => Ok(param),
+
+            // Fetch value from memory
+            ParamMode::Relative => self.read_atom(param + self.rb),
+        }
+    }
+
+    fn fetch_write_addr(&mut self, addr: Atom, mode: ParamMode) -> Result<Atom, VmStopReason> {
+        let param = self.read_atom(addr as Atom)?;
+
+        match mode {
+            // Fetch value from memory
+            ParamMode::Addr => Ok(param),
+
+            // Use immediate value
+            ParamMode::Imm => panic!("Write params must not be immediate"),
+
+            // Fetch value from memory
+            ParamMode::Relative => Ok(param + self.rb),
         }
     }
 
     /// Run the Vm until it stops
     ///
     /// Returns Ok(self.ip()) if the vm executes `HALT`, otherwise Err() describes what happened.
-    pub fn run(&mut self) -> Result<usize, VmStopReason> {
+    pub fn run(&mut self) -> Result<Atom, VmStopReason> {
         loop {
             self.ticks += 1;
 
@@ -285,49 +326,61 @@ impl Vm {
                 Opcode::Add => {
                     // Fetch input values
                     let a = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     let b = self.fetch_param(
-                        (self.ip + 2) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 2,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     // Fetch output address
-                    let a_out = self.read_atom(self.ip + 3)? as usize;
+                    let a_out = self.fetch_write_addr(
+                        self.ip + 3,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
+                    ip_atom_num /= 10;
 
                     // Write back result
-                    self.write_atom(a_out as usize, a + b)?;
+                    self.write_atom(a_out as Atom, a + b)?;
 
                     self.ip += 4;
                 }
                 Opcode::Mul => {
                     // Fetch input values
                     let a = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     let b = self.fetch_param(
-                        (self.ip + 2) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 2,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     // Fetch output address
-                    let a_out = self.read_atom(self.ip + 3)? as usize;
+                    let a_out = self.fetch_write_addr(
+                        self.ip + 3,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
+                    ip_atom_num /= 10;
 
                     // Write back result
-                    self.write_atom(a_out as usize, a * b)?;
+                    self.write_atom(a_out, a * b)?;
 
                     self.ip += 4;
                 }
                 Opcode::In => {
-                    let a_out = self.read_atom(self.ip + 1)? as usize;
+                    let a_out = self.fetch_write_addr(
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
+                    ip_atom_num /= 10;
 
                     if self.input_buffer.is_empty() {
                         return Err(VmStopReason::BlockedOnInput { ip: self.ip });
@@ -345,8 +398,8 @@ impl Vm {
                 Opcode::Out => {
                     // Fetch value to output
                     let a0 = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
@@ -357,18 +410,15 @@ impl Vm {
                 }
                 Opcode::JumpNonzero => {
                     let arg = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
-                    let target = self
-                        .fetch_param(
-                            (self.ip + 2) as i32,
-                            ParamMode::from_digit(ip_atom_num % 10).unwrap(),
-                        )?
-                        .try_into()
-                        .expect("invalid addr");
+                    let target = self.fetch_param(
+                        self.ip + 2,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
                     ip_atom_num /= 10;
 
                     if arg != 0 {
@@ -379,18 +429,15 @@ impl Vm {
                 }
                 Opcode::JumpZero => {
                     let arg = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
-                    let target = self
-                        .fetch_param(
-                            (self.ip + 2) as i32,
-                            ParamMode::from_digit(ip_atom_num % 10).unwrap(),
-                        )?
-                        .try_into()
-                        .expect("invalid addr");
+                    let target = self.fetch_param(
+                        self.ip + 2,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
                     ip_atom_num /= 10;
 
                     if arg == 0 {
@@ -402,53 +449,71 @@ impl Vm {
                 Opcode::LessThan => {
                     // Fetch input values
                     let a = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     let b = self.fetch_param(
-                        (self.ip + 2) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 2,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     // Fetch output address
-                    let a_out = self.read_atom(self.ip + 3)? as usize;
+                    let a_out = self.fetch_write_addr(
+                        self.ip + 3,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
+                    ip_atom_num /= 10;
 
                     // Write back result
-                    self.write_atom(a_out as usize, if a < b { 1 } else { 0 })?;
+                    self.write_atom(a_out, if a < b { 1 } else { 0 })?;
 
                     self.ip += 4;
                 }
                 Opcode::Equal => {
                     // Fetch input values
                     let a = self.fetch_param(
-                        (self.ip + 1) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     let b = self.fetch_param(
-                        (self.ip + 2) as i32,
-                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        self.ip + 2,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
                     )?;
                     ip_atom_num /= 10;
 
                     // Fetch output address
-                    let a_out = self.read_atom(self.ip + 3)? as usize;
+                    let a_out = self.fetch_write_addr(
+                        self.ip + 3,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
+                    ip_atom_num /= 10;
 
                     // Write back result
-                    self.write_atom(a_out as usize, if a == b { 1 } else { 0 })?;
+                    self.write_atom(a_out as Atom, if a == b { 1 } else { 0 })?;
 
                     self.ip += 4;
+                }
+                Opcode::Arb => {
+                    let a = self.fetch_param(
+                        self.ip + 1,
+                        ParamMode::from_digit(ip_atom_num % 10).expect("Bad parammode"),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    self.rb += a;
+                    self.ip += 2;
                 }
                 Opcode::Hlt => return Ok(self.ip),
             }
 
             assert_eq!(
                 ip_atom_num, 0,
-                "{:?} ({}) didn't use all of its param modes",
+                "\"{:?}\" ({}) didn't use all of its param modes",
                 opcode, ip_atom
             );
         }
@@ -853,5 +918,22 @@ mod day_05 {
             &[12111395],
             "vm output didn't match expected output"
         );
+    }
+}
+
+#[cfg(test)]
+mod day_09 {
+    use super::*;
+
+    #[test]
+    fn check_quine() {
+        let quine = &[
+            109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99,
+        ];
+
+        let mut vm = Vm::with_memory_from_slice(quine);
+
+        assert_eq!(vm.run(), Ok(15));
+        assert_eq!(vm.get_output(), quine);
     }
 }
