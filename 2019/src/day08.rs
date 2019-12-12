@@ -73,7 +73,7 @@ pub fn part2(input: &[u32]) -> Result<String, std::fmt::Error> {
     }
 
     let mut output = String::new();
-    write!(output, "\n")?;
+    writeln!(output)?;
 
     for row in image.chunks(IMAGE_WIDTH) {
         for p in row {
@@ -86,7 +86,7 @@ pub fn part2(input: &[u32]) -> Result<String, std::fmt::Error> {
             };
             write!(output, "{}", display)?;
         }
-        writeln!(output, )?;
+        writeln!(output,)?;
     }
 
     Ok(output)
