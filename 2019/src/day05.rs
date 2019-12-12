@@ -1,5 +1,7 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
+use intcode::vm::Vm;
+
 pub const OP_ADD: i32 = 1;
 pub const OP_MUL: i32 = 2;
 
@@ -174,6 +176,9 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
     }
 }
 
+const INPUT_CODE_AC: i32 = 1;
+const INPUT_CODE_TRC: i32 = 5;
+
 #[aoc_generator(day5)]
 pub fn parse_intcode(input: &str) -> Vec<i32> {
     input
@@ -187,12 +192,24 @@ pub fn parse_intcode(input: &str) -> Vec<i32> {
 #[allow(clippy::ptr_arg)]
 pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
     let mut intcode = intcode.clone();
-    let input = [1]; // 1 for AC
+    let input = [INPUT_CODE_AC];
     let mut output: Vec<i32> = vec![];
 
     run_intcode(&mut intcode, &input, &mut output);
 
-    *output.last().expect("No oputput?")
+    *output.last().expect("No output?")
+}
+
+#[aoc(day5, part1, new_vm)]
+#[allow(clippy::ptr_arg)]
+pub fn p1_newvm(intcode: &Vec<i32>) -> i32 {
+    let mut vm = Vm::with_memory_from_slice(&intcode);
+    vm.add_input(INPUT_CODE_AC);
+
+    let why = vm.run();
+    why.unwrap();
+
+    *vm.get_output().last().expect("No output?")
 }
 
 #[cfg(test)]
@@ -219,10 +236,22 @@ fn check_branch_inst() {
 #[allow(clippy::ptr_arg)]
 pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
     let mut intcode = intcode.clone();
-    let input = [5]; // 5 for termal radiator controller
+    let input = [INPUT_CODE_TRC];
     let mut output: Vec<i32> = vec![];
 
     run_intcode(&mut intcode, &input, &mut output);
 
-    *output.last().expect("No oputput?")
+    *output.last().expect("No output?")
+}
+
+#[aoc(day5, part2, new_vm)]
+#[allow(clippy::ptr_arg)]
+pub fn p2_newvm(intcode: &Vec<i32>) -> i32 {
+    let mut vm = Vm::with_memory_from_slice(&intcode);
+    vm.add_input(INPUT_CODE_TRC);
+
+    let why = vm.run();
+    why.unwrap();
+
+    *vm.get_output().last().expect("No output?")
 }
