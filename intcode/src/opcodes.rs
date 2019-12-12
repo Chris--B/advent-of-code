@@ -10,12 +10,30 @@ pub enum Opcode {
     Add = 1,
     /// [r3] = [r1] * [r2]
     Mul = 2,
-
     /// [r1] = <user-input>
     In = 3,
-
     /// <user-output> from [r1]
     Out = 4,
+
+    /// if [r1] != 0 { ip = r2 }
+    JumpNonzero = 5,
+
+    /// if [r1] == 0 { ip = r2 }
+    JumpZero = 6,
+
+    /// if [r1] < [r2] {
+    ///     [r3] = 1
+    /// } else {
+    ///     r[3] = 0
+    /// }
+    LessThan = 7,
+
+    /// if [r1] == [r2] {
+    ///     [r3] = 1
+    /// } else {
+    ///     r[3] = 0
+    /// }
+    Equal = 8,
 
     /// Stop executing the vm
     Hlt = 99,
@@ -44,9 +62,12 @@ impl Opcode {
         match digits {
             1 => Some(Opcode::Add),
             2 => Some(Opcode::Mul),
-
             3 => Some(Opcode::In),
             4 => Some(Opcode::Out),
+            5 => Some(Opcode::JumpNonzero),
+            6 => Some(Opcode::JumpZero),
+            7 => Some(Opcode::LessThan),
+            8 => Some(Opcode::Equal),
 
             99 => Some(Opcode::Hlt),
             _ => None,

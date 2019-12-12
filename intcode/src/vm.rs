@@ -2,9 +2,11 @@
 //!
 //! This module implements a virtual machine to execute and manage intcode
 //! programs
+use crate::opcodes::{Opcode, ParamMode};
 
 use smallvec::SmallVec;
 
+use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Write;
 
@@ -240,140 +242,91 @@ impl Vm {
         }
     }
 
+    /// Fetches an atom according to the ParamMode
+    /// This may result in one or more memory accesses
+    fn fetch_param(&mut self, addr: Atom, mode: ParamMode) -> Result<Atom, VmStopReason> {
+        let param = self.read_atom(addr.try_into().unwrap())?;
+
+        match mode {
+            // Fetch value from memory
+            ParamMode::Addr => self.read_atom(param as usize),
+
+            // Use immediate value
+            ParamMode::Imm => Ok(param),
+        }
+    }
+
     /// Run the Vm until it stops
     ///
     /// Returns Ok(self.ip()) if the vm executes `HALT`, otherwise Err() describes what happened.
     pub fn run(&mut self) -> Result<usize, VmStopReason> {
-        use crate::opcodes::{Opcode, ParamMode};
-
         loop {
             self.ticks += 1;
 
             let ip_atom = self.read_atom(self.ip)?;
-            let opcode = Opcode::from_digits(ip_atom % 100);
+            let opcode = match Opcode::from_digits(ip_atom % 100) {
+                Some(opcode) => opcode,
+                None => {
+                    return Err(VmStopReason::UnknownInstruction {
+                        ip: self.ip,
+                        what: format!(
+                            "Unrecognized opcode header at address {}: {:?}",
+                            self.ip, ip_atom
+                        ),
+                    });
+                }
+            };
 
             // Instruction decoding can iteratively "strip" away values from this as it parses
             // the packed data - e.g. param modes.
             let mut ip_atom_num = ip_atom / 100;
 
             match opcode {
-                Some(Opcode::Add) => {
+                Opcode::Add => {
                     // Fetch input values
-                    let args: (Atom, Atom) = {
-                        // Extract param values
-                        let a0 = {
-                            let p0 = self.read_atom(self.ip + 1)?;
-                            let m0 = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                            ip_atom_num /= 10;
+                    let a = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
 
-                            match m0 {
-                                // Fetch value from memory
-                                ParamMode::Addr => self.read_atom(p0 as usize)?,
+                    let b = self.fetch_param(
+                        (self.ip + 2) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
 
-                                // Use immediate value
-                                ParamMode::Imm => p0,
-                            }
-                        };
-
-                        let a1 = {
-                            let p1 = self.read_atom(self.ip + 2)?;
-                            let m1 = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                            ip_atom_num /= 10;
-
-                            match m1 {
-                                // Fetch value from memory
-                                ParamMode::Addr => self.read_atom(p1 as usize)?,
-
-                                // Use immediate value
-                                ParamMode::Imm => p1,
-                            }
-                        };
-
-                        (a0, a1)
-                    };
-
-                    // Verify that the output ParamMode is valid
-                    #[cfg(debug_assertions)]
-                    {
-                        let mode = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                        ip_atom_num /= 10;
-                        if mode == ParamMode::Imm {
-                            return Err(VmStopReason::IllegalInstruction {
-                                ip: self.ip,
-                                what: format!(
-                                    "Opcode {:?} at {} used illegal \"Imm\" mode on writeout param",
-                                    opcode, self.ip
-                                ),
-                            });
-                        }
-                    }
                     // Fetch output address
-                    let a_out = self.read_atom(self.ip + 3)?;
+                    let a_out = self.read_atom(self.ip + 3)? as usize;
 
                     // Write back result
-                    self.write_atom(a_out as usize, args.0 + args.1)?;
+                    self.write_atom(a_out as usize, a + b)?;
 
                     self.ip += 4;
                 }
-                Some(Opcode::Mul) => {
+                Opcode::Mul => {
                     // Fetch input values
-                    let args: (Atom, Atom) = {
-                        // Extract param values
-                        let a0 = {
-                            let p0 = self.read_atom(self.ip + 1)?;
-                            let m0 = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                            ip_atom_num /= 10;
+                    let a = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
 
-                            match m0 {
-                                // Fetch value from memory
-                                ParamMode::Addr => self.read_atom(p0 as usize)?,
+                    let b = self.fetch_param(
+                        (self.ip + 2) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
 
-                                // Use immediate value
-                                ParamMode::Imm => p0,
-                            }
-                        };
-
-                        let a1 = {
-                            let p1 = self.read_atom(self.ip + 2)?;
-                            let m1 = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                            ip_atom_num /= 10;
-
-                            match m1 {
-                                // Fetch value from memory
-                                ParamMode::Addr => self.read_atom(p1 as usize)?,
-
-                                // Use immediate value
-                                ParamMode::Imm => p1,
-                            }
-                        };
-
-                        (a0, a1)
-                    };
-
-                    // Verify that the output ParamMode is valid
-                    #[cfg(debug_assertions)]
-                    {
-                        let mode = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                        ip_atom_num /= 10;
-                        if mode == ParamMode::Imm {
-                            return Err(VmStopReason::IllegalInstruction {
-                                ip: self.ip,
-                                what: format!(
-                                    "Opcode {:?} at {} used illegal \"Imm\" mode on writeout param",
-                                    opcode, self.ip
-                                ),
-                            });
-                        }
-                    }
                     // Fetch output address
-                    let a_out = self.read_atom(self.ip + 3)?;
+                    let a_out = self.read_atom(self.ip + 3)? as usize;
 
                     // Write back result
-                    self.write_atom(a_out as usize, args.0 * args.1)?;
+                    self.write_atom(a_out as usize, a * b)?;
 
                     self.ip += 4;
                 }
-                Some(Opcode::In) => {
+                Opcode::In => {
                     let a_out = self.read_atom(self.ip + 1)? as usize;
 
                     if self.input_buffer.is_empty() {
@@ -389,44 +342,114 @@ impl Vm {
 
                     self.ip += 2;
                 }
-
-                Some(Opcode::Out) => {
+                Opcode::Out => {
                     // Fetch value to output
-                    let a0 = {
-                        let p0 = self.read_atom(self.ip + 1)?;
-                        let m0 = ParamMode::from_digit(ip_atom_num % 10).unwrap();
-                        ip_atom_num /= 10;
-
-                        match m0 {
-                            // Fetch value from memory
-                            ParamMode::Addr => self.read_atom(p0 as usize)?,
-
-                            // Use immediate value
-                            ParamMode::Imm => p0,
-                        }
-                    };
+                    let a0 = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
 
                     // Write to "output"
                     self.output_buffer.push(a0);
 
                     self.ip += 2;
                 }
-                Some(Opcode::Hlt) => return Ok(self.ip),
-                None => {
-                    return Err(VmStopReason::UnknownInstruction {
-                        ip: self.ip,
-                        what: format!(
-                            "Unrecognized opcode header at address {}: {:?}",
-                            self.ip, opcode
-                        ),
-                    })
+                Opcode::JumpNonzero => {
+                    let arg = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    let target = self
+                        .fetch_param(
+                            (self.ip + 2) as i32,
+                            ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        )?
+                        .try_into()
+                        .expect("invalid addr");
+                    ip_atom_num /= 10;
+
+                    if arg != 0 {
+                        self.ip = target;
+                    } else {
+                        self.ip += 3;
+                    }
                 }
+                Opcode::JumpZero => {
+                    let arg = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    let target = self
+                        .fetch_param(
+                            (self.ip + 2) as i32,
+                            ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                        )?
+                        .try_into()
+                        .expect("invalid addr");
+                    ip_atom_num /= 10;
+
+                    if arg == 0 {
+                        self.ip = target;
+                    } else {
+                        self.ip += 3;
+                    }
+                }
+                Opcode::LessThan => {
+                    // Fetch input values
+                    let a = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    let b = self.fetch_param(
+                        (self.ip + 2) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    // Fetch output address
+                    let a_out = self.read_atom(self.ip + 3)? as usize;
+
+                    // Write back result
+                    self.write_atom(a_out as usize, if a < b { 1 } else { 0 })?;
+
+                    self.ip += 4;
+                }
+                Opcode::Equal => {
+                    // Fetch input values
+                    let a = self.fetch_param(
+                        (self.ip + 1) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    let b = self.fetch_param(
+                        (self.ip + 2) as i32,
+                        ParamMode::from_digit(ip_atom_num % 10).unwrap(),
+                    )?;
+                    ip_atom_num /= 10;
+
+                    // Fetch output address
+                    let a_out = self.read_atom(self.ip + 3)? as usize;
+
+                    // Write back result
+                    self.write_atom(a_out as usize, if a == b { 1 } else { 0 })?;
+
+                    self.ip += 4;
+                }
+                Opcode::Hlt => return Ok(self.ip),
             }
 
             assert_eq!(
                 ip_atom_num, 0,
-                "opcode {:?} didn't use all of its param modes",
-                opcode
+                "{:?} ({}) didn't use all of its param modes",
+                opcode, ip_atom
             );
         }
     }
@@ -645,6 +668,126 @@ mod day_05 {
     }
 
     #[test]
+    fn check_equal_pass_position_mode() {
+        let intcode = vec![3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(8);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[1]);
+    }
+
+    #[test]
+    fn check_less_pass_position_mode() {
+        let intcode = vec![3, 9, 7, 9, 10, 9, 4, 9, 99, -1, 8];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(7);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[1]);
+    }
+
+    #[test]
+    fn check_equal_pass_immediate_mode() {
+        let intcode = vec![3, 3, 1108, -1, 8, 3, 4, 3, 99];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(8);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[1]);
+    }
+
+    #[test]
+    fn check_less_pass_immediate_mode() {
+        let intcode = vec![3, 3, 1107, -1, 8, 3, 4, 3, 99];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(7);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[1]);
+    }
+
+    #[test]
+    fn check_equal_fail_position_mode() {
+        let intcode = vec![3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(80);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[0]);
+    }
+
+    #[test]
+    fn check_less_fail_position_mode() {
+        let intcode = vec![3, 9, 7, 9, 10, 9, 4, 9, 99, -1, 8];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(70);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[0]);
+    }
+
+    #[test]
+    fn check_equal_fail_immediate_mode() {
+        let intcode = vec![3, 3, 1108, -1, 8, 3, 4, 3, 99];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(80);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[0]);
+    }
+
+    #[test]
+    fn check_less_fail_immediate_mode() {
+        let intcode = vec![3, 3, 1107, -1, 8, 3, 4, 3, 99];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(70);
+        assert_eq!(vm.run(), Ok(8));
+        assert_eq!(vm.get_output(), &[0]);
+    }
+
+    #[test]
+    fn check_jump_nonzero_position_mode() {
+        let intcode = vec![3, 12, 6, 12, 15, 1, 13, 14, 13, 4, 13, 99, -1, 0, 1, 9];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(-1);
+        assert_eq!(vm.run(), Ok(11));
+        assert_eq!(vm.get_output(), &[1]);
+    }
+
+    #[test]
+    fn check_jump_zero_position_mode() {
+        let intcode = vec![3, 12, 6, 12, 15, 1, 13, 14, 13, 4, 13, 99, -1, 0, 1, 9];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(0);
+        assert_eq!(vm.run(), Ok(11));
+        assert_eq!(vm.get_output(), &[0]);
+    }
+
+    #[test]
+    fn check_jump_nonzero_immediate_mode() {
+        let intcode = vec![3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(-1);
+        assert_eq!(vm.run(), Ok(11));
+        assert_eq!(vm.get_output(), &[1]);
+    }
+
+    #[test]
+    fn check_jump_zero_immediate_mode() {
+        let intcode = vec![3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1];
+
+        let mut vm = Vm::with_memory(intcode);
+        vm.add_input(0);
+        assert_eq!(vm.run(), Ok(11));
+        assert_eq!(vm.get_output(), &[0]);
+    }
+
+    #[test]
     fn check_part2_input() {
         let intcode = vec![
             3, 225, 1, 225, 6, 6, 1100, 1, 238, 225, 104, 0, 101, 20, 183, 224, 101, -63, 224, 224,
@@ -701,13 +844,13 @@ mod day_05 {
         let why = vm.run();
         assert_eq!(
             why,
-            Ok(222),
+            Ok(676),
             "vm finished executing at an unexpected address"
         );
 
         assert_eq!(
             vm.get_output(),
-            &[0, 0, 0, 0, 0, 0, 0, 0, 0, 12111395],
+            &[12111395],
             "vm output didn't match expected output"
         );
     }
