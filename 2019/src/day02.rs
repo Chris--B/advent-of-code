@@ -1,15 +1,15 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
 #[aoc_generator(day2)]
-pub fn parse_intcode(input: &str) -> Vec<i32> {
+pub fn parse_intcode(input: &str) -> Vec<i64> {
     input
         .split(',')
-        .map(|line| line.trim().parse::<i32>().unwrap())
+        .map(|line| line.trim().parse::<i64>().unwrap())
         .collect()
 }
 
 #[aoc(day2, part1)]
-pub fn p1_simple(input: &[i32]) -> i32 {
+pub fn p1_simple(input: &[i64]) -> i64 {
     let mut mem = vec![0; input.len()];
     mem.copy_from_slice(input);
 
@@ -21,10 +21,10 @@ pub fn p1_simple(input: &[i32]) -> i32 {
     mem[0]
 }
 
-fn run_intcode(mem: &mut [i32]) {
-    const OP_ADD: i32 = 1;
-    const OP_MUL: i32 = 2;
-    const OP_HLT: i32 = 99;
+fn run_intcode(mem: &mut [i64]) {
+    const OP_ADD: i64 = 1;
+    const OP_MUL: i64 = 2;
+    const OP_HLT: i64 = 99;
 
     let mut ip: usize = 0;
 
@@ -69,10 +69,10 @@ fn check_intcode_runner() {
 }
 
 #[allow(clippy::inconsistent_digit_grouping)]
-const MOON_LANDING: i32 = 1969_07_20;
+const MOON_LANDING: i64 = 1969_07_20;
 
 #[aoc(day2, part2, bruteforce)]
-pub fn p2_simple(input: &[i32]) -> i32 {
+pub fn p2_simple(input: &[i64]) -> i64 {
     let mut mem = vec![0; input.len()];
 
     for noun in 0..=99 {
@@ -94,14 +94,14 @@ pub fn p2_simple(input: &[i32]) -> i32 {
 }
 
 #[aoc(day2, part2, analytic)]
-pub fn p2_analytic(input: &[i32]) -> i32 {
+pub fn p2_analytic(input: &[i64]) -> i64 {
     // It can be observed that this program acts as a linear function of
     // its `noun` and `verb` inputs and an unknown constant:
     //
     //   X * n + Y * v + b == VALUE
     //
 
-    fn run_sim(noun: i32, verb: i32, input: &[i32]) -> i32 {
+    fn run_sim(noun: i64, verb: i64, input: &[i64]) -> i64 {
         let mut mem = vec![0; input.len()];
         mem.copy_from_slice(input);
 
@@ -124,7 +124,7 @@ pub fn p2_analytic(input: &[i32]) -> i32 {
 }
 
 #[aoc(day2, part1, new_vm)]
-pub fn p1_new_vm(input: &[i32]) -> i32 {
+pub fn p1_new_vm(input: &[i64]) -> i64 {
     let mut vm = intcode::vm::Vm::with_memory_from_slice(input);
 
     vm.mem_mut()[1] = 12;
@@ -136,7 +136,7 @@ pub fn p1_new_vm(input: &[i32]) -> i32 {
 }
 
 #[aoc(day2, part2, new_vm)]
-pub fn p2_new_vm(input: &[i32]) -> i32 {
+pub fn p2_new_vm(input: &[i64]) -> i64 {
     let mut vm = intcode::vm::Vm::empty();
 
     for noun in 0..=99 {

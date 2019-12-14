@@ -2,32 +2,32 @@ use aoc_runner_derive::{aoc, aoc_generator};
 
 use itertools::Itertools;
 
-pub const OP_ADD: i32 = 1;
-pub const OP_MUL: i32 = 2;
+pub const OP_ADD: i64 = 1;
+pub const OP_MUL: i64 = 2;
 
-pub const OP_IN: i32 = 3;
-pub const OP_OUT: i32 = 4;
+pub const OP_IN: i64 = 3;
+pub const OP_OUT: i64 = 4;
 
-pub const OP_JN: i32 = 5;
-pub const OP_JZ: i32 = 6;
-pub const OP_LT: i32 = 7;
-pub const OP_EQ: i32 = 8;
+pub const OP_JN: i64 = 5;
+pub const OP_JZ: i64 = 6;
+pub const OP_LT: i64 = 7;
+pub const OP_EQ: i64 = 8;
 
-pub const OP_HLT: i32 = 99;
+pub const OP_HLT: i64 = 99;
 
-pub const PM_POS: i32 = 0;
-pub const PM_IMM: i32 = 1;
+pub const PM_POS: i64 = 0;
+pub const PM_IMM: i64 = 1;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Op {
-    code: i32,
-    pm_arg0: i32,
-    pm_arg1: i32,
-    pm_arg2: i32,
+    code: i64,
+    pm_arg0: i64,
+    pm_arg1: i64,
+    pm_arg2: i64,
 }
 
 impl Op {
-    pub fn decode(num: i32) -> Op {
+    pub fn decode(num: i64) -> Op {
         let mut num = num;
 
         let code = num % 100;
@@ -64,10 +64,10 @@ fn check_op_decode() {
     );
 }
 
-pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output: &mut Vec<i32>) {
+pub fn run_intcode(mem: &mut [i64], mut input: impl Iterator<Item = i64>, output: &mut Vec<i64>) {
     let mut ip: usize = 0;
 
-    fn load_param(mem: &[i32], pm: i32, param: i32) -> i32 {
+    fn load_param(mem: &[i64], pm: i64, param: i64) -> i64 {
         match pm {
             PM_POS => {
                 assert!(param >= 0);
@@ -78,7 +78,7 @@ pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output
         }
     }
 
-    fn write_param(mem: &mut [i32], pm: i32, param: i32, value: i32) {
+    fn write_param(mem: &mut [i64], pm: i64, param: i64, value: i64) {
         match pm {
             PM_POS => {
                 assert!(param >= 0);
@@ -112,8 +112,6 @@ pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output
                 ip += 4;
             }
             OP_IN => {
-                dbg!(&output);
-
                 // Read from input
                 let value = input
                     .next()
@@ -181,20 +179,19 @@ pub fn run_intcode(mem: &mut [i32], mut input: impl Iterator<Item = i32>, output
 }
 
 #[allow(clippy::ptr_arg)]
-fn exec_amp(intcode: &Vec<i32>, phase: i32, signal: i32) -> i32 {
+fn exec_amp(intcode: &Vec<i64>, phase: i64, signal: i64) -> i64 {
     let mut intcode = intcode.clone();
-    let mut output: Vec<i32> = vec![];
+    let mut output: Vec<i64> = vec![];
 
     let input = [phase, signal];
 
     run_intcode(&mut intcode, input.iter().cloned(), &mut output);
 
-    // assert!(output.len() == 1);
     output[0]
 }
 
 #[allow(clippy::ptr_arg)]
-fn exec_phase_seq(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
+fn exec_phase_seq(intcode: &Vec<i64>, phases: &[i64]) -> i64 {
     let mut signal = 0;
 
     // A
@@ -227,7 +224,7 @@ fn check_example_1_1() {
 }
 
 #[allow(clippy::ptr_arg)]
-fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
+fn _exec_phase_seq_2(intcode: &Vec<i64>, phases: &[i64]) -> i64 {
     let mut signal = 0;
 
     let mut intcodes = [
@@ -241,7 +238,7 @@ fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     // A
     println!("A");
     signal = {
-        let mut output: Vec<i32> = vec![];
+        let mut output: Vec<i64> = vec![];
         let input = [phases[0], signal];
         run_intcode(&mut intcodes[0], input.iter().cloned(), &mut output);
         output[0]
@@ -250,7 +247,7 @@ fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     // B
     println!("B");
     signal = {
-        let mut output: Vec<i32> = vec![];
+        let mut output: Vec<i64> = vec![];
         let input = [phases[1], signal];
         run_intcode(&mut intcodes[1], input.iter().cloned(), &mut output);
         output[0]
@@ -259,7 +256,7 @@ fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     // C
     println!("C");
     signal = {
-        let mut output: Vec<i32> = vec![];
+        let mut output: Vec<i64> = vec![];
         let input = [phases[2], signal];
         run_intcode(&mut intcodes[2], input.iter().cloned(), &mut output);
         output[0]
@@ -268,7 +265,7 @@ fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     // D
     println!("D");
     signal = {
-        let mut output: Vec<i32> = vec![];
+        let mut output: Vec<i64> = vec![];
         let input = [phases[3], signal];
         run_intcode(&mut intcodes[3], input.iter().cloned(), &mut output);
         output[0]
@@ -277,7 +274,7 @@ fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     // E
     println!("E");
     signal = {
-        let mut output: Vec<i32> = vec![];
+        let mut output: Vec<i64> = vec![];
         let input = [phases[4], signal];
         run_intcode(&mut intcodes[4], input.iter().cloned(), &mut output);
         output[0]
@@ -286,20 +283,8 @@ fn _exec_phase_seq_2(intcode: &Vec<i32>, phases: &[i32]) -> i32 {
     signal
 }
 
-#[cfg(test)]
-#[test]
-fn check_example_2_1() {
-    let intcode = vec![
-        3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1, 28,
-        1005, 28, 6, 99, 0, 0, 5,
-    ];
-    let phases = [9, 8, 7, 6, 5];
-
-    // assert_eq!(exec_phase_seq_2(&intcode, &phases), 139_629_729);
-}
-
 #[aoc_generator(day7)]
-pub fn parse_intcode(input: &str) -> Vec<i32> {
+pub fn parse_intcode(input: &str) -> Vec<i64> {
     input
         .trim()
         .split(',')
@@ -309,18 +294,8 @@ pub fn parse_intcode(input: &str) -> Vec<i32> {
 
 #[aoc(day7, part1)]
 #[allow(clippy::ptr_arg)]
-pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
+pub fn p1_simple(intcode: &Vec<i64>) -> i64 {
     (0..=4)
-        .permutations(5)
-        .map(|p| exec_phase_seq(intcode, &p))
-        .max()
-        .expect("No permutations?")
-}
-
-#[aoc(day7, part2)]
-#[allow(clippy::ptr_arg)]
-pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
-    (5..=9)
         .permutations(5)
         .map(|p| exec_phase_seq(intcode, &p))
         .max()

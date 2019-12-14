@@ -2,32 +2,32 @@ use aoc_runner_derive::{aoc, aoc_generator};
 
 use intcode::vm::Vm;
 
-pub const OP_ADD: i32 = 1;
-pub const OP_MUL: i32 = 2;
+pub const OP_ADD: i64 = 1;
+pub const OP_MUL: i64 = 2;
 
-pub const OP_IN: i32 = 3;
-pub const OP_OUT: i32 = 4;
+pub const OP_IN: i64 = 3;
+pub const OP_OUT: i64 = 4;
 
-pub const OP_JN: i32 = 5;
-pub const OP_JZ: i32 = 6;
-pub const OP_LT: i32 = 7;
-pub const OP_EQ: i32 = 8;
+pub const OP_JN: i64 = 5;
+pub const OP_JZ: i64 = 6;
+pub const OP_LT: i64 = 7;
+pub const OP_EQ: i64 = 8;
 
-pub const OP_HLT: i32 = 99;
+pub const OP_HLT: i64 = 99;
 
-pub const PM_POS: i32 = 0;
-pub const PM_IMM: i32 = 1;
+pub const PM_POS: i64 = 0;
+pub const PM_IMM: i64 = 1;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Op {
-    code: i32,
-    pm_arg0: i32,
-    pm_arg1: i32,
-    pm_arg2: i32,
+    code: i64,
+    pm_arg0: i64,
+    pm_arg1: i64,
+    pm_arg2: i64,
 }
 
 impl Op {
-    pub fn decode(num: i32) -> Op {
+    pub fn decode(num: i64) -> Op {
         let mut num = num;
 
         let code = num % 100;
@@ -64,10 +64,10 @@ fn check_op_decode() {
     );
 }
 
-pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
+pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
     let mut ip: usize = 0;
 
-    fn load_param(mem: &[i32], pm: i32, param: i32) -> i32 {
+    fn load_param(mem: &[i64], pm: i64, param: i64) -> i64 {
         match pm {
             PM_POS => {
                 assert!(param >= 0);
@@ -78,7 +78,7 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
         }
     }
 
-    fn write_param(mem: &mut [i32], pm: i32, param: i32, value: i32) {
+    fn write_param(mem: &mut [i64], pm: i64, param: i64, value: i64) {
         match pm {
             PM_POS => {
                 assert!(param >= 0);
@@ -176,11 +176,11 @@ pub fn run_intcode(mem: &mut [i32], input: &[i32], output: &mut Vec<i32>) {
     }
 }
 
-const INPUT_CODE_AC: i32 = 1;
-const INPUT_CODE_TRC: i32 = 5;
+const INPUT_CODE_AC: i64 = 1;
+const INPUT_CODE_TRC: i64 = 5;
 
 #[aoc_generator(day5)]
-pub fn parse_intcode(input: &str) -> Vec<i32> {
+pub fn parse_intcode(input: &str) -> Vec<i64> {
     input
         .trim()
         .split(',')
@@ -190,10 +190,10 @@ pub fn parse_intcode(input: &str) -> Vec<i32> {
 
 #[aoc(day5, part1)]
 #[allow(clippy::ptr_arg)]
-pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
+pub fn p1_simple(intcode: &Vec<i64>) -> i64 {
     let mut intcode = intcode.clone();
     let input = [INPUT_CODE_AC];
-    let mut output: Vec<i32> = vec![];
+    let mut output: Vec<i64> = vec![];
 
     run_intcode(&mut intcode, &input, &mut output);
 
@@ -202,7 +202,7 @@ pub fn p1_simple(intcode: &Vec<i32>) -> i32 {
 
 #[aoc(day5, part1, new_vm)]
 #[allow(clippy::ptr_arg)]
-pub fn p1_newvm(intcode: &Vec<i32>) -> i32 {
+pub fn p1_newvm(intcode: &Vec<i64>) -> i64 {
     let mut vm = Vm::with_memory_from_slice(&intcode);
     vm.add_input(INPUT_CODE_AC);
 
@@ -234,10 +234,10 @@ fn check_branch_inst() {
 
 #[aoc(day5, part2)]
 #[allow(clippy::ptr_arg)]
-pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
+pub fn p2_simple(intcode: &Vec<i64>) -> i64 {
     let mut intcode = intcode.clone();
     let input = [INPUT_CODE_TRC];
-    let mut output: Vec<i32> = vec![];
+    let mut output: Vec<i64> = vec![];
 
     run_intcode(&mut intcode, &input, &mut output);
 
@@ -246,7 +246,7 @@ pub fn p2_simple(intcode: &Vec<i32>) -> i32 {
 
 #[aoc(day5, part2, new_vm)]
 #[allow(clippy::ptr_arg)]
-pub fn p2_newvm(intcode: &Vec<i32>) -> i32 {
+pub fn p2_newvm(intcode: &Vec<i64>) -> i64 {
     let mut vm = Vm::with_memory_from_slice(&intcode);
     vm.add_input(INPUT_CODE_TRC);
 

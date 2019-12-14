@@ -2,16 +2,16 @@ use aoc_runner_derive::{aoc, aoc_generator};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Point {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
 }
 
 impl Point {
-    fn xy(x: i32, y: i32) -> Point {
+    fn xy(x: i64, y: i64) -> Point {
         Point { x, y }
     }
 
-    fn manhattan(self) -> i32 {
+    fn manhattan(self) -> i64 {
         self.x.abs() + self.y.abs()
     }
 }
@@ -87,7 +87,7 @@ fn parse_line(line: &str) -> Wire {
 
     for turn in line.split(',') {
         let dir = turn.chars().nth(0).unwrap();
-        let dist: i32 = turn[1..].parse().unwrap();
+        let dist: i64 = turn[1..].parse().unwrap();
         assert!(dist != 0);
 
         let (dx, dy) = match dir {
@@ -125,7 +125,7 @@ pub fn parse_input(input: &str) -> (Wire, Wire) {
 }
 
 #[aoc(day3, part1)]
-pub fn p1_simple(input: &(Wire, Wire)) -> i32 {
+pub fn p1_simple(input: &(Wire, Wire)) -> i64 {
     Wire::intersection(&input.0, &input.1)
         .map(|p| p.manhattan())
         .min()

@@ -128,20 +128,6 @@ pub fn p1_simple(range: &(u32, u32)) -> usize {
         stage.clear();
     }
 
-    #[cfg(debug_assertions)]
-    {
-        dbg!(lo);
-        dbg!(hi);
-        for pwd in tasks.iter().filter(|pwd| pwd.check()).take(10) {
-            let text = pwd
-                .pwd
-                .iter()
-                .map(|byte| format!("{}", byte))
-                .collect::<String>();
-            eprintln!("{}", text);
-        }
-    }
-
     tasks.iter().filter(|pwd| pwd.check()).count()
 }
 
