@@ -221,6 +221,16 @@ impl Vm {
         &self.output_buffer
     }
 
+    /// Take pending output values
+    ///
+    /// This removes output values from the internal buffer, so that `get_output()` returns an empty
+    /// list until new output is generated.
+    pub fn pop_output(&mut self) -> SmallVec<[Atom; 16]> {
+        let mut output = SmallVec::new();
+        std::mem::swap(&mut self.output_buffer, &mut output);
+        output
+    }
+
     /// Internal method to read an atom from a vm address
     // Does bounds checking
     fn read_atom(&mut self, addr: Atom) -> Result<Atom, VmStopReason> {
