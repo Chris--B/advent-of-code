@@ -119,6 +119,14 @@ impl Vm {
     /// Construct a new Vm with initial memory
     ///
     /// The vm will begin executing int code at index 0
+    pub fn from_code(intcode: &[Atom]) -> Vm {
+        let mem: Vec<Atom> = intcode.iter().copied().collect();
+        Vm::with_memory(mem)
+    }
+
+    /// Construct a new Vm with initial memory
+    ///
+    /// The vm will begin executing int code at index 0
     pub fn with_memory(mem: Vec<Atom>) -> Vm {
         Vm {
             ip: 0,
