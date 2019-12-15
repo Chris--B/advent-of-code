@@ -80,9 +80,6 @@ pub fn parse_range(input: &str) -> (u32, u32) {
     let lo = iter.next().unwrap().parse().expect("Invalid number for lo");
     let hi = iter.next().unwrap().parse().expect("Invalid number for hi");
 
-    // Exactly 2 inputs
-    debug_assert!(iter.next().is_none());
-
     (lo, hi)
 }
 

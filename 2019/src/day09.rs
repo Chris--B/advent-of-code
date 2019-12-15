@@ -32,3 +32,31 @@ pub fn part2(boost_code: &[i64]) -> i64 {
 
     vm.get_output()[0]
 }
+
+#[aoc(day9, part1, new_vm2)]
+pub fn part1_newvm2(boost_code: &[i64]) -> Result<i64, intcode::cpu::VmError> {
+    use intcode::cpu::*;
+
+    let mut vm = Vm::from_code(boost_code);
+
+    vm.input(1);
+
+    match vm.run()? {
+        NameMe::Output(out) => Ok(out),
+        reason => panic!("{:#?}", reason),
+    }
+}
+
+#[aoc(day9, part2, new_vm2)]
+pub fn part2_newvm2(boost_code: &[i64]) -> Result<i64, intcode::cpu::VmError> {
+    use intcode::cpu::*;
+
+    let mut vm = Vm::from_code(boost_code);
+
+    vm.input(2);
+
+    match vm.run()? {
+        NameMe::Output(out) => Ok(out),
+        reason => panic!("{:#?}", reason),
+    }
+}

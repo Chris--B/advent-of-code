@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 
-pub mod opcodes;
+pub mod cpu;
 pub mod vm;

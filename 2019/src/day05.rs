@@ -212,6 +212,21 @@ pub fn p1_newvm(intcode: &Vec<i64>) -> i64 {
     *vm.get_output().last().expect("No output?")
 }
 
+#[aoc(day5, part1, new_vm2)]
+#[allow(clippy::ptr_arg)]
+pub fn part1_newvm(intcode: &Vec<i64>) -> Result<i64, intcode::cpu::VmError> {
+    use intcode::cpu::*;
+
+    let mut vm = Vm::from_code(&intcode);
+
+    vm.input(INPUT_CODE_AC);
+
+    match vm.run()? {
+        intcode::cpu::NameMe::Output(out) => Ok(out),
+        reason => panic!("{:#?}", reason),
+    }
+}
+
 #[cfg(test)]
 #[test]
 fn check_branch_inst() {
@@ -254,4 +269,19 @@ pub fn p2_newvm(intcode: &Vec<i64>) -> i64 {
     why.unwrap();
 
     *vm.get_output().last().expect("No output?")
+}
+
+#[aoc(day5, part2, new_vm2)]
+#[allow(clippy::ptr_arg)]
+pub fn part2_newvm(intcode: &Vec<i64>) -> Result<i64, intcode::cpu::VmError> {
+    use intcode::cpu::*;
+
+    let mut vm = Vm::from_code(&intcode);
+
+    vm.input(INPUT_CODE_TRC);
+
+    match vm.run()? {
+        intcode::cpu::NameMe::Output(out) => Ok(out),
+        reason => panic!("{:#?}", reason),
+    }
 }
