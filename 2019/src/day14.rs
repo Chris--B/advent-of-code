@@ -7,7 +7,7 @@ use std::collections::HashMap;
 pub type Material = SmallVec<[u8; 5]>;
 pub type Inputs = SmallVec<[(u64, Material); 8]>;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone)]
 struct Reactant {
     material: Material,
     rank: u64,
@@ -30,7 +30,15 @@ impl Ord for Reactant {
 
 impl PartialOrd for Reactant {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+        self.rank.partial_cmp(&other.rank)
+    }
+}
+
+impl Eq for Reactant {}
+
+impl PartialEq for Reactant {
+    fn eq(&self, other: &Self) -> bool {
+        self.rank.eq(&other.rank)
     }
 }
 
@@ -142,6 +150,33 @@ fn check_round_to_mult_of() {
     assert_eq!(round_to_mult_of(10, 7), 10);
 }
 
+#[cfg(test)]
+#[test]
+fn check_2210736_ore() {
+    const INPUT: &str = r#"
+    171 ORE => 8 CNZTR
+    7 ZLQW, 3 BMBT, 9 XCVML, 26 XMNCP, 1 WPTQ, 2 MZWV, 1 RJRHP => 4 PLWSL
+    114 ORE => 4 BHXH
+    14 VRPVC => 6 BMBT
+    6 BHXH, 18 KTJDG, 12 WPTQ, 7 PLWSL, 31 FHTLT, 37 ZDVW => 1 FUEL
+    6 WPTQ, 2 BMBT, 8 ZLQW, 18 KTJDG, 1 XMNCP, 6 MZWV, 1 RJRHP => 6 FHTLT
+    15 XDBXC, 2 LTCX, 1 VRPVC => 6 ZLQW
+    13 WPTQ, 10 LTCX, 3 RJRHP, 14 XMNCP, 2 MZWV, 1 ZLQW => 1 ZDVW
+    5 BMBT => 4 WPTQ
+    189 ORE => 9 KTJDG
+    1 MZWV, 17 XDBXC, 3 XCVML => 2 XMNCP
+    12 VRPVC, 27 CNZTR => 2 XDBXC
+    15 KTJDG, 12 BHXH => 5 XCVML
+    3 BHXH, 2 VRPVC => 7 MZWV
+    121 ORE => 7 VRPVC
+    7 XCVML => 6 RJRHP
+    5 BHXH, 4 VRPVC => 5 LTCX
+    "#;
+
+    let reactions = parse_input(INPUT.trim());
+    assert_eq!(part1(&reactions), 2210736);
+}
+
 #[aoc(day14, part1)]
 pub fn part1(reactions: &[Reaction]) -> u64 {
     // Load formulas into a nice map
@@ -189,26 +224,22 @@ pub fn part1(reactions: &[Reaction]) -> u64 {
     counts.insert(m("FUEL"), 1);
 
     while let Some(curr) = ingredients.pop() {
-        println!("========");
-
+        // If we found some ORE, ignore it
+        // but do NOT reset its count!
         if ranks[&curr.material] == 0 {
-            dbg!(curr);
-            break;
+            continue;
         }
 
         // Get the count of `curr` that we need to create
         let curr_count = counts
             .get_mut(&curr.material)
             .expect("Missing material in counts");
-        dbg!((material_name(&curr.material), *curr_count));
 
         // Reduce to its potential ingredients
         let (formula_count, inputs) = &formulas[&curr.material];
 
         // Given the constraints of the formula, get our real `curr` count
         let real_curr_count = round_to_mult_of(*formula_count, *curr_count);
-
-        dbg!(*curr_count, *formula_count, real_curr_count);
 
         // Reset this ingredient's count to 0
         *curr_count = 0;
@@ -217,7 +248,6 @@ pub fn part1(reactions: &[Reaction]) -> u64 {
         for input in inputs {
             let material = &input.1;
             let count = input.0 * (real_curr_count / formula_count);
-            dbg!((material_name(&material), count));
 
             if let Some(c) = counts.get_mut(material) {
                 // Already inserted into ingredients, just update the count
@@ -232,8 +262,6 @@ pub fn part1(reactions: &[Reaction]) -> u64 {
             }
         }
     }
-
-    dbg!(b"ORE", &counts);
 
     counts[&m("ORE")]
 }
