@@ -177,8 +177,7 @@ fn check_2210736_ore() {
     assert_eq!(part1(&reactions), 2210736);
 }
 
-#[aoc(day14, part1)]
-pub fn part1(reactions: &[Reaction]) -> u64 {
+fn calc_ore(reactions: &[Reaction], fuel: u64) -> u64 {
     // Load formulas into a nice map
     let mut formulas: HashMap<Material, (u64, Inputs)> = HashMap::new();
     for r in reactions {
@@ -212,6 +211,7 @@ pub fn part1(reactions: &[Reaction]) -> u64 {
             last_count = ranks.len();
         }
     }
+    let ranks = ranks;
 
     let mut ingredients: BinaryHeap<Reactant> = BinaryHeap::new();
     let mut counts: HashMap<Material, u64> = HashMap::new();
@@ -221,7 +221,7 @@ pub fn part1(reactions: &[Reaction]) -> u64 {
         material: m("FUEL"),
         rank: ranks[&m("FUEL")],
     });
-    counts.insert(m("FUEL"), 1);
+    counts.insert(m("FUEL"), fuel);
 
     while let Some(curr) = ingredients.pop() {
         // If we found some ORE, ignore it
@@ -263,5 +263,16 @@ pub fn part1(reactions: &[Reaction]) -> u64 {
         }
     }
 
+    let leftovers = counts
+        .iter()
+        .filter(|&(_material, count)| *count != 0)
+        .count();
+    assert_eq!(leftovers, 1);
+
     counts[&m("ORE")]
+}
+
+#[aoc(day14, part1)]
+pub fn part1(reactions: &[Reaction]) -> u64 {
+    calc_ore(reactions, 1)
 }
