@@ -10,5 +10,6 @@ default-run = "aoc20"
 [dependencies]
 aoc-runner = ""
 aoc-runner-derive = ""
-smallvec = "1"
 itertools = "0.9"
+regex = "1"
+smallvec = "1"
