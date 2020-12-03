@@ -1,15 +1,16 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use smallvec::SmallVec;
 
 #[aoc_generator(day3)]
-pub fn parse_input(input: &str) -> Vec<SmallVec<[u8; 32]>> {
+pub fn parse_input(input: &str) -> Vec<[u8; 31]> {
+    use std::convert::TryInto;
+
     input
         .lines()
-        .map(|line| line.trim().as_bytes().into())
+        .map(|line| line.trim().as_bytes().try_into().unwrap())
         .collect()
 }
 
-fn count_trees(map: &[SmallVec<[u8; 32]>], dx: usize, dy: usize) -> usize {
+fn count_trees(map: &[[u8; 31]], dx: usize, dy: usize) -> usize {
     let mut tree_count = 0;
 
     let mut x = 0;
@@ -33,12 +34,12 @@ fn count_trees(map: &[SmallVec<[u8; 32]>], dx: usize, dy: usize) -> usize {
 }
 
 #[aoc(day3, part1)]
-pub fn part1(input: &[SmallVec<[u8; 32]>]) -> usize {
+pub fn part1(input: &[[u8; 31]]) -> usize {
     count_trees(input, 3, 1)
 }
 
 #[aoc(day3, part2)]
-pub fn part2(input: &[SmallVec<[u8; 32]>]) -> usize {
+pub fn part2(input: &[[u8; 31]]) -> usize {
     let mut a = 1;
 
     a *= count_trees(input, 1, 1);
