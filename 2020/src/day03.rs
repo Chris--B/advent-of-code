@@ -41,11 +41,11 @@ pub fn part1(input: &[SmallVec<[u8; 32]>]) -> usize {
 pub fn part2(input: &[SmallVec<[u8; 32]>]) -> usize {
     let mut a = 1;
 
-    a *= dbg!(count_trees(input, 1, 1));
-    a *= dbg!(count_trees(input, 3, 1));
-    a *= dbg!(count_trees(input, 5, 1));
-    a *= dbg!(count_trees(input, 7, 1));
-    a *= dbg!(count_trees(input, 1, 2));
+    a *= count_trees(input, 1, 1);
+    a *= count_trees(input, 3, 1);
+    a *= count_trees(input, 5, 1);
+    a *= count_trees(input, 7, 1);
+    a *= count_trees(input, 1, 2);
 
     a
 }
