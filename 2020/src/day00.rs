@@ -1,9 +1,14 @@
-#![allow(dead_code)]
-
 use aoc_runner_derive::{aoc, aoc_generator};
 
+// Each day:
+//  - Pick the proper typedef/name for `Foo` below
+//  - Ctrl + F on dayN below
+//  - Uncomment out part2's attribute macros
+//  - Uncomment this module in lib.rs
+type Foo = usize;
+
 #[aoc_generator(dayN)]
-pub fn parse_input(input: &str) -> Vec<i64> {
+pub fn parse_input(input: &str) -> Vec<Foo> {
     input
         .lines()
         .map(|line| line.trim().parse().unwrap())
@@ -12,34 +17,12 @@ pub fn parse_input(input: &str) -> Vec<i64> {
 
 // Part1 ======================================================================
 #[aoc(dayN, part1)]
-pub fn part1(input: &[i64]) -> i64 {
+pub fn part1(_input: &[Foo]) -> Foo {
     unimplemented!();
 }
 
-#[test]
-fn check_part1_ex() {
-    let input = r#"
-    TODO
-    "#;
-
-    let parsed = parse_input(input);
-
-    assert_eq!(0, part1(&parsed));
-}
-
-// Part1 ======================================================================
-#[aoc(dayN, part2)]
-pub fn part2(input: &[i64]) -> i64 {
+// Part2 ======================================================================
+// #[aoc(dayN, part2)]
+pub fn part2(_input: &[Foo]) -> Foo {
     unimplemented!();
-}
-
-#[test]
-fn check_part2_ex() {
-    let input = r#"
-    TODO
-    "#;
-
-    let parsed = parse_input(input);
-
-    assert_eq!(0, part2(&parsed));
 }
