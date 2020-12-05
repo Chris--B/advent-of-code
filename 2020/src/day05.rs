@@ -54,7 +54,7 @@ pub fn parse_input(input: &str) -> Vec<Seat> {
 // Part1 ======================================================================
 #[aoc(day5, part1)]
 pub fn part1(input: &[Seat]) -> usize {
-    input.iter().map(|s| s.id()).max().unwrap()
+    input.iter().map(|s| s.id()).max().unwrap_or_default()
 }
 
 #[test]
@@ -87,5 +87,5 @@ pub fn part2(input: &[Seat]) -> usize {
         }
     }
 
-    unreachable!("Didn't find a solution")
+    0
 }
