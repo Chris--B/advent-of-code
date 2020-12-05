@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 #[derive(Debug, PartialEq)]
-pub struct PassportEntry {
+pub struct Passport {
     /// Birth Year
     byr: String,
 
@@ -31,7 +31,7 @@ pub struct PassportEntry {
     cid: Option<String>,
 }
 
-impl PassportEntry {
+impl Passport {
     fn from_text<'a>(lines: impl Iterator<Item = &'a str>) -> Option<Self> {
         let mut byr = None;
         let mut iyr = None;
@@ -89,7 +89,7 @@ impl PassportEntry {
             }
         }
 
-        Some(PassportEntry {
+        Some(Passport {
             byr: byr?,
             iyr: iyr?,
             eyr: eyr?,
@@ -103,21 +103,21 @@ impl PassportEntry {
 
     fn is_valid(&self) -> bool {
         // Valid byr
-        (if let Ok(year) = self.byr.parse::<u16>() {
-                    (1920..=2002).contains(&year)
-        } else { false })
+        (
+            (1920..=2002).contains(&self.byr.parse().unwrap_or_default())
+        )
         &&
 
         // Valid iyr
-        (if let Ok(year) = self.iyr.parse::<u16>() {
-                (2010..=2020).contains(&year)
-        } else { false })
+        (
+            (2010..=2020).contains(&self.iyr.parse().unwrap_or_default())
+        )
         &&
 
         // Valid eyr
-        (if let Ok(year) = self.eyr.parse::<u16>() {
-                (2020..=2030).contains(&year)
-        } else { false })
+        (
+            (2020..=2030).contains(&self.eyr.parse().unwrap_or_default())
+        )
         &&
 
         // Valid hgt
@@ -179,20 +179,20 @@ impl PassportEntry {
 }
 
 #[aoc_generator(day4)]
-pub fn parse_input(input: &str) -> Vec<Option<PassportEntry>> {
+pub fn parse_input(input: &str) -> Vec<Passport> {
     input
         .trim()
         .lines()
         .group_by(|l| l.trim().is_empty())
         .into_iter()
         .filter_map(|(is_empty, record)| if is_empty { None } else { Some(record) })
-        .map(PassportEntry::from_text)
+        .filter_map(Passport::from_text)
         .collect()
 }
 
 #[aoc(day4, part1)]
-pub fn part1(input: &[Option<PassportEntry>]) -> usize {
-    input.iter().filter_map(Option::as_ref).count()
+pub fn part1(input: &[Passport]) -> usize {
+    input.len()
 }
 
 #[test]
@@ -216,11 +216,10 @@ iyr:2011 ecl:brn hgt:59in
 }
 
 #[aoc(day4, part2)]
-pub fn part2(input: &[Option<PassportEntry>]) -> usize {
+pub fn part2(input: &[Passport]) -> usize {
     input
         .iter()
-        .filter_map(Option::as_ref)
-        .filter(|e| e.is_valid())
+        .filter(|passport: &&Passport| passport.is_valid())
         .count()
 }
 
