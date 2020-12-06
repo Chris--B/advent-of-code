@@ -7,8 +7,7 @@ use std::convert::TryInto;
 #[derive(Debug)]
 pub struct Seat {
     ticket: [u8; 10],
-    row: u8,
-    col: u8,
+    id: u16,
 }
 
 impl Seat {
@@ -16,33 +15,33 @@ impl Seat {
         let ticket: [u8; 10] = s.as_bytes().try_into().unwrap();
         let mut buf: [u8; 10] = ticket;
 
-        // Replace the letters with binary numbers
+        // Replace the letters with binary 1s and 0s so we can parse it
         for c in &mut buf {
             match *c {
                 b'R' | b'B' => *c = b'1',
                 b'L' | b'F' => *c = b'0',
-                _ => {}
+                _ => {
+                    unreachable!()
+                }
             }
         }
 
-        // And parse like numbers
-        let (row, col) = buf.split_at(7);
-        let row = unsafe { std::str::from_utf8_unchecked(&row) };
-        let col = unsafe { std::str::from_utf8_unchecked(&col) };
+        // The ticket is just the id in binary, so extract that now.
+        let s = unsafe { std::str::from_utf8_unchecked(&buf) };
+        let id = u16::from_str_radix(s, 2).unwrap();
 
-        Seat {
-            ticket,
-            row: u8::from_str_radix(row, 2).unwrap(),
-            col: u8::from_str_radix(col, 2).unwrap(),
-        }
+        Seat { ticket, id }
     }
 
     fn loc(&self) -> (u8, u8) {
-        (self.row, self.col)
+        let row = (self.id >> 3) as u8;
+        let col = (self.id & 0b111) as u8;
+
+        (row, col)
     }
 
     fn id(&self) -> usize {
-        self.row as usize * 8 + self.col as usize
+        self.id as usize
     }
 }
 
