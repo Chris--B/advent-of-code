@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cargo watch -c  \
+    -x check    \
+    -x fmt      \
+    -x clippy   \
+    -x test     \
+    -x run      \
+    -x "run --target=aarch64-apple-darwin --release"
+
