@@ -5,7 +5,7 @@ use aoc_runner_derive::{aoc, aoc_generator};
 //  - Ctrl + F on dayN below
 //  - Uncomment out part2's attribute macros
 //  - Uncomment this module in lib.rs
-type Foo = usize;
+type Foo = u64;
 
 #[aoc_generator(dayN)]
 pub fn parse_input(input: &str) -> Vec<Foo> {
@@ -17,12 +17,12 @@ pub fn parse_input(input: &str) -> Vec<Foo> {
 
 // Part1 ======================================================================
 #[aoc(dayN, part1)]
-pub fn part1(_input: &[Foo]) -> Foo {
+pub fn part1(input: &[Foo]) -> Foo {
     unimplemented!();
 }
 
 // Part2 ======================================================================
 // #[aoc(dayN, part2)]
-pub fn part2(_input: &[Foo]) -> Foo {
+pub fn part2(input: &[Foo]) -> Foo {
     unimplemented!();
 }
