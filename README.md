@@ -20,7 +20,7 @@ For more information about this annual event, see it's website:
 ### Info
 All solutions here use the `cargo-aoc` framework for running and benchmarking the puzzles. To get started using it, consult it's README in its repo [here](https://github.com/gobanos/cargo-aoc).
 
-I use `cargo-aoc 0.2.0` installed locally. There may be issues if you mis-match versions of the library (pulled by Cargo during builds) and the runner (isntalled with `cargo install`).
+I use `cargo-aoc 0.3.0` installed locally. There may be issues if you mis-match versions of the library (downloaded by Cargo during builds) and the runner (installed with `cargo install`).
 
 ### Building
 Each year lives in isolation and must be built from its directory.
