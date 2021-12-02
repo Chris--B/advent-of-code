@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use aoc_runner_derive::aoc_lib;
 
 mod day01;
