@@ -1,9 +1,9 @@
 #!/bin/bash
 
-cargo watch -c               \
-    -x check                 \
-    -x fmt                   \
-    -x clippy                \
-    -x "test"                \
-    -x "run --release"
+export CARGO_BUILD_TARGET=aarch64-apple-darwin
 
+cargo watch -c               \
+    -x "clippy --tests"      \
+    -x fmt                   \
+    -x "test -q --lib"       \
+    -x "aoc $*"

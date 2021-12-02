@@ -17,12 +17,14 @@ pub fn parse_input(input: &str) -> Vec<Foo> {
 
 // Part1 ======================================================================
 #[aoc(dayN, part1)]
+#[inline(never)]
 pub fn part1(input: &[Foo]) -> Foo {
     unimplemented!();
 }
 
 // Part2 ======================================================================
 // #[aoc(dayN, part2)]
+#[inline(never)]
 pub fn part2(input: &[Foo]) -> Foo {
     unimplemented!();
 }
