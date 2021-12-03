@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export CARGO_BUILD_TARGET=aarch64-apple-darwin
-
 cargo watch -c               \
     -x "clippy --tests"      \
     -x fmt                   \

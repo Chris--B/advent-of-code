@@ -10,6 +10,7 @@ default-run = "aoc21"
 [dependencies]
 aoc-runner = "*"
 aoc-runner-derive = "*"
+
 itertools = "0.10"
 lazy_static = "1"
 regex = "1"
