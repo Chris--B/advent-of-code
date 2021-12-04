@@ -25,8 +25,7 @@ impl Board {
     }
 
     fn score(&self) -> u32 {
-        // i do what I want
-        let nums: [u32; 25] = unsafe { std::mem::transmute(self.0) };
+        let nums: &[u32; 25] = unsafe { std::mem::transmute(&self.0) };
 
         nums.iter().sum()
     }
@@ -34,18 +33,14 @@ impl Board {
     fn has_won(&self) -> bool {
         // check each row
         for x in 0..5 {
-            let won = (0..5).all(|y| self.at(x, y) == 0);
-
-            if won {
+            if (0..5).all(|y| self.at(x, y) == 0) {
                 return true;
             }
         }
 
-        // check each row
+        // check each col
         for y in 0..5 {
-            let won = (0..5).all(|x| self.at(x, y) == 0);
-
-            if won {
+            if (0..5).all(|x| self.at(x, y) == 0) {
                 return true;
             }
         }
@@ -66,39 +61,21 @@ pub fn parse_input(input: &str) -> BingoState {
 
     let mut boards = vec![];
 
+    // Boards are 6 lines: 1 empty and 5 lines of 5 numbers each.
     while let Some(_empty) = lines.next() {
         assert_eq!(_empty, "");
 
-        let b0: Vec<u32> = lines
-            .next()
-            .unwrap()
-            .split_whitespace()
-            .map(|n| n.parse().unwrap())
-            .collect();
-        let b1: Vec<u32> = lines
-            .next()
-            .unwrap()
-            .split_whitespace()
-            .map(|n| n.parse().unwrap())
-            .collect();
-        let b2: Vec<u32> = lines
-            .next()
-            .unwrap()
-            .split_whitespace()
-            .map(|n| n.parse().unwrap())
-            .collect();
-        let b3: Vec<u32> = lines
-            .next()
-            .unwrap()
-            .split_whitespace()
-            .map(|n| n.parse().unwrap())
-            .collect();
-        let b4: Vec<u32> = lines
-            .next()
-            .unwrap()
-            .split_whitespace()
-            .map(|n| n.parse().unwrap())
-            .collect();
+        fn parse_line(line: &str) -> Vec<u32> {
+            line.split_whitespace()
+                .map(|n| n.parse().unwrap())
+                .collect()
+        }
+
+        let b0 = parse_line(lines.next().unwrap());
+        let b1 = parse_line(lines.next().unwrap());
+        let b2 = parse_line(lines.next().unwrap());
+        let b3 = parse_line(lines.next().unwrap());
+        let b4 = parse_line(lines.next().unwrap());
 
         let board = Board([
             [b0[0], b0[1], b0[2], b0[3], b0[4]],
