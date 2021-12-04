@@ -1,12 +1,14 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
+use smallvec::SmallVec;
+
 #[derive(Clone)]
 pub struct BingoState {
     rng: Vec<u32>,
     boards: Vec<Board>,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Board([[u32; 5]; 5]);
 
 impl Board {
@@ -59,13 +61,14 @@ pub fn parse_input(input: &str) -> BingoState {
         .map(|n| n.parse().unwrap())
         .collect();
 
-    let mut boards = vec![];
+    let mut boards = Vec::with_capacity(100);
 
     // Boards are 6 lines: 1 empty and 5 lines of 5 numbers each.
     while let Some(_empty) = lines.next() {
         assert_eq!(_empty, "");
 
-        fn parse_line(line: &str) -> Vec<u32> {
+        #[inline(always)]
+        fn parse_line(line: &str) -> SmallVec<[u32; 5]> {
             line.split_whitespace()
                 .map(|n| n.parse().unwrap())
                 .collect()
@@ -77,15 +80,13 @@ pub fn parse_input(input: &str) -> BingoState {
         let b3 = parse_line(lines.next().unwrap());
         let b4 = parse_line(lines.next().unwrap());
 
-        let board = Board([
+        boards.push(Board([
             [b0[0], b0[1], b0[2], b0[3], b0[4]],
             [b1[0], b1[1], b1[2], b1[3], b1[4]],
             [b2[0], b2[1], b2[2], b2[3], b2[4]],
             [b3[0], b3[1], b3[2], b3[3], b3[4]],
             [b4[0], b4[1], b4[2], b4[3], b4[4]],
-        ]);
-
-        boards.push(board);
+        ]));
     }
 
     BingoState { rng, boards }
@@ -96,7 +97,6 @@ pub fn parse_input(input: &str) -> BingoState {
 #[aoc(day4, part1)]
 #[inline(never)]
 pub fn part1(input: &BingoState) -> u32 {
-    // dumb
     let BingoState { rng, mut boards } = input.clone();
 
     for n in rng {
@@ -116,7 +116,6 @@ pub fn part1(input: &BingoState) -> u32 {
 #[aoc(day4, part2)]
 #[inline(never)]
 pub fn part2(input: &BingoState) -> u32 {
-    // dumb
     let BingoState { rng, mut boards } = input.clone();
 
     let mut winner = None;
