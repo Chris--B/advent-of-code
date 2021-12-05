@@ -1,4 +1,4 @@
-use aoc_runner_derive::{aoc, aoc_generator};
+use aoc_runner_derive::aoc;
 
 use smallvec::SmallVec;
 
@@ -51,8 +51,7 @@ impl Board {
     }
 }
 
-#[aoc_generator(day4)]
-pub fn parse_input(input: &str) -> BingoState {
+fn parse_input(input: &str) -> BingoState {
     let mut lines = input.lines();
     let rng = lines
         .next()
@@ -65,7 +64,7 @@ pub fn parse_input(input: &str) -> BingoState {
 
     // Boards are 6 lines: 1 empty and 5 lines of 5 numbers each.
     while let Some(_empty) = lines.next() {
-        assert_eq!(_empty, "");
+        debug_assert_eq!(_empty, "");
 
         #[inline(always)]
         fn parse_line(line: &str) -> SmallVec<[u32; 5]> {
@@ -96,8 +95,8 @@ pub fn parse_input(input: &str) -> BingoState {
 
 #[aoc(day4, part1)]
 #[inline(never)]
-pub fn part1(input: &BingoState) -> u32 {
-    let BingoState { rng, mut boards } = input.clone();
+pub fn part1(input: &str) -> u32 {
+    let BingoState { rng, mut boards } = parse_input(input);
 
     for n in rng {
         for board in boards.iter_mut() {
@@ -115,8 +114,8 @@ pub fn part1(input: &BingoState) -> u32 {
 // Part2 ======================================================================
 #[aoc(day4, part2)]
 #[inline(never)]
-pub fn part2(input: &BingoState) -> u32 {
-    let BingoState { rng, mut boards } = input.clone();
+pub fn part2(input: &str) -> u32 {
+    let BingoState { rng, mut boards } = parse_input(input);
 
     let mut winner = None;
 
@@ -131,4 +130,221 @@ pub fn part2(input: &BingoState) -> u32 {
     }
 
     winner.unwrap()
+}
+
+#[derive(Debug)]
+struct Entry {
+    board: u8,
+    pos: u8,
+    num: u8,
+    next: u16,
+}
+
+struct State<'a> {
+    drawings_text: &'a str,
+    entries: Vec<Entry>,
+    head_idx_per_number: [usize; 100],
+    num_boards: u8,
+}
+
+fn parse_input_packed(input: &str) -> State {
+    let mut lines = input.lines();
+    let drawings_text: &str = lines.next().unwrap();
+
+    let mut board = 0;
+    let mut pos = 0;
+
+    let mut entries = vec![];
+
+    // linked lists per number
+    let mut head_idx_per_number = [usize::MAX; 100];
+    let mut tail_idx_per_number = [usize::MAX; 100];
+
+    while let Some(_empty) = lines.next() {
+        debug_assert_eq!(_empty, "");
+
+        fn parse_board_row(
+            num: u8,
+            entry: Entry,
+            head_idx_per_number: &mut [usize; 100],
+            tail_idx_per_number: &mut [usize; 100],
+            entries: &mut Vec<Entry>,
+        ) {
+            // Save the head for each number when we find one
+            if head_idx_per_number[num as usize] == usize::MAX {
+                head_idx_per_number[num as usize] = entries.len();
+            }
+
+            // Update the tail for `num` everytime we append
+            let tail_idx = tail_idx_per_number[num as usize];
+            if tail_idx < entries.len() {
+                entries[tail_idx].next = entries.len() as u16;
+            }
+            tail_idx_per_number[num as usize] = entries.len();
+
+            // append
+            entries.push(entry);
+        }
+
+        for _ in 0..5 {
+            for entry in lines.next().unwrap().split_whitespace() {
+                let num: u8 = entry.parse().unwrap();
+                let entry = Entry {
+                    board,
+                    pos,
+                    num,
+                    next: u16::MAX,
+                };
+
+                parse_board_row(
+                    num,
+                    entry,
+                    &mut head_idx_per_number,
+                    &mut tail_idx_per_number,
+                    &mut entries,
+                );
+                pos += 1;
+            }
+        }
+
+        debug_assert_eq!(pos, 25);
+
+        board += 1;
+        pos = 0;
+    }
+
+    State {
+        entries,
+        drawings_text,
+        head_idx_per_number,
+        num_boards: board,
+    }
+}
+
+fn board_has_won(board: u32, pos: u32) -> bool {
+    let col = pos % 5;
+    let row_start = pos - col;
+
+    let unfinished_row = 0b11111 & (!board >> row_start);
+    let unfinished_col = 0x108421 & (!board >> col);
+
+    (unfinished_row == 0) || (unfinished_col == 0)
+}
+
+#[aoc(day4, part1, askalski_bit_shenanigans)]
+#[inline(never)]
+pub fn part1_askalski_bit_shenanigans(input: &str) -> u32 {
+    let State {
+        entries,
+        drawings_text,
+        head_idx_per_number,
+        num_boards,
+    } = parse_input_packed(input);
+
+    let mut boards = vec![0_u32; num_boards as usize];
+
+    for drawing in drawings_text.split(',') {
+        let num: u8 = drawing.parse().unwrap();
+
+        // walk the boards list and mark them as played
+        let idx = head_idx_per_number[num as usize];
+        if idx == usize::MAX {
+            continue;
+        }
+
+        let mut n = &entries[idx];
+        loop {
+            let board: &mut u32 = &mut boards[n.board as usize];
+
+            debug_assert!(!board_has_won(*board, n.pos as u32));
+
+            *board |= 1 << n.pos as u32;
+
+            if board_has_won(*board, n.pos as u32) {
+                let mut score = 0_u32;
+
+                for p in 0..25 {
+                    if *board & (0x1 << p) == 0 {
+                        let entry = entries
+                            .iter()
+                            .find(|e| e.board == n.board && e.pos == p as u8)
+                            .unwrap();
+                        score += entry.num as u32;
+                    }
+                }
+
+                return score * num as u32;
+            }
+
+            if n.next != u16::MAX {
+                n = &entries[n.next as usize];
+            } else {
+                break;
+            }
+        }
+    }
+
+    panic!("No winners?");
+}
+
+#[aoc(day4, part2, askalski_bit_shenanigans)]
+#[inline(never)]
+pub fn part2_askalski_bit_shenanigans(input: &str) -> u32 {
+    let State {
+        entries,
+        drawings_text,
+        head_idx_per_number,
+        num_boards,
+    } = parse_input_packed(input);
+
+    let mut boards = vec![0_u32; num_boards as usize];
+
+    let mut last_winner = None;
+
+    for drawing in drawings_text.split(',') {
+        let num: u8 = drawing.parse().unwrap();
+
+        // walk the boards list and mark them as played
+        let idx = head_idx_per_number[num as usize];
+        if idx == usize::MAX {
+            continue;
+        }
+
+        let mut n = &entries[idx];
+        loop {
+            let board: &mut u32 = &mut boards[n.board as usize];
+
+            // has not won yet
+            if *board & (1 << 25) == 0 {
+                *board |= 1 << n.pos as u32;
+
+                if board_has_won(*board, n.pos as u32) {
+                    last_winner = Some((n.board, *board, num));
+                    *board |= 1 << 25;
+                }
+            }
+
+            if n.next != u16::MAX {
+                n = &entries[n.next as usize];
+            } else {
+                break;
+            }
+        }
+    }
+
+    let (board_idx, board, num) = last_winner.unwrap();
+
+    let mut score = 0_u32;
+
+    for p in 0..25 {
+        if board & (0x1 << p) == 0 {
+            let entry = entries
+                .iter()
+                .find(|e| e.board == board_idx && e.pos == p as u8)
+                .unwrap();
+            score += entry.num as u32;
+        }
+    }
+
+    score * num as u32
 }
