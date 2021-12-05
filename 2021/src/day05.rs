@@ -13,38 +13,58 @@ pub struct Line {
 
 impl Line {
     fn points(&self) -> impl Iterator<Item = (i64, i64)> {
-        #![allow(non_snake_case)]
+        LineIter::new(*self)
+    }
+}
 
-        let Line { x0, y0, x1, y1 } = *self;
+struct LineIter {
+    line: Line,
 
-        let mut v = vec![];
+    curr_x: i64,
+    dir_x: i64,
 
-        let dx = x1 - x0;
-        let dy = y1 - y0;
+    curr_y: i64,
+    dir_y: i64,
+}
 
-        if dx == 0 && dy != 0 {
-            let y = i64::min(y0, y1);
-            let Y = i64::max(y0, y1);
-            v.extend((y..=Y).map(|y| (x0, y)));
-        } else if dx != 0 && dy == 0 {
-            let x = i64::min(x0, x1);
-            let X = i64::max(x0, x1);
-            v.extend((x..=X).map(|x| (x, y0)));
-        } else if dx.abs() == dy.abs() {
-            assert!(dx != 0);
+impl LineIter {
+    fn new(line: Line) -> Self {
+        let dir_x = if line.x1 > line.x0 { 1 } else { -1 };
+        let dir_y = if line.y1 > line.y0 { 1 } else { -1 };
 
-            let steps = (y1 - y0).abs();
+        LineIter {
+            line,
+            // offset here so the first .next() call produces (x0, y0)
+            curr_x: line.x0 - dir_x,
+            dir_x,
+            // offset here so the first .next() call produces (x0, y0)
+            curr_y: line.y0 - dir_y,
+            dir_y,
+        }
+    }
+}
 
-            let dir_x = if x1 > x0 { 1 } else { -1 };
-            let dir_y = if y1 > y0 { 1 } else { -1 };
+impl Iterator for LineIter {
+    type Item = (i64, i64);
 
-            v.extend((0..=steps).map(|i| (x0 + dir_x * i, y0 + dir_y * i)));
-        } else {
-            dbg!(*self);
-            panic!("no")
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut done = true;
+
+        if self.curr_x != self.line.x1 {
+            done = false;
+            self.curr_x += self.dir_x;
         }
 
-        v.into_iter()
+        if self.curr_y != self.line.y1 {
+            done = false;
+            self.curr_y += self.dir_y;
+        }
+
+        if done {
+            None
+        } else {
+            Some((self.curr_x, self.curr_y))
+        }
     }
 }
 
