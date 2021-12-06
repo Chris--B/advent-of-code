@@ -1,54 +1,45 @@
-use aoc_runner_derive::{aoc, aoc_generator};
+use aoc_runner_derive::aoc;
 
-#[aoc_generator(day6)]
-pub fn parse_input(input: &str) -> Vec<u8> {
-    input.split(',').map(|n| n.parse().unwrap()).collect()
+pub fn parse_input(input: &str) -> [u64; 9] {
+    // We don't care about the order, so just sort
+    let mut counts = [0_u64; 9];
+
+    for s in input.split(',') {
+        let n: u8 = s.parse().unwrap();
+
+        counts[n as usize] += 1;
+    }
+
+    counts
 }
 
-#[test]
-fn check_input_1() {
-    let input = "3,4,3,1,2";
-    let fish: Vec<u8> = parse_input(input);
+pub fn parse_input_clever(input: &str) -> [u64; 9] {
+    let bs = input.as_bytes();
 
-    assert_eq!(tick_fish(fish.clone(), 18), 26);
-    assert_eq!(tick_fish(fish, 80), 5934);
-}
+    // We don't care about the order, so just sort
+    let mut counts = [0_u64; 9];
 
-#[test]
-fn check_input_2() {
-    let input = "3,4,3,1,2";
-    let fish: Vec<u8> = parse_input(input);
-
-    assert_eq!(tick_fish_fast(&fish, 18), 26);
-    assert_eq!(tick_fish_fast(&fish, 80), 5934);
-}
-
-#[allow(dead_code)]
-fn tick_fish(mut fishes: Vec<u8>, times: u64) -> u64 {
-    fishes.reserve(fishes.len() * 1024);
-
-    for t in 0..times {
-        let count = fishes.len();
-        for i in 0..count {
-            if fishes[i] != 0 {
-                fishes[i] -= 1;
-            } else {
-                fishes[i] = 6;
-                fishes.push(8);
-            }
+    for b in bs {
+        if b'0' <= *b && *b <= b'6' {
+            let n = b - b'0';
+            counts[n as usize] += 1;
         }
     }
 
-    fishes.len() as u64
+    counts
 }
 
-fn tick_fish_fast(fishes: &[u8], times: u64) -> u64 {
-    // We don't care about the order, so just sort
-    let mut counts = [0_u64; 9];
-    for fish in fishes {
-        counts[*fish as usize] += 1;
-    }
+#[test]
+fn check_input() {
+    let input = "3,4,3,1,2";
+    let counts = parse_input(input);
 
+    assert_eq!(sim_fish_population(counts, 18), 26);
+    assert_eq!(sim_fish_population(counts, 80), 5934);
+    assert_eq!(sim_fish_population(counts, 256), 26_984_457_539);
+}
+
+fn sim_fish_population(mut counts: [u64; 9], times: u64) -> u64 {
     for t in 0..times {
         // age all the fish
         counts = [
@@ -70,13 +61,17 @@ fn tick_fish_fast(fishes: &[u8], times: u64) -> u64 {
 // Part1 ======================================================================
 #[aoc(day6, part1)]
 #[inline(never)]
-pub fn part1(fish: &[u8]) -> u64 {
-    tick_fish_fast(fish, 80)
+pub fn part1(input: &str) -> u64 {
+    let counts = parse_input(input);
+    // let counts = parse_input_clever(input);
+    sim_fish_population(counts, 80)
 }
 
 // Part2 ======================================================================
 #[aoc(day6, part2)]
 #[inline(never)]
-pub fn part2(fish: &[u8]) -> u64 {
-    tick_fish_fast(fish, 256)
+pub fn part2(input: &str) -> u64 {
+    let counts = parse_input(input);
+    // let counts = parse_input_clever(input);
+    sim_fish_population(counts, 256)
 }
