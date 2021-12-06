@@ -58,20 +58,73 @@ fn sim_fish_population(mut counts: [u64; 9], times: u64) -> u64 {
     counts.into_iter().sum()
 }
 
-// Part1 ======================================================================
-#[aoc(day6, part1)]
+fn sim_fish_population_reindex(mut counts: [u64; 9], times: usize) -> u64 {
+    const CYCLE: usize = 7;
+    const LEN: usize = 9;
+
+    for t in 0..times {
+        counts[(t + CYCLE) % LEN] += counts[t % LEN];
+    }
+
+    counts.into_iter().sum()
+}
+
+// =============================================================================
+#[aoc(day6, part1, simple_shuffle)]
 #[inline(never)]
-pub fn part1(input: &str) -> u64 {
+pub fn part1_simple_shuffle(input: &str) -> u64 {
     let counts = parse_input(input);
-    // let counts = parse_input_clever(input);
     sim_fish_population(counts, 80)
 }
 
-// Part2 ======================================================================
-#[aoc(day6, part2)]
+#[aoc(day6, part2, simple_shuffle)]
 #[inline(never)]
-pub fn part2(input: &str) -> u64 {
+pub fn part2_simple_shuffle(input: &str) -> u64 {
     let counts = parse_input(input);
-    // let counts = parse_input_clever(input);
     sim_fish_population(counts, 256)
+}
+
+// =============================================================================
+#[aoc(day6, part1, simple_reindex)]
+#[inline(never)]
+pub fn part1_simple_reindex(input: &str) -> u64 {
+    let counts = parse_input(input);
+    sim_fish_population_reindex(counts, 80)
+}
+
+#[aoc(day6, part2, simple_reindex)]
+#[inline(never)]
+pub fn part2_simple_reindex(input: &str) -> u64 {
+    let counts = parse_input(input);
+    sim_fish_population_reindex(counts, 256)
+}
+
+// =============================================================================
+#[aoc(day6, part1, clever_shuffle)]
+#[inline(never)]
+pub fn part1_clever_shuffle(input: &str) -> u64 {
+    let counts = parse_input_clever(input);
+    sim_fish_population(counts, 80)
+}
+
+#[aoc(day6, part2, clever_shuffle)]
+#[inline(never)]
+pub fn part2_clever_shuffle(input: &str) -> u64 {
+    let counts = parse_input_clever(input);
+    sim_fish_population(counts, 256)
+}
+
+// =============================================================================
+#[aoc(day6, part1, clever_reindex)]
+#[inline(never)]
+pub fn part1_clever_reindex(input: &str) -> u64 {
+    let counts = parse_input_clever(input);
+    sim_fish_population_reindex(counts, 80)
+}
+
+#[aoc(day6, part2, clever_reindex)]
+#[inline(never)]
+pub fn part2_clever_reindex(input: &str) -> u64 {
+    let counts = parse_input_clever(input);
+    sim_fish_population_reindex(counts, 256)
 }
