@@ -1,14 +1,11 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
 // Each day:
-//  - Pick the proper typedef/name for `Foo` below
 //  - Ctrl + F on dayN below
-//  - Uncomment out part2's attribute macros
 //  - Uncomment this module in lib.rs
-type Foo = u64;
 
 #[aoc_generator(dayN)]
-pub fn parse_input(input: &str) -> Vec<Foo> {
+pub fn parse_input(input: &str) -> Vec<i64> {
     input
         .lines()
         .map(|line| line.trim().parse().unwrap())
@@ -18,13 +15,13 @@ pub fn parse_input(input: &str) -> Vec<Foo> {
 // Part1 ======================================================================
 #[aoc(dayN, part1)]
 #[inline(never)]
-pub fn part1(input: &[Foo]) -> Foo {
+pub fn part1(input: &[i64]) -> i64 {
     unimplemented!();
 }
 
 // Part2 ======================================================================
-// #[aoc(dayN, part2)]
+#[aoc(dayN, part2)]
 #[inline(never)]
-pub fn part2(input: &[Foo]) -> Foo {
+pub fn part2(input: &[i64]) -> i64 {
     unimplemented!();
 }
