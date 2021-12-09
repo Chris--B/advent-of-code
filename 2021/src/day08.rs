@@ -236,6 +236,86 @@ pub fn part2(input: &str) -> u64 {
 
     parse_input(input).map(solve_one).sum()
 }
+/*
+    | Number of common segments   |
+    | digit | 1 | 4 | 8 | product |
+    |-------+---+---+---+---------|
+    |     0 | 2 | 3 | 6 |      36 |
+    |     1 | 2 | 2 | 2 |      8  |
+    |     2 | 1 | 2 | 5 |      10 |
+    |     3 | 2 | 3 | 5 |      30 |
+    |     4 | 2 | 4 | 4 |      32 |
+    |     5 | 1 | 3 | 5 |      15 |
+    |     6 | 1 | 3 | 6 |      18 |
+    |     7 | 2 | 2 | 3 |      12 |
+    |     8 | 2 | 4 | 7 |      56 |
+    |     9 | 2 | 4 | 6 |      48 |
+*/
+const fn make_product_to_digit_lut() -> [u8; 128] {
+    let mut lut = [0_u8; 128];
+    lut[36] = 0;
+    lut[8] = 1;
+    lut[10] = 2;
+    lut[30] = 3;
+    lut[32] = 4;
+    lut[15] = 5;
+    lut[18] = 6;
+    lut[12] = 7;
+    lut[56] = 8;
+    lut[48] = 9;
+
+    lut
+}
+const LUT_PRODUCT_TO_DIGIT: [u8; 128] = make_product_to_digit_lut();
+
+#[aoc(day8, part2, product)]
+#[inline(never)]
+pub fn part2_product(input: &str) -> u64 {
+    fn solve_one(pair: ([SSDisplay; 10], [SSDisplay; 4])) -> u64 {
+        // We don't know the order of 'digit', but since we know 1, 4, and 8
+        // we can produce 'product' above, and use that to uniquely ID each digit.
+        let input: [SSDisplay; 10] = pair.0;
+
+        let unknowns: [u8; 10] = [
+            // data we'll use
+            input[0].0, //
+            input[1].0, //
+            input[2].0, //
+            input[3].0, //
+            input[4].0, //
+            input[5].0, //
+            input[6].0, //
+            input[7].0, //
+            input[8].0, //
+            input[9].0, //
+        ];
+
+        // Patterns of known digits
+        let d_1: u8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 2)).0;
+        let d_4: u8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 4)).0;
+        let d_8: u8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 7)).0;
+
+        let mut lut_unknown_to_digit = [0_u64; 128];
+
+        for unknown in unknowns.into_iter() {
+            let p_1 = (unknown & d_1).count_ones();
+            let p_4 = (unknown & d_4).count_ones();
+            let p_8 = (unknown & d_8).count_ones();
+
+            let product = p_1 * p_4 * p_8;
+
+            let digit = LUT_PRODUCT_TO_DIGIT[product as usize];
+            lut_unknown_to_digit[unknown as usize] = digit as u64;
+        }
+
+        pair.1
+            .into_iter()
+            .map(|o| lut_unknown_to_digit[o.0 as usize])
+            .fold(0, |acc, o| 10 * acc + o)
+    }
+
+    parse_input(input).map(solve_one).sum()
+}
 
 #[cfg(feature = "simd")]
 #[aoc(day8, part2, simd)]
@@ -246,46 +326,31 @@ pub fn part2_simd(input: &str) -> u64 {
 
         // core_simd doesn't seem to provide this
         fn pop_count(v: u8x16) -> u8x16 {
-            if cfg!(target_arch = "aarch64") {
+            #![allow(unreachable_code)]
+            use core::mem::transmute as _f;
+
+            #[cfg(target_arch = "aarch64")]
+            unsafe {
                 use core::arch::aarch64::vcntq_u8;
-                use core::mem::transmute as f;
-                unsafe { f(vcntq_u8(f(v))) }
-            } else {
-                u8x16::splat(0)
+
+                return _f(vcntq_u8(_f(v)));
             }
-        }
 
-        /*
-            | Number of common segments   |
-            | digit | 1 | 4 | 8 | product |
-            |-------+---+---+---+---------|
-            |     0 | 2 | 3 | 6 |      36 |
-            |     1 | 2 | 2 | 2 |      8  |
-            |     2 | 1 | 2 | 5 |      10 |
-            |     3 | 2 | 3 | 5 |      30 |
-            |     4 | 2 | 4 | 4 |      32 |
-            |     5 | 1 | 3 | 5 |      15 |
-            |     6 | 1 | 3 | 6 |      18 |
-            |     7 | 2 | 2 | 3 |      12 |
-            |     8 | 2 | 4 | 7 |      56 |
-            |     9 | 2 | 4 | 6 |      48 |
-        */
-        const fn make_product_to_digit_lut() -> [u8; 128] {
-            let mut lut = [0_u8; 128];
-            lut[36] = 0;
-            lut[8] = 1;
-            lut[10] = 2;
-            lut[30] = 3;
-            lut[32] = 4;
-            lut[15] = 5;
-            lut[18] = 6;
-            lut[12] = 7;
-            lut[56] = 8;
-            lut[48] = 9;
+            #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+            unsafe {
+                use core::arch::x86_64::_mm_popcnt_epi8;
 
-            lut
+                return _f(_mm_popcnt_epi8(_f(v)));
+            }
+
+            // If nothing else, we can do this scalar
+            let mut xs = v.to_array();
+            for x in &mut xs {
+                *x = x.count_ones() as u8;
+            }
+
+            u8x16::from_array(xs)
         }
-        const LUT_PRODUCT_TO_DIGIT: [u8; 128] = make_product_to_digit_lut();
 
         // We don't know the order of 'digit', but since we know 1, 4, and 8
         // we can produce 'product' above, and use that to uniquely ID each digit.
@@ -314,29 +379,25 @@ pub fn part2_simd(input: &str) -> u64 {
         let d_4 = find_exactly_one(input.into_iter().filter(|d| d.set() == 4));
         let d_8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 7));
 
-        // Vector with known digit in each lane
-        let v_1 = u8x16::splat(d_1.0);
-        let v_4 = u8x16::splat(d_4.0);
-        let v_8 = u8x16::splat(d_8.0);
-
-        let p_1 = pop_count(unknown & v_1);
-        let p_4 = pop_count(unknown & v_4);
-        let p_8 = pop_count(unknown & v_8);
-
+        // Draw the rest of the owl
+        let p_1 = pop_count(unknown & u8x16::splat(d_1.0));
+        let p_4 = pop_count(unknown & u8x16::splat(d_4.0));
+        let p_8 = pop_count(unknown & u8x16::splat(d_8.0));
         let product = p_1 * p_4 * p_8;
 
-        let inputs = input.into_iter();
-        let digits = product.to_array().into_iter();
-
-        let mut lut_orig_to_digit = [0_u64; 128];
-        for (orig, prod) in inputs.zip(digits) {
-            let digit = LUT_PRODUCT_TO_DIGIT[prod as usize];
-            lut_orig_to_digit[orig.0 as usize] = digit as u64;
+        // TODO: Can we do vetor read/writes instead of a loop?
+        // Maybe: https://lemire.me/blog/2019/07/23/arbitrary-byte-to-byte-maps-using-arm-neon/
+        let mut lut_unknown_to_digit = [0_u64; 128];
+        for i in 0..10 {
+            let u = unknown[i];
+            let p = product[i];
+            let digit = LUT_PRODUCT_TO_DIGIT[p as usize];
+            lut_unknown_to_digit[u as usize] = digit as u64;
         }
 
         pair.1
             .into_iter()
-            .map(|o| lut_orig_to_digit[o.0 as usize])
+            .map(|o| lut_unknown_to_digit[o.0 as usize])
             .fold(0, |acc, o| 10 * acc + o)
     }
 
@@ -363,6 +424,11 @@ fn check_example_1() {
 #[test]
 fn check_example_2() {
     debug_assert_eq!(part2(EXAMPLE_INPUT), 61229);
+}
+
+#[test]
+fn check_example_2_product() {
+    debug_assert_eq!(part2_product(EXAMPLE_INPUT), 61229);
 }
 
 #[cfg(feature = "simd")]
