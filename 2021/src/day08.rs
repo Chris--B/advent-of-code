@@ -270,19 +270,22 @@ pub fn part2_simd(input: &str) -> u64 {
             |     8 | 2 | 4 | 7 |      56 |
             |     9 | 2 | 4 | 6 |      48 |
         */
-        // TODO: const
-        let mut lut_product_to_digit = [0_u8; 127];
-        lut_product_to_digit[36] = 0;
-        lut_product_to_digit[8] = 1;
-        lut_product_to_digit[10] = 2;
-        lut_product_to_digit[30] = 3;
-        lut_product_to_digit[32] = 4;
-        lut_product_to_digit[15] = 5;
-        lut_product_to_digit[18] = 6;
-        lut_product_to_digit[12] = 7;
-        lut_product_to_digit[56] = 8;
-        lut_product_to_digit[48] = 9;
-        let lut_product_to_digit = lut_product_to_digit;
+        const fn make_product_to_digit_lut() -> [u8; 128] {
+            let mut lut = [0_u8; 128];
+            lut[36] = 0;
+            lut[8] = 1;
+            lut[10] = 2;
+            lut[30] = 3;
+            lut[32] = 4;
+            lut[15] = 5;
+            lut[18] = 6;
+            lut[12] = 7;
+            lut[56] = 8;
+            lut[48] = 9;
+
+            lut
+        }
+        const LUT_PRODUCT_TO_DIGIT: [u8; 128] = make_product_to_digit_lut();
 
         // We don't know the order of 'digit', but since we know 1, 4, and 8
         // we can produce 'product' above, and use that to uniquely ID each digit.
@@ -327,7 +330,7 @@ pub fn part2_simd(input: &str) -> u64 {
 
         let mut lut_orig_to_digit = [0_u64; 128];
         for (orig, prod) in inputs.zip(digits) {
-            let digit = lut_product_to_digit[prod as usize];
+            let digit = LUT_PRODUCT_TO_DIGIT[prod as usize];
             lut_orig_to_digit[orig.0 as usize] = digit as u64;
         }
 
