@@ -1,6 +1,7 @@
-use aoc_runner_derive::{aoc, aoc_generator};
+use aoc_runner_derive::aoc;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct SSDisplay(u8);
 
 impl SSDisplay {
@@ -50,18 +51,15 @@ fn parse_line(line: &str) -> ([SSDisplay; 10], [SSDisplay; 4]) {
     (input.try_into().unwrap(), output.try_into().unwrap())
 }
 
-#[aoc_generator(day8)]
-pub fn parse_input(input: &str) -> Vec<([SSDisplay; 10], [SSDisplay; 4])> {
-    input.lines().map(|line| parse_line(line.trim())).collect()
+fn parse_input(input: &str) -> impl Iterator<Item = ([SSDisplay; 10], [SSDisplay; 4])> + '_ {
+    input.lines().map(|line| parse_line(line.trim()))
 }
 
 // Part1 ======================================================================
 #[aoc(day8, part1)]
 #[inline(never)]
-pub fn part1(input: &[([SSDisplay; 10], [SSDisplay; 4])]) -> usize {
-    input
-        .iter()
-        .copied()
+pub fn part1(input: &str) -> usize {
+    parse_input(input)
         .map(|(_in, out)| {
             out.into_iter()
                 .filter(|d| matches!(d.set(), 2 | 3 | 4 | 7))
@@ -88,11 +86,9 @@ fn _make_known() -> [SSDisplay; 10] {
 
 #[aoc(day8, part2)]
 #[inline(never)]
-pub fn part2(input: &[([SSDisplay; 10], [SSDisplay; 4])]) -> u64 {
-    fn solve_one(pair: &([SSDisplay; 10], [SSDisplay; 4])) -> u64 {
-        #![warn(unused_variables)]
-
-        let (input, output) = *pair;
+pub fn part2(input: &str) -> u64 {
+    fn solve_one(pair: ([SSDisplay; 10], [SSDisplay; 4])) -> u64 {
+        let (input, output) = pair;
 
         // These should all be known instantly
         let maybe_1: Vec<_> = input.iter().filter(|d| d.set() == 2).collect();
@@ -237,7 +233,7 @@ pub fn part2(input: &[([SSDisplay; 10], [SSDisplay; 4])]) -> u64 {
         res
     }
 
-    input.iter().map(solve_one).sum()
+    parse_input(input).map(solve_one).sum()
 }
 
 #[cfg(test)]
@@ -254,10 +250,10 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
 
 #[test]
 fn check_example_1() {
-    debug_assert_eq!(part1(&parse_input(EXAMPLE_INPUT)), 26);
+    debug_assert_eq!(part1(EXAMPLE_INPUT), 26);
 }
 
 #[test]
 fn check_example_2() {
-    debug_assert_eq!(part2(&parse_input(EXAMPLE_INPUT)), 61229);
+    debug_assert_eq!(part2(EXAMPLE_INPUT), 61229);
 }
