@@ -27,6 +27,8 @@ mod day09;
 // mod day19;
 // mod day20;
 
+pub mod framebuffer;
+
 aoc_lib! { year = 2021 }
 
 #[inline(always)]
