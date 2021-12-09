@@ -1,6 +1,6 @@
 use aoc_runner_derive::aoc;
 
-use image::{Luma, Rgb};
+use image::Rgb;
 
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
@@ -84,12 +84,24 @@ fn make_min_points(fb: &Framebuffer<u8>) -> Framebuffer<u8> {
     min_points
 }
 
-fn random_color(x: usize, y: usize) -> Rgb<u8> {
-    let i = x + 100 * y;
-    let (r, g, b) = (128, i / 256, i % 256);
+fn random_color(_x: usize, _y: usize) -> Rgb<u8> {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
 
-    Rgb([r, g as u8, b as u8])
+    let r = rng.gen();
+    let g = rng.gen();
+    let b = rng.gen();
+
+    Rgb([r, g, b])
 }
+
+const BLACK: Rgb<u8> = Rgb([0_u8; 3]);
+const WHITE: Rgb<u8> = Rgb([0xff_u8; 3]);
+
+// Mataches AOC colors
+const GOLD: Rgb<u8> = Rgb([0xff, 0xff, 0x66]);
+const BLUE: Rgb<u8> = Rgb([15, 15, 35]);
+const GREEN: Rgb<u8> = Rgb([0x0, 0x99, 0x0]);
 
 // Part1 ======================================================================
 #[aoc(day9, part1)]
@@ -98,9 +110,15 @@ pub fn part1(input: &str) -> usize {
     let fb = parse_input(input);
     let min_points = make_min_points(&fb);
 
-    min_points
-        .save_to("_day9_mins.png", |b| Luma([*b]))
-        .unwrap();
+    if saving_images() {
+        min_points
+            .save_to("_day9_mins.png", |b| match *b {
+                WALL_GRAY => GREEN,
+                SLOPE_GRAY => BLUE,
+                _ => GOLD,
+            })
+            .unwrap();
+    }
 
     min_points
         .into_inner()
@@ -117,10 +135,6 @@ pub fn part1(input: &str) -> usize {
 pub fn part2(input: &str) -> usize {
     let fb = parse_input(input);
     let min_points = make_min_points(&fb);
-
-    // Walls are black
-    const BLACK: Rgb<u8> = Rgb([0_u8; 3]);
-    const WHITE: Rgb<u8> = Rgb([0xff_u8; 3]);
 
     let mut fb_a = Framebuffer::from_func(fb.width(), fb.height(), |x, y| {
         // Translate the pseduo-grayscale colors to Rgb
