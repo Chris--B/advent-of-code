@@ -1,3 +1,6 @@
+#![cfg_attr(feature = "simd", feature(portable_simd))]
+#![cfg_attr(feature = "simd", feature(stdsimd))]
+
 use aoc_runner_derive::aoc_lib;
 
 mod day01;
@@ -25,3 +28,12 @@ mod day08;
 // mod day20;
 
 aoc_lib! { year = 2021 }
+
+#[inline(always)]
+pub(crate) fn find_exactly_one<T>(mut iter: impl Iterator<Item = T>) -> T {
+    let t: T = iter.next().unwrap();
+
+    debug_assert!(iter.next().is_none());
+
+    t
+}

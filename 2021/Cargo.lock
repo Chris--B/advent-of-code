@@ -46,6 +46,7 @@ version = "0.1.0"
 dependencies = [
  "aoc-runner",
  "aoc-runner-derive",
+ "core_simd",
  "itertools",
  "lazy_static",
  "rayon",
@@ -64,6 +65,11 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "core_simd"
+version = "0.1.0"
+source = "git+https://github.com/rust-lang/portable-simd#81484a399c96c69adeef352be0e7823b39ce6e7e"
 
 [[package]]
 name = "crossbeam-channel"

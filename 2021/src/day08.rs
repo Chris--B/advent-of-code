@@ -1,3 +1,4 @@
+use crate::find_exactly_one;
 use aoc_runner_derive::aoc;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -236,6 +237,109 @@ pub fn part2(input: &str) -> u64 {
     parse_input(input).map(solve_one).sum()
 }
 
+#[cfg(feature = "simd")]
+#[aoc(day8, part2, simd)]
+#[inline(never)]
+pub fn part2_simd(input: &str) -> u64 {
+    fn solve_one(pair: ([SSDisplay; 10], [SSDisplay; 4])) -> u64 {
+        use core_simd::*;
+
+        // core_simd doesn't seem to provide this
+        fn pop_count(v: u8x16) -> u8x16 {
+            if cfg!(target_arch = "aarch64") {
+                use core::arch::aarch64::vcntq_u8;
+                use core::mem::transmute as f;
+                unsafe { f(vcntq_u8(f(v))) }
+            } else {
+                u8x16::splat(0)
+            }
+        }
+
+        /*
+            | Number of common segments   |
+            | digit | 1 | 4 | 8 | product |
+            |-------+---+---+---+---------|
+            |     0 | 2 | 3 | 6 |      36 |
+            |     1 | 2 | 2 | 2 |      8  |
+            |     2 | 1 | 2 | 5 |      10 |
+            |     3 | 2 | 3 | 5 |      30 |
+            |     4 | 2 | 4 | 4 |      32 |
+            |     5 | 1 | 3 | 5 |      15 |
+            |     6 | 1 | 3 | 6 |      18 |
+            |     7 | 2 | 2 | 3 |      12 |
+            |     8 | 2 | 4 | 7 |      56 |
+            |     9 | 2 | 4 | 6 |      48 |
+        */
+        // TODO: const
+        let mut lut_product_to_digit = [0_u8; 127];
+        lut_product_to_digit[36] = 0;
+        lut_product_to_digit[8] = 1;
+        lut_product_to_digit[10] = 2;
+        lut_product_to_digit[30] = 3;
+        lut_product_to_digit[32] = 4;
+        lut_product_to_digit[15] = 5;
+        lut_product_to_digit[18] = 6;
+        lut_product_to_digit[12] = 7;
+        lut_product_to_digit[56] = 8;
+        lut_product_to_digit[48] = 9;
+        let lut_product_to_digit = lut_product_to_digit;
+
+        // We don't know the order of 'digit', but since we know 1, 4, and 8
+        // we can produce 'product' above, and use that to uniquely ID each digit.
+        let input: [SSDisplay; 10] = pair.0;
+
+        let unknown: [u8; 16] = [
+            // data we'll use
+            input[0].0, //
+            input[1].0, //
+            input[2].0, //
+            input[3].0, //
+            input[4].0, //
+            input[5].0, //
+            input[6].0, //
+            input[7].0, //
+            input[8].0, //
+            input[9].0, // padding to 16-wide
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        ];
+
+        // Each lane is an unknown digit
+        let unknown = u8x16::from(unknown);
+
+        // Scalar patterns of known digits
+        let d_1 = find_exactly_one(input.into_iter().filter(|d| d.set() == 2));
+        let d_4 = find_exactly_one(input.into_iter().filter(|d| d.set() == 4));
+        let d_8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 7));
+
+        // Vector with known digit in each lane
+        let v_1 = u8x16::splat(d_1.0);
+        let v_4 = u8x16::splat(d_4.0);
+        let v_8 = u8x16::splat(d_8.0);
+
+        let p_1 = pop_count(unknown & v_1);
+        let p_4 = pop_count(unknown & v_4);
+        let p_8 = pop_count(unknown & v_8);
+
+        let product = p_1 * p_4 * p_8;
+
+        let inputs = input.into_iter();
+        let digits = product.to_array().into_iter();
+
+        let mut lut_orig_to_digit = [0_u64; 128];
+        for (orig, prod) in inputs.zip(digits) {
+            let digit = lut_product_to_digit[prod as usize];
+            lut_orig_to_digit[orig.0 as usize] = digit as u64;
+        }
+
+        pair.1
+            .into_iter()
+            .map(|o| lut_orig_to_digit[o.0 as usize])
+            .fold(0, |acc, o| 10 * acc + o)
+    }
+
+    parse_input(input).map(solve_one).sum()
+}
+
 #[cfg(test)]
 const EXAMPLE_INPUT: &str = r#"be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
 edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc
@@ -256,4 +360,10 @@ fn check_example_1() {
 #[test]
 fn check_example_2() {
     debug_assert_eq!(part2(EXAMPLE_INPUT), 61229);
+}
+
+#[cfg(feature = "simd")]
+#[test]
+fn check_example_2_simd() {
+    debug_assert_eq!(part2_simd(EXAMPLE_INPUT), 61229);
 }
