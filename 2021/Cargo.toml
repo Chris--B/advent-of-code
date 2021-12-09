@@ -17,6 +17,7 @@ regex = "1"
 smallvec = "1"
 rayon = "1"
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
+image = "0.23"
 
 [profile.release]
 overflow-checks = true
