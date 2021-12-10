@@ -181,7 +181,7 @@ where
 
 /// Interop with `image1` crate
 impl<T> Framebuffer<T> {
-    pub fn save_to<P, F>(&self, path: &str, f: F) -> Result<(), image::ImageError>
+    pub fn make_image<P, F>(&self, scale: u32, f: F) -> ImageBuffer<P, Vec<P::Subpixel>>
     where
         P: image::Pixel + 'static,
         [<P as image::Pixel>::Subpixel]: image::EncodableLayout,
@@ -191,14 +191,21 @@ impl<T> Framebuffer<T> {
         let height = self.height as u32;
         let img = ImageBuffer::from_fn(width, height, |x, y| f(&self[(x, y)]));
 
-        const S: u32 = 20;
-        let img = image::imageops::resize(
+        image::imageops::resize(
             &img,
-            width * S,
-            height * S,
+            width * scale,
+            height * scale,
             image::imageops::FilterType::Nearest,
-        );
+        )
+    }
 
+    pub fn save_to<P, F>(&self, path: &str, scale: u32, f: F) -> Result<(), image::ImageError>
+    where
+        P: image::Pixel + 'static,
+        [<P as image::Pixel>::Subpixel]: image::EncodableLayout,
+        F: Fn(&T) -> P,
+    {
+        let img = self.make_image(scale, f);
         img.save(path)
     }
 }

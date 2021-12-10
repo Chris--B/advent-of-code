@@ -2,12 +2,14 @@ use aoc_runner_derive::aoc;
 
 use image::Rgb;
 
+use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
 use crate::framebuffer::Framebuffer;
 
 // Turn off by default, because it dumps a lot
 static SAVE_IMG: AtomicBool = AtomicBool::new(true);
+const SCALE: u32 = 20;
 
 fn saving_images() -> bool {
     SAVE_IMG.load(SeqCst)
@@ -112,7 +114,7 @@ pub fn part1(input: &str) -> usize {
 
     if saving_images() {
         min_points
-            .save_to("_day9_mins.png", |b| match *b {
+            .save_to("_day9_mins.png", SCALE, |b| match *b {
                 WALL_GRAY => GREEN,
                 SLOPE_GRAY => BLUE,
                 _ => GOLD,
@@ -156,11 +158,11 @@ pub fn part2(input: &str) -> usize {
     let mut prev = &mut fb_a;
     let mut next = &mut fb_b;
 
-    let mut imgs = vec![];
+    let mut fbs = vec![];
 
     loop {
         if saving_images() {
-            imgs.push(prev.clone());
+            fbs.push(prev.clone());
         }
 
         let mut points_changed = 0;
@@ -200,7 +202,7 @@ pub fn part2(input: &str) -> usize {
     }
 
     if saving_images() {
-        imgs.push(prev.clone());
+        fbs.push(prev.clone());
     }
 
     let pixel_counts = next.counts();
@@ -236,17 +238,40 @@ pub fn part2(input: &str) -> usize {
             }
         }
 
-        imgs.push(prev.clone());
+        fbs.push(prev.clone());
     }
 
     if saving_images() {
-        for (t, frame) in imgs.into_iter().enumerate() {
+        use image::{
+            gif::{GifEncoder, Repeat},
+            Delay, Frame,
+        };
+
+        let gif_output = File::create("_9-2_steps.gif").unwrap();
+        let mut gif_encoder = GifEncoder::new(gif_output);
+        gif_encoder.set_repeat(Repeat::Infinite).unwrap();
+
+        let delay = Delay::from_numer_denom_ms(300, 1);
+
+        let last_frame_idx = fbs.len() - 1;
+        for (t, fb) in fbs.into_iter().enumerate() {
             let name = format!("_9-2_step-{:02}.png", t);
             println!("Saving step {} to \'{}\'", t, name);
-            frame.save_to(&name, |p| *p).unwrap();
+
+            let img = fb.make_image(SCALE, |p| image::Rgba([p[0], p[1], p[2], 0xff]));
+            img.save(&name).unwrap();
+
+            let frame = if t < last_frame_idx {
+                Frame::from_parts(img, 0, 0, delay)
+            } else {
+                Frame::from_parts(img, 0, 0, Delay::from_numer_denom_ms(2000, 1))
+            };
+            gif_encoder.encode_frame(frame).unwrap();
         }
+
+        println!("Saving _9-2_steps.gif");
     } else {
-        drop(imgs);
+        drop(fbs);
     }
 
     res
