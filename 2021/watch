@@ -3,5 +3,5 @@
 cargo watch -c               \
     -x "clippy --tests"      \
     -x fmt                   \
-    -x "test -q --lib"       \
+    -x "test --lib"       \
     -x "aoc $*"
