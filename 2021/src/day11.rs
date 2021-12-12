@@ -4,7 +4,7 @@ fn flatten_mut<T>(a: &mut [[T; 10]; 10]) -> &mut [T; 100] {
     unsafe { std::mem::transmute(a) }
 }
 
-fn parse_input(input: &str) -> [[u8; 10]; 10] {
+pub fn parse_input(input: &str) -> [[u8; 10]; 10] {
     let bytes = input.as_bytes();
 
     let mut octs = [0_u8; 100];
@@ -38,7 +38,7 @@ fn _print(step: usize, octs: &[u8; 100]) {
     println!();
 }
 
-fn sim_step(octs: &mut [[u8; 10]; 10]) -> usize {
+pub fn sim_step(octs: &mut [[u8; 10]; 10]) -> usize {
     // First, the energy level of each octopus increases by one
     for o in flatten_mut(octs) {
         *o += 1;

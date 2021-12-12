@@ -6,6 +6,13 @@ edition = "2021"
 default-run = "aoc21"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "aoc21"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gif-of"
+path = "src/gif_of.rs"
 
 [dependencies]
 aoc-runner = "*"
@@ -19,6 +26,10 @@ rayon = "1"
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
 image = "0.23"
 rand = "0.8"
+
+# Enable aggressive optimizations for all dependencies all of the time
+[profile.dev.package."*"]
+opt-level = 2
 
 [profile.release]
 overflow-checks = true

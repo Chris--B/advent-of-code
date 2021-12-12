@@ -3,29 +3,29 @@
 
 use aoc_runner_derive::aoc_lib;
 
-mod day01;
-mod day02;
+pub mod day01;
+pub mod day02;
 #[allow(unused_variables)]
-mod day03;
-mod day04;
+pub mod day03;
+pub mod day04;
 #[allow(unused_variables)]
-mod day05;
+pub mod day05;
 #[allow(unused_variables)]
-mod day06;
-mod day07;
-mod day08;
-mod day09;
-mod day10;
-mod day11;
-// mod day12;
-// mod day13;
-// mod day14;
-// mod day15;
-// mod day16;
-// mod day17;
-// mod day18;
-// mod day19;
-// mod day20;
+pub mod day06;
+pub mod day07;
+pub mod day08;
+pub mod day09;
+pub mod day10;
+pub mod day11;
+// pub mod day12;
+// pub mod day13;
+// pub mod day14;
+// pub mod day15;
+// pub mod day16;
+// pub mod day17;
+// pub mod day18;
+// pub mod day19;
+// pub mod day20;
 
 pub mod framebuffer;
 

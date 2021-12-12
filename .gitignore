@@ -1,5 +1,13 @@
+# Standard Rust
 **/target
 **/*.rs.bk
 
+# Mac
 .DS_Store
+
+# Personal pattern
 _*
+
+# Visualizations
+*.png
+*.gif
