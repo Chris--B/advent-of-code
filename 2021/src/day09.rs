@@ -109,11 +109,12 @@ pub fn part1(input: &str) -> usize {
     find_min_points(&mut fb);
 
     if saving_images() {
-        fb.save_to("_day9_mins.png", SCALE, |b| match *b {
+        fb.make_image(SCALE, |b| match *b {
             WALL_GRAY => GREEN,
             SLOPE_GRAY => BLUE,
             _ => GOLD,
         })
+        .save("_day9_mins.png")
         .unwrap();
     }
 

@@ -40,23 +40,17 @@ where
     /// Construct a framebuffer with specified dimensions. Elements are default constructed.
     pub fn with_dims(width: usize, height: usize) -> Self {
         let buf_len = width * height;
-        let (width, height) = (width as isize, height as isize);
+
         let buf = smallvec![T::default(); buf_len];
+        let (width, height) = (width as isize, height as isize);
+        let border_color = None;
 
         Framebuffer {
             buf,
             width,
             height,
-            border_color: None,
+            border_color,
         }
-    }
-}
-
-impl<T> Framebuffer<T> {
-    /// Sets a color to be returned when accesses are out of bounds, returning the old color.
-    pub fn set_border_color(&mut self, mut border_color: Option<T>) -> Option<T> {
-        std::mem::swap(&mut self.border_color, &mut border_color);
-        border_color
     }
 }
 
@@ -64,8 +58,10 @@ impl<T> Framebuffer<T> {
 impl<T> Framebuffer<T> {
     pub fn from_func(width: usize, height: usize, func: impl Fn(usize, usize) -> T) -> Self {
         let buf_len = width * height;
-        let (width, height) = (width as isize, height as isize);
+
         let mut buf = SmallVec::with_capacity(buf_len);
+        let (width, height) = (width as isize, height as isize);
+        let border_color = None;
 
         // Generate elements in row-major order
         // We choose this order so we can .push() each new element. This will change if we modify
@@ -80,61 +76,28 @@ impl<T> Framebuffer<T> {
             buf,
             width,
             height,
-            border_color: None,
+            border_color,
         }
     }
-
-    // type Buf = SmallVec<[T; LOCAL_SIZE]>;
 
     pub fn into_inner(self) -> SmallVec<[T; LOCAL_SIZE]> {
         self.buf
     }
 }
 
-/// Access Methods
 impl<T> Framebuffer<T> {
-    #[inline(always)]
+    /// Sets a color to be returned when accesses are out of bounds, returning the old color.
+    pub fn set_border_color(&mut self, mut border_color: Option<T>) -> Option<T> {
+        std::mem::swap(&mut self.border_color, &mut border_color);
+        border_color
+    }
+
     pub fn width(&self) -> usize {
         self.width as usize
     }
 
-    #[inline(always)]
     pub fn height(&self) -> usize {
         self.height as usize
-    }
-
-    #[inline(always)]
-    fn idx_from_xy(&self, x: isize, y: isize) -> Option<usize> {
-        if x < 0 || y < 0 {
-            return None;
-        }
-
-        if x >= self.width || y >= self.height {
-            return None;
-        }
-
-        let idx = x + y * self.width;
-        Some(idx as usize)
-    }
-
-    #[inline(always)]
-    fn get_buf<'a>(&'a self, buf: &'a [T], x: isize, y: isize) -> &'a T {
-        self.idx_from_xy(x, y)
-            .map(|idx| &buf[idx])
-            .or_else(|| self.border_color.as_ref())
-            .expect("oob index but no border color set")
-    }
-
-    #[inline(always)]
-    pub fn get(&self, x: isize, y: isize) -> Option<&T> {
-        let idx = self.idx_from_xy(x, y)?;
-        self.buf.get(idx)
-    }
-
-    #[inline(always)]
-    pub fn get_mut(&mut self, x: isize, y: isize) -> Option<&mut T> {
-        let idx = self.idx_from_xy(x, y)?;
-        self.buf.get_mut(idx)
     }
 
     /// Call a kernel per pixel
@@ -144,6 +107,14 @@ impl<T> Framebuffer<T> {
                 kernel(x as usize, y as usize, &mut self[(x, y)]);
             }
         }
+    }
+
+    pub fn flatten(&self) -> std::slice::Iter<T> {
+        self.buf.iter()
+    }
+
+    pub fn flatten_mut(&mut self) -> std::slice::IterMut<T> {
+        self.buf.iter_mut()
     }
 }
 
@@ -155,10 +126,13 @@ where
     ///
     /// If border color is unset, this panics
     pub fn kernel_3x3(&mut self, mut kernel: impl FnMut(usize, usize, &[[&T; 3]; 3]) -> T) {
+        // Duplicate out buffer to run the kernel "in place"
+        // "Taps" will reference back to this snapshot, while we update the main buffer after each
+        // kernel call.
         let prev = self.buf.clone();
 
-        for x in 0..self.width {
-            for y in 0..self.height {
+        for y in 0..self.height {
+            for x in 0..self.width {
                 #[rustfmt::skip]
                 let taps: [[&T;3]; 3] = [
                     [ self.get_buf(&prev, x-1, y-1), self.get_buf(&prev, x, y-1), self.get_buf(&prev, x+1, y-1)],
@@ -179,18 +153,15 @@ where
     pub fn counts(&self) -> HashMap<&T, usize> {
         let mut counts = HashMap::new();
 
-        for x in 0..self.width() {
-            for y in 0..self.height() {
-                let t: &T = &self[(x, y)];
-                *counts.entry(t).or_insert(0) += 1;
-            }
+        for t in self.flatten() {
+            *counts.entry(t).or_insert(0) += 1;
         }
 
         counts
     }
 }
 
-/// Interop with `image1` crate
+/// Interop with `image` crate
 impl<T> Framebuffer<T> {
     pub fn make_image<P, F>(&self, scale: u32, f: F) -> ImageBuffer<P, Vec<P::Subpixel>>
     where
@@ -208,16 +179,6 @@ impl<T> Framebuffer<T> {
             height * scale,
             image::imageops::FilterType::Nearest,
         )
-    }
-
-    pub fn save_to<P, F>(&self, path: &str, scale: u32, f: F) -> Result<(), image::ImageError>
-    where
-        P: image::Pixel + 'static,
-        [<P as image::Pixel>::Subpixel]: image::EncodableLayout,
-        F: Fn(&T) -> P,
-    {
-        let img = self.make_image(scale, f);
-        img.save(path)
     }
 }
 
@@ -265,6 +226,38 @@ impl<T> IndexMut<(usize, usize)> for Framebuffer<T> {
 }
 
 // The real index logic
+
+impl<T> Framebuffer<T> {
+    fn idx_from_xy(&self, x: isize, y: isize) -> Option<usize> {
+        if x < 0 || y < 0 {
+            return None;
+        }
+
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+
+        let idx = x + y * self.width;
+        Some(idx as usize)
+    }
+
+    fn get_buf<'a>(&'a self, buf: &'a [T], x: isize, y: isize) -> &'a T {
+        self.idx_from_xy(x, y)
+            .map(|idx| &buf[idx])
+            .or_else(|| self.border_color.as_ref())
+            .expect("oob index but no border color set")
+    }
+
+    pub fn get(&self, x: isize, y: isize) -> Option<&T> {
+        let idx = self.idx_from_xy(x, y)?;
+        self.buf.get(idx)
+    }
+
+    pub fn get_mut(&mut self, x: isize, y: isize) -> Option<&mut T> {
+        let idx = self.idx_from_xy(x, y)?;
+        self.buf.get_mut(idx)
+    }
+}
 
 impl<T> Index<(isize, isize)> for Framebuffer<T> {
     type Output = T;
