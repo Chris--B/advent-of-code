@@ -92,7 +92,6 @@ fn finish_line(line: &str) -> String {
         }
     }
 
-    assert_ne!(stack, vec![]);
     stack.reverse();
 
     stack
