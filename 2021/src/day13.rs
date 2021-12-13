@@ -47,21 +47,20 @@ pub fn parse_input(input: &str) -> (HashSet<(usize, usize)>, Vec<Fold>) {
 #[inline(never)]
 pub fn part1(input: &str) -> usize {
     let (mut dots, folds) = parse_input(input);
+    let mut dots_post = HashSet::with_capacity(dots.len());
 
-    let mut after_fold = HashSet::new();
-
-    match dbg!(folds[0]) {
+    match folds[0] {
         X(fold_x) => {
             for (x, y) in dots.drain() {
                 assert_ne!(x, fold_x);
                 if x < fold_x {
                     // Copy verbatim
-                    after_fold.insert((x, y));
+                    dots_post.insert((x, y));
                     continue;
                 }
 
                 let dx = x - fold_x;
-                after_fold.insert((fold_x - dx, y));
+                dots_post.insert((fold_x - dx, y));
             }
         }
         Y(fold_y) => {
@@ -69,17 +68,17 @@ pub fn part1(input: &str) -> usize {
                 assert_ne!(y, fold_y);
                 if y < fold_y {
                     // Copy verbatim
-                    after_fold.insert((x, y));
+                    dots_post.insert((x, y));
                     continue;
                 }
 
                 let dy = y - fold_y;
-                after_fold.insert((x, fold_y - dy));
+                dots_post.insert((x, fold_y - dy));
             }
         }
     }
 
-    after_fold.len()
+    dots_post.len()
 }
 
 // Part2 ======================================================================
@@ -87,8 +86,7 @@ pub fn part1(input: &str) -> usize {
 #[inline(never)]
 pub fn part2(input: &str) -> String {
     let (mut dots, mut folds) = parse_input(input);
-
-    let mut dots_post = HashSet::new();
+    let mut dots_post = HashSet::with_capacity(dots.len());
 
     for fold in folds.drain(..) {
         match fold {
@@ -123,9 +121,7 @@ pub fn part2(input: &str) -> String {
         dots.extend(dots_post.drain());
     }
 
-    let min_x = dots.iter().map(|(x, _)| *x).min().unwrap();
     let max_x = dots.iter().map(|(x, _)| *x).max().unwrap();
-    let min_y = dots.iter().map(|(_, y)| *y).min().unwrap();
     let max_y = dots.iter().map(|(_, y)| *y).max().unwrap();
 
     let mut code = String::with_capacity(max_x * max_y);
@@ -133,8 +129,8 @@ pub fn part2(input: &str) -> String {
     // aoc runner starts us indented a little, so make sure we stay aligned
     code.push('\n');
 
-    for y in min_y..=max_y {
-        for x in min_x..=max_x {
+    for y in 0..=max_y {
+        for x in 0..=max_x {
             if dots.contains(&(x, y)) {
                 write!(code, "#").unwrap();
             } else {
