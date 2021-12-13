@@ -58,9 +58,8 @@ fn parse_input(input: &str) -> Framebuffer<u8> {
 ///     - a wall, 9
 ///     - a min point in a basin, its depth [0, 8]
 ///     - not a min point, 10
-fn make_min_points(fb: &Framebuffer<u8>) -> Framebuffer<u8> {
-    let mut min_points = Framebuffer::with_dims(fb.width(), fb.height());
-    fb.kernel_3x3(|x, y, taps| {
+fn find_min_points(fb: &mut Framebuffer<u8>) {
+    fb.kernel_3x3(|_x, _y, taps| {
         #[rustfmt::skip]
         let [
             [_, a, _],
@@ -69,21 +68,18 @@ fn make_min_points(fb: &Framebuffer<u8>) -> Framebuffer<u8> {
         ] = *taps;
 
         if *o == WALL_HEIGHT {
-            min_points[(x, y)] = WALL_GRAY;
-            return;
+            return WALL_GRAY;
         }
 
         let m = o.min(a).min(b).min(c).min(d);
-        min_points[(x, y)] = if m == o {
+        if m == o {
             // Found a min point, leave it as its depth
             *o
         } else {
             // Not a min point
             SLOPE_GRAY
-        };
+        }
     });
-
-    min_points
 }
 
 fn random_color(_x: usize, _y: usize) -> Rgb<u8> {
@@ -109,21 +105,19 @@ const GREEN: Rgb<u8> = Rgb([0x0, 0x99, 0x0]);
 #[aoc(day9, part1)]
 #[inline(never)]
 pub fn part1(input: &str) -> usize {
-    let fb = parse_input(input);
-    let min_points = make_min_points(&fb);
+    let mut fb = parse_input(input);
+    find_min_points(&mut fb);
 
     if saving_images() {
-        min_points
-            .save_to("_day9_mins.png", SCALE, |b| match *b {
-                WALL_GRAY => GREEN,
-                SLOPE_GRAY => BLUE,
-                _ => GOLD,
-            })
-            .unwrap();
+        fb.save_to("_day9_mins.png", SCALE, |b| match *b {
+            WALL_GRAY => GREEN,
+            SLOPE_GRAY => BLUE,
+            _ => GOLD,
+        })
+        .unwrap();
     }
 
-    min_points
-        .into_inner()
+    fb.into_inner()
         .into_iter()
         // Only count things that still look like heights
         .filter(|p| *p < WALL_HEIGHT)
@@ -135,10 +129,11 @@ pub fn part1(input: &str) -> usize {
 #[aoc(day9, part2)]
 #[inline(never)]
 pub fn part2(input: &str) -> usize {
-    let fb = parse_input(input);
-    let min_points = make_min_points(&fb);
+    let mut min_points = parse_input(input);
+    find_min_points(&mut min_points);
 
-    let mut fb_a = Framebuffer::from_func(fb.width(), fb.height(), |x, y| {
+    // TODO: Be nice to translate pixel types with a kernel, instead of this
+    let mut fb = Framebuffer::from_func(min_points.width(), min_points.height(), |x, y| {
         // Translate the pseduo-grayscale colors to Rgb
         match min_points[(x, y)] {
             WALL_GRAY => BLACK,
@@ -150,24 +145,18 @@ pub fn part2(input: &str) -> usize {
             }
         }
     });
-    let mut fb_b = fb_a.clone();
-
-    fb_a.set_border_color(Some(BLACK));
-    fb_b.set_border_color(Some(BLACK));
-
-    let mut prev = &mut fb_a;
-    let mut next = &mut fb_b;
+    fb.set_border_color(Some(BLACK));
 
     let mut fbs = vec![];
 
     loop {
         if saving_images() {
-            fbs.push(prev.clone());
+            fbs.push(fb.clone());
         }
 
         let mut points_changed = 0;
 
-        prev.kernel_3x3(|x, y, taps| {
+        fb.kernel_3x3(|_x, _y, taps| {
             #[rustfmt::skip]
             let [
                 [_, a, _],
@@ -177,8 +166,7 @@ pub fn part2(input: &str) -> usize {
 
             // Only consider white points for basins
             if *o != WHITE {
-                next[(x, y)] = *o;
-                return;
+                return *o;
             }
 
             // NO DIAGONALS.
@@ -188,24 +176,23 @@ pub fn part2(input: &str) -> usize {
             if let Some(color) = taps.iter().find(|p| ***p != BLACK && ***p != WHITE) {
                 // We're adjacent to known basin, so expand
                 points_changed += 1;
-                next[(x, y)] = **color;
+                **color
             } else {
-                // We're not, so do nothing yet
+                // We're not, so just return the same color
+                *o
             }
         });
 
         if points_changed == 0 {
             break;
         }
-
-        std::mem::swap(&mut prev, &mut next);
     }
 
     if saving_images() {
-        fbs.push(prev.clone());
+        fbs.push(fb.clone());
     }
 
-    let pixel_counts = next.counts();
+    let pixel_counts = fb.counts();
     let mut sorted: Vec<(Rgb<_>, usize)> = pixel_counts
         .into_iter()
         .map(|(color, count)| (*color, count))
@@ -219,26 +206,26 @@ pub fn part2(input: &str) -> usize {
 
     // Pretty pictures
     if saving_images() {
-        for x in 0..prev.width() {
-            'inner: for y in 0..prev.width() {
+        for x in 0..fb.width() {
+            'inner: for y in 0..fb.width() {
                 // skip walls
-                if prev[(x, y)] == BLACK {
+                if fb[(x, y)] == BLACK {
                     continue;
                 }
 
                 // if it's a top-3 basin, skip it too
                 for (color, _count) in top_3 {
-                    if prev[(x, y)] == *color {
+                    if fb[(x, y)] == *color {
                         continue 'inner;
                     }
                 }
 
                 // otherwise, clear it
-                prev[(x, y)] = WHITE;
+                fb[(x, y)] = WHITE;
             }
         }
 
-        fbs.push(prev.clone());
+        fbs.push(fb.clone());
     }
 
     if saving_images() {

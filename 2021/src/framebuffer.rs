@@ -118,6 +118,14 @@ impl<T> Framebuffer<T> {
     }
 
     #[inline(always)]
+    fn get_buf<'a>(&'a self, buf: &'a [T], x: isize, y: isize) -> &'a T {
+        self.idx_from_xy(x, y)
+            .map(|idx| &buf[idx])
+            .or_else(|| self.border_color.as_ref())
+            .expect("oob index but no border color set")
+    }
+
+    #[inline(always)]
     pub fn get(&self, x: isize, y: isize) -> Option<&T> {
         let idx = self.idx_from_xy(x, y)?;
         self.buf.get(idx)
@@ -128,20 +136,27 @@ impl<T> Framebuffer<T> {
         let idx = self.idx_from_xy(x, y)?;
         self.buf.get_mut(idx)
     }
+}
 
+impl<T> Framebuffer<T>
+where
+    T: Clone,
+{
     /// Call a kernel per pixel, sampling the neighboring 3x3 pixels
     ///
     /// If border color is unset, this panics
-    pub fn kernel_3x3(&self, mut kernel: impl FnMut(usize, usize, &[[&T; 3]; 3])) {
+    pub fn kernel_3x3(&mut self, mut kernel: impl FnMut(usize, usize, &[[&T; 3]; 3]) -> T) {
+        let prev = self.buf.clone();
+
         for x in 0..self.width {
             for y in 0..self.height {
                 #[rustfmt::skip]
                 let taps: [[&T;3]; 3] = [
-                    [ &self[(x-1, y-1)], &self[(x, y-1)], &self[(x+1, y-1)]],
-                    [ &self[(x-1, y  )], &self[(x, y  )], &self[(x+1, y  )]],
-                    [ &self[(x-1, y+1)], &self[(x, y+1)], &self[(x+1, y+1)]],
+                    [ self.get_buf(&prev, x-1, y-1), self.get_buf(&prev, x, y-1), self.get_buf(&prev, x+1, y-1)],
+                    [ self.get_buf(&prev, x-1, y  ), self.get_buf(&prev, x, y  ), self.get_buf(&prev, x+1, y  )],
+                    [ self.get_buf(&prev, x-1, y+1), self.get_buf(&prev, x, y+1), self.get_buf(&prev, x+1, y+1)],
                 ];
-                kernel(x as usize, y as usize, &taps);
+                self[(x, y)] = kernel(x as usize, y as usize, &taps);
             }
         }
     }
