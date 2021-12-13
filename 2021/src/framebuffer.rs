@@ -136,6 +136,15 @@ impl<T> Framebuffer<T> {
         let idx = self.idx_from_xy(x, y)?;
         self.buf.get_mut(idx)
     }
+
+    /// Call a kernel per pixel
+    pub fn kernel_1x1(&mut self, mut kernel: impl FnMut(usize, usize, &mut T)) {
+        for x in 0..self.width {
+            for y in 0..self.height {
+                kernel(x as usize, y as usize, &mut self[(x, y)]);
+            }
+        }
+    }
 }
 
 impl<T> Framebuffer<T>
@@ -161,19 +170,6 @@ where
         }
     }
 }
-
-// Getting weird mut errors, this might not be useful. 🤷‍♀️
-// impl<T> Framebuffer<T> {
-//     /// Do something for each pixel
-//     pub fn for_each<'a>(&'a mut self, mut func: impl FnMut(usize, usize, &'a T)) {
-//         for x in 0..self.width() {
-//             for y in 0..self.height() {
-//                 let t: &T = &self[(x, y)];
-//                 func(x, y, t);
-//             }
-//         }
-//     }
-// }
 
 impl<T> Framebuffer<T>
 where
