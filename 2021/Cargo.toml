@@ -26,6 +26,7 @@ rayon = "1"
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
 image = "0.23"
 rand = "0.8"
+scan_fmt = "0.2"
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]
