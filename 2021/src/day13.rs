@@ -144,7 +144,7 @@ pub fn part2(input: &str) -> String {
 }
 
 #[test]
-fn check_example_1() {
+fn check_example_1_a() {
     let input = r#"6,10
 0,14
 9,10
@@ -166,6 +166,33 @@ fn check_example_1() {
 
 fold along y=7
 fold along x=5"#;
+
+    assert_eq!(part1(input), 17);
+}
+
+#[test]
+fn check_example_1_b() {
+    let input = r#"6,10
+0,14
+9,10
+0,3
+10,4
+4,11
+6,0
+6,12
+4,1
+0,13
+10,12
+3,4
+3,0
+8,4
+1,10
+2,14
+8,10
+9,0
+
+fold along x=5
+fold along y=7"#;
 
     assert_eq!(part1(input), 17);
 }
