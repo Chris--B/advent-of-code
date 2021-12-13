@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use crate::framebuffer::Framebuffer;
 
 // Turn off by default, because it dumps a lot
-static SAVE_IMG: AtomicBool = AtomicBool::new(true);
+static SAVE_IMG: AtomicBool = AtomicBool::new(false);
 const SCALE: u32 = 20;
 
 fn saving_images() -> bool {
