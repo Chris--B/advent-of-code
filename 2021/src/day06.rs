@@ -42,17 +42,8 @@ fn check_input() {
 fn sim_fish_population(mut counts: [u64; 9], times: u64) -> u64 {
     for t in 0..times {
         // age all the fish
-        counts = [
-            counts[1],             // age 0
-            counts[2],             // age 1
-            counts[3],             // age 2
-            counts[4],             // age 3
-            counts[5],             // age 4
-            counts[6],             // age 5
-            counts[7] + counts[0], // age 6, includes new parents
-            counts[8],             // age 7
-            counts[0],             // age 8, these are new fish
-        ];
+        counts.rotate_left(1);
+        counts[6] += counts[8];
     }
 
     counts.into_iter().sum()
@@ -70,16 +61,16 @@ fn sim_fish_population_reindex(mut counts: [u64; 9], times: usize) -> u64 {
 }
 
 // =============================================================================
-#[aoc(day6, part1, simple_shuffle)]
+#[aoc(day6, part1, simple_rotate)]
 #[inline(never)]
-pub fn part1_simple_shuffle(input: &str) -> u64 {
+pub fn part1_simple_rotate(input: &str) -> u64 {
     let counts = parse_input(input);
     sim_fish_population(counts, 80)
 }
 
-#[aoc(day6, part2, simple_shuffle)]
+#[aoc(day6, part2, simple_rotate)]
 #[inline(never)]
-pub fn part2_simple_shuffle(input: &str) -> u64 {
+pub fn part2_simple_rotate(input: &str) -> u64 {
     let counts = parse_input(input);
     sim_fish_population(counts, 256)
 }
@@ -100,16 +91,16 @@ pub fn part2_simple_reindex(input: &str) -> u64 {
 }
 
 // =============================================================================
-#[aoc(day6, part1, clever_shuffle)]
+#[aoc(day6, part1, clever_rotate)]
 #[inline(never)]
-pub fn part1_clever_shuffle(input: &str) -> u64 {
+pub fn part1_clever_rotate(input: &str) -> u64 {
     let counts = parse_input_clever(input);
     sim_fish_population(counts, 80)
 }
 
-#[aoc(day6, part2, clever_shuffle)]
+#[aoc(day6, part2, clever_rotate)]
 #[inline(never)]
-pub fn part2_clever_shuffle(input: &str) -> u64 {
+pub fn part2_clever_rotate(input: &str) -> u64 {
     let counts = parse_input_clever(input);
     sim_fish_population(counts, 256)
 }
