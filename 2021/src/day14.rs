@@ -101,22 +101,22 @@ fn expand_fast(template: &str, rules: &HashMap<(char, char), char>, times: usize
     }
 
     let mut counts: HashMap<char, usize> = HashMap::new();
-    for ((a, b), count) in pair_counts.iter() {
-        // println!("{}{}: {}", a, b, count);
 
+    // Count only the first letter in each pair
+    for ((a, _), count) in pair_counts.iter() {
         *counts.entry(*a).or_insert(0) += count;
-        *counts.entry(*b).or_insert(0) += count;
     }
 
-    // for (c, count) in counts.iter() {
-    //     println!("{}: {}", c, count);
-    // }
+    // And the last letter in our template, which was ignored above
+    {
+        let c = template.chars().last().unwrap();
+        *counts.entry(c).or_insert(0) += 1;
+    }
 
     let most = counts.iter().map(|(_c, count)| *count).max().unwrap();
     let least = counts.iter().map(|(_c, count)| *count).min().unwrap();
 
-    // draw the rest of the owl
-    (most - least) / 2 + 1
+    most - least
 }
 
 #[aoc(day14, part1, fast)]
