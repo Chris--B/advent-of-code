@@ -2,6 +2,8 @@ use aoc_runner_derive::{aoc, aoc_generator};
 
 use std::collections::HashMap;
 
+use crate::framebuffer::Framebuffer;
+
 #[derive(Copy, Clone, Debug)]
 pub struct Line {
     x0: i64,
@@ -147,9 +149,9 @@ pub fn parse_input(input: &str) -> Vec<Line> {
 }
 
 // Part1 ======================================================================
-#[aoc(day5, part1)]
+#[aoc(day5, part1, hashmap)]
 #[inline(never)]
-pub fn part1(lines: &[Line]) -> usize {
+pub fn part1_hashmap(lines: &[Line]) -> usize {
     let mut map = HashMap::<(i64, i64), u32>::new();
 
     for line in lines.iter().copied() {
@@ -166,9 +168,9 @@ pub fn part1(lines: &[Line]) -> usize {
 }
 
 // Part2 ======================================================================
-#[aoc(day5, part2)]
+#[aoc(day5, part2, hashmap)]
 #[inline(never)]
-pub fn part2(lines: &[Line]) -> usize {
+pub fn part2_hashmap(lines: &[Line]) -> usize {
     let mut map = HashMap::<(i64, i64), u32>::new();
 
     for line in lines.iter().copied() {
@@ -179,5 +181,28 @@ pub fn part2(lines: &[Line]) -> usize {
         }
     }
 
-    map.iter().filter(|(p, c)| **c >= 2).count()
+    map.iter().filter(|(_p, c)| **c >= 2).count()
+}
+
+// Part2 ======================================================================
+#[aoc(day5, part2, framebuffer)]
+#[inline(never)]
+pub fn part2_framebuffer(lines: &[Line]) -> usize {
+    let max_x = lines.iter().map(|line| line.x0.max(line.x1)).max().unwrap();
+    let max_x = 1 + max_x as usize;
+
+    let max_y = lines.iter().map(|line| line.y0.max(line.y1)).max().unwrap();
+    let max_y = 1 + max_y as usize;
+
+    let mut fb: Framebuffer<usize> = Framebuffer::with_dims(max_x, max_y);
+
+    for line in lines.iter().copied() {
+        let Line { x0, y0, x1, y1 } = line;
+
+        for (x, y) in line.points() {
+            fb[(x as usize, y as usize)] += 1;
+        }
+    }
+
+    fb.flatten().filter(|c| **c >= 2).count()
 }
