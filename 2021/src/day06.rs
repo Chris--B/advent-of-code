@@ -119,3 +119,101 @@ pub fn part2_clever_reindex(input: &str) -> u64 {
     let counts = parse_input_clever(input);
     sim_fish_population_reindex(counts, 256)
 }
+
+// =============================================================================
+type Num = u64;
+fn sim_fish_population_matrix(mut counts: [Num; 9], mut times: usize) -> Num {
+    fn dot(left: &[Num; 9], right: &[Num; 9]) -> Num {
+        let mut sum = 0;
+        for i in 0..9 {
+            sum += left[i] * right[i];
+        }
+
+        sum
+    }
+
+    // TODO: Wish we could SIMD this....
+    fn square(m: &[[Num; 9]; 9]) -> [[Num; 9]; 9] {
+        let mut mm = [[0; 9]; 9];
+
+        for i in 0..9 {
+            for j in 0..9 {
+                for k in 0..9 {
+                    mm[i][j] += m[i][k] * m[k][j];
+                }
+            }
+        }
+
+        mm
+    }
+
+    let mut m: [[Num; 9]; 9] = [
+        [0, 1, 0, 0, 0, 0, 0, 0, 0], // age 0
+        [0, 0, 1, 0, 0, 0, 0, 0, 0], // age 1
+        [0, 0, 0, 1, 0, 0, 0, 0, 0], // age 2
+        [0, 0, 0, 0, 1, 0, 0, 0, 0], // age 3
+        [0, 0, 0, 0, 0, 1, 0, 0, 0], // age 4
+        [0, 0, 0, 0, 0, 0, 1, 0, 0], // age 5
+        [1, 0, 0, 0, 0, 0, 0, 1, 0], // age 6, including new parents
+        [0, 0, 0, 0, 0, 0, 0, 0, 1], // age 7
+        [1, 0, 0, 0, 0, 0, 0, 0, 0], // age 8, these are new fish
+    ];
+
+    while times > 0 {
+        if (times & 0x1) == 0x1 {
+            // Multiply by our running square
+            counts = [
+                dot(&counts, &m[0]),
+                dot(&counts, &m[1]),
+                dot(&counts, &m[2]),
+                dot(&counts, &m[3]),
+                dot(&counts, &m[4]),
+                dot(&counts, &m[5]),
+                dot(&counts, &m[6]),
+                dot(&counts, &m[7]),
+                dot(&counts, &m[8]),
+            ];
+        }
+
+        m = square(&m);
+        times >>= 1;
+    }
+
+    // for _ in 0..times {
+    //     counts = [
+    //         dot(&counts, &m[0]),
+    //         dot(&counts, &m[1]),
+    //         dot(&counts, &m[2]),
+    //         dot(&counts, &m[3]),
+    //         dot(&counts, &m[4]),
+    //         dot(&counts, &m[5]),
+    //         dot(&counts, &m[6]),
+    //         dot(&counts, &m[7]),
+    //         dot(&counts, &m[8]),
+    //     ];
+    // }
+
+    counts.into_iter().sum()
+}
+
+#[aoc(day6, part1, clever_matrix)]
+#[inline(never)]
+pub fn part1_clever_matrix(input: &str) -> u64 {
+    let counts = parse_input_clever(input);
+    sim_fish_population_matrix(counts, 80)
+}
+
+#[aoc(day6, part2, clever_matrix)]
+#[inline(never)]
+pub fn part2_clever_matrix(input: &str) -> u64 {
+    let counts = parse_input_clever(input);
+    sim_fish_population_matrix(counts, 256)
+}
+
+#[test]
+fn check_example_1_clever_matrix() {
+    let input = "3,4,3,1,2";
+    assert_eq!(part1_clever_matrix(input), 5_934);
+
+    assert_eq!(part2_clever_matrix(input), 26_984_457_539);
+}
