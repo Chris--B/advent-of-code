@@ -18,11 +18,10 @@ fn parse_input(input: &str) -> (String, HashMap<(char, char), char>) {
         .lines()
         .skip(2)
         .map(|line| {
-            let mut iter = line.split(" -> ");
+            let (from, to) = line.split_once(" -> ").unwrap();
 
-            let from: (char, char) = str_to_pair(iter.next().unwrap());
-            let to: char = iter.next().unwrap().chars().next().unwrap();
-            assert_eq!(iter.next(), None);
+            let from: (char, char) = str_to_pair(from);
+            let to: char = to.chars().next().unwrap();
 
             (from, to)
         })
