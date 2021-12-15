@@ -36,5 +36,5 @@ opt-level = 2
 overflow-checks = true
 
 [features]
-default = ["simd"]
+default = []
 simd = ["core_simd"]
