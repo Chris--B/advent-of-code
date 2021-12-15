@@ -3,6 +3,8 @@
 
 use aoc_runner_derive::aoc_lib;
 
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+
 pub mod day01;
 pub mod day02;
 #[allow(unused_variables)]
@@ -28,6 +30,13 @@ pub mod day14;
 // pub mod day20;
 
 pub mod framebuffer;
+
+/// Configure whether images are written to disk or not
+static SAVE_IMG: AtomicBool = AtomicBool::new(false);
+
+fn saving_images() -> bool {
+    SAVE_IMG.load(SeqCst)
+}
 
 aoc_lib! { year = 2021 }
 

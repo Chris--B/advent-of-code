@@ -3,17 +3,11 @@ use aoc_runner_derive::aoc;
 use image::Rgb;
 
 use std::fs::File;
-use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
 use crate::framebuffer::Framebuffer;
 
-// Turn off by default, because it dumps a lot
-static SAVE_IMG: AtomicBool = AtomicBool::new(false);
+/// Image scale to make it viewable (and not a tiny 10x10 image)
 const SCALE: u32 = 20;
-
-fn saving_images() -> bool {
-    SAVE_IMG.load(SeqCst)
-}
 
 /// Wall values separate basins and we'll never mess with them.
 const WALL_HEIGHT: u8 = 9;
@@ -108,7 +102,7 @@ pub fn part1(input: &str) -> usize {
     let mut fb = parse_input(input);
     find_min_points(&mut fb);
 
-    if saving_images() {
+    if crate::saving_images() {
         fb.make_image(SCALE, |b| match *b {
             WALL_GRAY => GREEN,
             SLOPE_GRAY => BLUE,
@@ -151,7 +145,7 @@ pub fn part2(input: &str) -> usize {
     let mut fbs = vec![];
 
     loop {
-        if saving_images() {
+        if crate::saving_images() {
             fbs.push(fb.clone());
         }
 
@@ -189,7 +183,7 @@ pub fn part2(input: &str) -> usize {
         }
     }
 
-    if saving_images() {
+    if crate::saving_images() {
         fbs.push(fb.clone());
     }
 
@@ -206,7 +200,7 @@ pub fn part2(input: &str) -> usize {
     let res = top_3.iter().map(|(_color, count)| *count).product();
 
     // Pretty pictures
-    if saving_images() {
+    if crate::saving_images() {
         for x in 0..fb.width() {
             'inner: for y in 0..fb.width() {
                 // skip walls
@@ -229,7 +223,7 @@ pub fn part2(input: &str) -> usize {
         fbs.push(fb.clone());
     }
 
-    if saving_images() {
+    if crate::saving_images() {
         use image::{
             gif::{GifEncoder, Repeat},
             Delay, Frame,
