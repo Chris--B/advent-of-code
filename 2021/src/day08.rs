@@ -291,9 +291,9 @@ pub fn part2_product(input: &str) -> u64 {
         ];
 
         // Patterns of known digits
-        let d_1: u8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 2)).0;
-        let d_4: u8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 4)).0;
-        let d_8: u8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 7)).0;
+        let d_1: u8 = find_exactly_one(input, |d| d.set() == 2).0;
+        let d_4: u8 = find_exactly_one(input, |d| d.set() == 4).0;
+        let d_8: u8 = find_exactly_one(input, |d| d.set() == 7).0;
 
         let mut lut_unknown_to_digit = [0_u64; 128];
 
@@ -375,9 +375,9 @@ pub fn part2_simd(input: &str) -> u64 {
         let unknown = u8x16::from(unknown);
 
         // Scalar patterns of known digits
-        let d_1 = find_exactly_one(input.into_iter().filter(|d| d.set() == 2));
-        let d_4 = find_exactly_one(input.into_iter().filter(|d| d.set() == 4));
-        let d_8 = find_exactly_one(input.into_iter().filter(|d| d.set() == 7));
+        let d_1 = find_exactly_one(input, |d| d.set() == 2);
+        let d_4 = find_exactly_one(input, |d| d.set() == 4);
+        let d_8 = find_exactly_one(input, |d| d.set() == 7);
 
         // Draw the rest of the owl
         let p_1 = pop_count(unknown & u8x16::splat(d_1.0));

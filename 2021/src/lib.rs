@@ -41,9 +41,13 @@ fn saving_images() -> bool {
 aoc_lib! { year = 2021 }
 
 #[inline(always)]
-pub(crate) fn find_exactly_one<T>(mut iter: impl Iterator<Item = T>) -> T {
+pub(crate) fn find_exactly_one<T, I, P>(iter: I, p: P) -> T
+where
+    I: IntoIterator<Item = T>,
+    P: FnMut(&I::Item) -> bool,
+{
+    let mut iter = iter.into_iter().filter(p);
     let t: T = iter.next().unwrap();
-
     debug_assert!(iter.next().is_none());
 
     t
