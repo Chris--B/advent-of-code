@@ -40,7 +40,7 @@ fn check_input() {
 }
 
 fn sim_fish_population(mut counts: [u64; 9], times: u64) -> u64 {
-    for t in 0..times {
+    for _ in 0..times {
         // age all the fish
         counts.rotate_left(1);
         counts[6] += counts[8];

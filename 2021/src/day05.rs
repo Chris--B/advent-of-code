@@ -164,7 +164,7 @@ pub fn part1_hashmap(lines: &[Line]) -> usize {
         }
     }
 
-    map.iter().filter(|(p, c)| **c >= 2).count()
+    map.iter().filter(|(_p, c)| **c >= 2).count()
 }
 
 // Part2 ======================================================================
@@ -174,8 +174,6 @@ pub fn part2_hashmap(lines: &[Line]) -> usize {
     let mut map = HashMap::<(i64, i64), u32>::new();
 
     for line in lines.iter().copied() {
-        let Line { x0, y0, x1, y1 } = line;
-
         for (x, y) in line.points() {
             *map.entry((x, y)).or_insert(0) += 1;
         }
@@ -197,8 +195,6 @@ pub fn part2_framebuffer(lines: &[Line]) -> usize {
     let mut fb: Framebuffer<usize> = Framebuffer::with_dims(max_x, max_y);
 
     for line in lines.iter().copied() {
-        let Line { x0, y0, x1, y1 } = line;
-
         for (x, y) in line.points() {
             fb[(x as usize, y as usize)] += 1;
         }

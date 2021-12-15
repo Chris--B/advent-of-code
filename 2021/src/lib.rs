@@ -7,12 +7,9 @@ use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
 pub mod day01;
 pub mod day02;
-#[allow(unused_variables)]
 pub mod day03;
 pub mod day04;
-#[allow(unused_variables)]
 pub mod day05;
-#[allow(unused_variables)]
 pub mod day06;
 pub mod day07;
 pub mod day08;

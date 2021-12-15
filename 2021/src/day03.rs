@@ -63,8 +63,6 @@ pub fn part2(input: &str) -> u64 {
                 };
 
                 if should_cull {
-                    let removed = lines[line_idx];
-
                     lines.swap_remove(line_idx);
 
                     if lines.len() == 1 {
