@@ -51,7 +51,7 @@ fn expand(rules: &HashMap<(char, char), char>, s: &mut String) {
 }
 
 // Part1 ======================================================================
-#[aoc(day14, part1)]
+#[aoc(day14, part1, slow)]
 #[inline(never)]
 pub fn part1(input: &str) -> usize {
     let (mut template, rules) = parse_input(input);
@@ -72,48 +72,62 @@ pub fn part1(input: &str) -> usize {
 
 // Part2 ======================================================================
 fn expand_fast(template: &str, rules: &HashMap<(char, char), char>, times: usize) -> usize {
-    let mut pair_counts: HashMap<(char, char), usize> = HashMap::new();
+    const fn idx1(a: char) -> usize {
+        let a = a as u8 - b'A';
+        a as usize
+    }
+
+    const fn idx2((a, b): (char, char)) -> usize {
+        idx1(b) + 26 * idx1(a)
+    }
+
+    let mut pair_counts = [0_usize; 26 * 26];
 
     // initialize with the template
     for (a, b) in template.chars().tuple_windows() {
-        *pair_counts.entry((a, b)).or_insert(0) += 1;
+        pair_counts[idx2((a, b))] += 1;
     }
 
-    let mut next_pair_counts = HashMap::new();
     for _ in 0..times {
+        let mut next_pair_counts = [0_usize; 26 * 26];
+
         for ((a, b), x) in rules {
             // "remove" our pair
-            if let Some(count) = pair_counts.get(&(*a, *b)) {
-                if *count > 0 {
-                    // "insert" its replacement pairs:
-                    let first_pair = (*a, *x);
-                    let last_pair = (*x, *b);
-
-                    *next_pair_counts.entry(first_pair).or_insert(0) += *count;
-                    *next_pair_counts.entry(last_pair).or_insert(0) += *count;
-                }
+            let count = pair_counts[idx2((*a, *b))];
+            if count > 0 {
+                // "insert" its replacement pairs:
+                next_pair_counts[idx2((*a, *x))] += count;
+                next_pair_counts[idx2((*x, *b))] += count;
             }
         }
 
-        pair_counts.clear();
         std::mem::swap(&mut next_pair_counts, &mut pair_counts);
     }
 
-    let mut counts: HashMap<char, usize> = HashMap::new();
+    let mut letter_counts = [0_usize; 26];
 
-    // Count only the first letter in each pair
-    for ((a, _), count) in pair_counts.iter() {
-        *counts.entry(*a).or_insert(0) += count;
+    for a in 'A'..='Z' {
+        for b in 'A'..='Z' {
+            letter_counts[idx1(a)] += pair_counts[idx2((a, b))];
+        }
     }
 
     // And the last letter in our template, which was ignored above
     {
         let c = template.chars().last().unwrap();
-        *counts.entry(c).or_insert(0) += 1;
+        letter_counts[idx1(c)] += 1;
     }
 
-    let most = counts.iter().map(|(_c, count)| *count).max().unwrap();
-    let least = counts.iter().map(|(_c, count)| *count).min().unwrap();
+    let most = letter_counts
+        .iter()
+        .filter(|count| **count != 0)
+        .max()
+        .unwrap();
+    let least = letter_counts
+        .iter()
+        .filter(|count| **count != 0)
+        .min()
+        .unwrap();
 
     most - least
 }
@@ -126,7 +140,7 @@ pub fn part1_fast(input: &str) -> usize {
     expand_fast(&template, &rules, 10)
 }
 
-#[aoc(day14, part2)]
+#[aoc(day14, part2, fast)]
 #[inline(never)]
 pub fn part2(input: &str) -> usize {
     let (template, rules) = parse_input(input);
