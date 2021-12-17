@@ -1,31 +1,34 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Packet {
     version: u8,
     payload: Payload,
+    offset: u64,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum Payload {
+    Lit(u64),
+    Op { id: u64, num_packets: u64 },
+}
+use Payload::*;
+
 impl Packet {
-    fn for_each(&self, f: impl Fn(&Packet)) {
-        f(self);
+    fn id(&self) -> u64 {
         match self.payload {
-            Lit(_) => {}
-            Op { id: _, ref packets } => {
-                for p in packets {
-                    f(p);
-                }
-            }
+            Lit(_) => 4,
+            Op { id, .. } => id,
+        }
+    }
+
+    fn num_packets(&self) -> u64 {
+        match self.payload {
+            Lit(_) => 0,
+            Op { num_packets, .. } => num_packets,
         }
     }
 }
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum Payload {
-    Lit(u64),
-    Op { id: u64, packets: Vec<Packet> },
-}
-use Payload::*;
 
 #[aoc_generator(day16)]
 pub fn parse_input(input: &str) -> Vec<u8> {
@@ -65,33 +68,38 @@ pub fn parse_input(input: &str) -> Vec<u8> {
 struct PacketParser<'a> {
     bits: &'a [u8],
     offset: usize,
-    depth: usize,
+    packet_offsets: Vec<u64>,
 }
 
 impl<'a> PacketParser<'a> {
     fn new(bits: &'a [u8]) -> Self {
-        PacketParser { bits, offset: 0, depth: 0 }
+        PacketParser {
+            bits,
+            offset: 0,
+            packet_offsets: vec![],
+        }
     }
 
-    fn skip(&mut self, n: u64) {
-        println!("depth={depth} Skipping {} bits", n, depth=self.depth);
-        self.offset += n as usize;
-        assert!(self.offset < self.bits.len());
+    fn offset(&self) -> u64 {
+        self.offset as u64
     }
 
     fn fix_num(&mut self, nbits: usize) -> u64 {
         let a = self.offset;
         let b = self.offset + nbits;
-        println!("depth={depth} fix_num: ({}, {})", a, b, depth=self.depth);
-
         let s = std::str::from_utf8(&self.bits[a..b]).unwrap();
         let num = u64::from_str_radix(s, 2).unwrap();
+
+        // println!("  num: [{}, {}) -> {}", a, b, num);
 
         self.offset += nbits;
         num
     }
 
     fn var_num(&mut self) -> u64 {
+        // println!("Parsing var_num...");
+        let _a = self.offset();
+
         let mut num = 0;
         loop {
             let x = self.fix_num(5);
@@ -102,29 +110,67 @@ impl<'a> PacketParser<'a> {
             }
         }
 
+        let _b = self.offset();
+        // println!("var_num: [{}, {}) -> {}", _a, _b, num);
+
         num
     }
 
     fn all_packets(&mut self) -> Vec<Packet> {
         let mut packets = vec![];
 
+        // println!("## Parsing Packets");
         while let Some(p) = self.next_packet() {
             packets.push(p);
+        }
+        // println!("## Parsed {} Packets", packets.len());
+
+        // println!("## Patching Packets...");
+        // patch num_packets field!
+        for (i, p) in packets.iter_mut().enumerate() {
+            // println!("Checking packet: {:?}... ", p);
+
+            let num_packets = p.num_packets();
+            if num_packets > (u32::MAX as u64) {
+                // println!("  Needs patching");
+                let bit_scope: u64 = num_packets - u32::MAX as u64;
+
+                let curr: u64 = self.packet_offsets[i];
+                let real_num_packets = self.packet_offsets[i..]
+                    .iter()
+                    .take_while(|o| **o < curr + bit_scope)
+                    .count();
+
+                // println!(
+                //     "Patching {} bits into {} packets",
+                //     bit_scope, real_num_packets
+                // );
+
+                match &mut p.payload {
+                    Lit(_) => unreachable!(),
+                    Op { num_packets, .. } => *num_packets = real_num_packets as u64,
+                }
+            } else {
+                assert_ne!(num_packets, u32::MAX as u64);
+                // println!("  OK");
+            }
         }
 
         packets
     }
 
     fn next_packet(&mut self) -> Option<Packet> {
-        self.depth += 1;
+        let offset = self.offset();
+        // println!("Starting packet at {}", offset);
 
-        if self.offset == self.bits.len() {
+        if self.offset == self.bits.len() || self.bits[self.offset..].iter().all(|b| *b == b'0') {
             return None;
         }
+
         let version = self.fix_num(3) as u8;
         let id = self.fix_num(3);
 
-        println!("depth={depth} version={}, id={}", version, id, depth=self.depth);
+        // println!("version={}, id={}", version, id);
 
         let payload;
         if id == 4 {
@@ -132,39 +178,38 @@ impl<'a> PacketParser<'a> {
         } else {
             payload = self.op_payload(id);
         }
-        self.depth -= 1;
 
-        Some(Packet { version, payload })
+        self.packet_offsets.push(offset);
+
+        Some(Packet {
+            version,
+            offset,
+            payload,
+        })
     }
 
     fn lit_payload(&mut self) -> Payload {
-        println!("depth={depth} Parsing a Literal", depth=self.depth);
+        // println!("Parsing Lit");
         Lit(self.var_num())
     }
 
     fn op_payload(&mut self, id: u64) -> Payload {
-        self.depth += 1;
-
         let length_type_id = self.fix_num(1) as u8;
-        println!("depth={depth} Parsing an Op w/ length_type_id={}", length_type_id, depth=self.depth);
+        // println!("Parsing Op w/ length_type_id={}", length_type_id);
 
         if length_type_id == 0 {
             let nbits = self.fix_num(15) as usize;
+            // println!("--- TODO: Handle translating nbits={} into packets", nbits);
 
-            let mut sub_parser = PacketParser::new(&self.bits[..nbits]);
-            sub_parser.depth = self.depth;
-
-            let packets = sub_parser.all_packets();
-
-            self.depth -= 1;
-            Op { id, packets }
+            Op {
+                id,
+                num_packets: u32::MAX as u64 + nbits as u64,
+            }
         } else if length_type_id == 1 {
-            let npackets = self.fix_num(11);
+            let num_packets = self.fix_num(11);
+            // println!("Expects {} packets", num_packets);
 
-            let packets: Vec<_> = (0..npackets).map(|_| self.next_packet().unwrap()).collect();
-
-            self.depth -= 1;
-            Op { id, packets }
+            Op { id, num_packets }
         } else {
             unreachable!("{} is not a valid length_type_id", length_type_id);
         }
@@ -176,22 +221,52 @@ impl<'a> PacketParser<'a> {
 #[inline(never)]
 pub fn part1(bits: &[u8]) -> u64 {
     let mut parser = PacketParser::new(bits);
+    let packets = parser.all_packets();
 
-    let mut packets = vec![];
-    while let Some(p) = parser.next_packet() {
-        packets.push(p);
-    }
-
-    dbg!(packets.len());
-
-    0
+    packets.iter().map(|p| p.version as u64).sum()
 }
 
 // Part2 ======================================================================
+
+fn eval_packet(p: &Packet, ps: &[Packet]) -> i64 {
+    match p.id() {
+        0 => {
+            // sum
+        }
+        1 => {
+            // product
+        }
+        2 => {
+            // min
+        }
+        3 => {
+            // max
+        }
+        5 => {
+            assert_eq!(p.num_packets(), 2);
+            // greater-than
+        }
+        6 => {
+            assert_eq!(p.num_packets(), 2);
+            // less-than
+        }
+        7 => {
+            assert_eq!(p.num_packets(), 2);
+            // equal-to
+        }
+        _ => unreachable!(),
+    }
+
+    todo!()
+}
+
 #[aoc(day16, part2)]
 #[inline(never)]
 pub fn part2(bits: &[u8]) -> i64 {
-    unimplemented!();
+    let mut parser = PacketParser::new(bits);
+    let packets = parser.all_packets();
+
+    eval_packet(&packets[0], &packets[1..])
 }
 
 #[cfg(test)]
@@ -230,11 +305,12 @@ mod t {
         let mut parser = PacketParser::new(&bits);
 
         let expected = Packet {
+            offset: 0,
             version: 6,
             payload: Lit(2021),
         };
 
-        assert_eq!(Some(expected), parser.next_packet());
+        assert_eq!(vec![expected], parser.all_packets());
     }
 
     #[test]
@@ -242,13 +318,28 @@ mod t {
         let bits = text_to_bits("00111000000000000110111101000101001010010001001000000000");
         let mut parser = PacketParser::new(&bits);
 
-        let packets = vec![];
-        let expected = Packet {
-            version: 1,
-            payload: Op { id: 6, packets },
-        };
+        let expected = vec![
+            Packet {
+                offset: 0,
+                version: 1,
+                payload: Op {
+                    id: 6,
+                    num_packets: 2,
+                },
+            },
+            Packet {
+                version: 6,
+                payload: Lit(10),
+                offset: 22,
+            },
+            Packet {
+                version: 2,
+                payload: Lit(20),
+                offset: 33,
+            },
+        ];
 
-        assert_eq!(Some(expected), parser.next_packet());
+        assert_eq!(expected, parser.all_packets());
     }
 
     #[test]
@@ -256,25 +347,75 @@ mod t {
         let bits = text_to_bits("11101110000000001101010000001100100000100011000001100000");
         let mut parser = PacketParser::new(&bits);
 
-        let packets = vec![
+        let expected = vec![
             Packet {
+                offset: 0,
+                version: 7,
+                payload: Op {
+                    id: 3,
+                    num_packets: 3,
+                },
+            },
+            Packet {
+                offset: 18,
                 version: 2,
                 payload: Lit(1),
             },
             Packet {
+                offset: 29,
                 version: 4,
                 payload: Lit(2),
             },
             Packet {
+                offset: 40,
                 version: 1,
                 payload: Lit(3),
             },
         ];
-        let expected = Packet {
-            version: 7,
-            payload: Op { id: 3, packets },
-        };
 
-        assert_eq!(Some(expected), parser.next_packet());
+        assert_eq!(expected, parser.all_packets());
+    }
+
+    #[test]
+    fn check_example_2_eval_a() {}
+
+    #[test]
+    fn check_example_2_eval_0() {
+        assert_eq!(part2(&parse_input("C200B40A82")), 3);
+    }
+
+    #[test]
+    fn check_example_2_eval_1() {
+        assert_eq!(part2(&parse_input("04005AC33890")), 54);
+    }
+
+    #[test]
+    fn check_example_2_eval_2() {
+        assert_eq!(part2(&parse_input("880086C3E88112")), 7);
+    }
+
+    #[test]
+    fn check_example_2_eval_3() {
+        assert_eq!(part2(&parse_input("CE00C43D881120")), 9);
+    }
+
+    #[test]
+    fn check_example_2_eval_4() {
+        assert_eq!(part2(&parse_input("D8005AC2A8F0")), 1);
+    }
+
+    #[test]
+    fn check_example_2_eval_5() {
+        assert_eq!(part2(&parse_input("F600BC2D8F")), 0);
+    }
+
+    #[test]
+    fn check_example_2_eval_6() {
+        assert_eq!(part2(&parse_input("9C005AC2F8F0")), 0);
+    }
+
+    #[test]
+    fn check_example_2_eval_7() {
+        assert_eq!(part2(&parse_input("9C0141080250320F1802104A08")), 1);
     }
 }
