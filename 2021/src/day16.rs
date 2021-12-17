@@ -138,13 +138,13 @@ impl<'a> PacketParser<'a> {
                 let curr: u64 = self.packet_offsets[i];
                 let real_num_packets = self.packet_offsets[i..]
                     .iter()
-                    .take_while(|o| **o < curr + bit_scope)
+                    .take_while(|o| **o <= curr + bit_scope)
                     .count();
 
-                // println!(
-                //     "Patching {} bits into {} packets",
-                //     bit_scope, real_num_packets
-                // );
+                println!(
+                    "Patching {} bits into {} packets",
+                    bit_scope, real_num_packets
+                );
 
                 match &mut p.payload {
                     Lit(_) => unreachable!(),
@@ -163,7 +163,7 @@ impl<'a> PacketParser<'a> {
         let offset = self.offset();
         // println!("Starting packet at {}", offset);
 
-        if self.offset == self.bits.len() || self.bits[self.offset..].iter().all(|b| *b == b'0') {
+        if self.offset >= self.bits.len() || self.bits[self.offset..].iter().all(|b| *b == b'0') {
             return None;
         }
 
@@ -228,45 +228,88 @@ pub fn part1(bits: &[u8]) -> u64 {
 
 // Part2 ======================================================================
 
-fn eval_packet(p: &Packet, ps: &[Packet]) -> i64 {
-    match p.id() {
-        0 => {
-            // sum
+#[derive(Debug)]
+struct PacketTree {
+    p: Packet,
+    args: Vec<PacketTree>,
+}
+
+fn eval_packet(tree: &PacketTree) -> i64 {
+    let n = tree.args.len();
+    match tree.p.id() {
+        // sum
+        0 => tree.args.iter().map(eval_packet).sum(),
+
+        // product
+        1 => tree.args.iter().map(eval_packet).product(),
+
+        // min
+        2 => tree.args.iter().map(eval_packet).min().unwrap(),
+
+        // max
+        3 => tree.args.iter().map(eval_packet).max().unwrap(),
+
+        // lit
+        4 => {
+            assert_eq!(n, 0);
+            match tree.p.payload {
+                Lit(x) => x as i64,
+                _ => unreachable!(),
+            }
         }
-        1 => {
-            // product
-        }
-        2 => {
-            // min
-        }
-        3 => {
-            // max
-        }
+
+        // greater-than
         5 => {
-            assert_eq!(p.num_packets(), 2);
-            // greater-than
+            assert_eq!(n, 2);
+            (eval_packet(&tree.args[0]) > eval_packet(&tree.args[1])) as i64
         }
+
+        // less-than
         6 => {
-            assert_eq!(p.num_packets(), 2);
-            // less-than
+            assert_eq!(n, 2);
+            (eval_packet(&tree.args[0]) < eval_packet(&tree.args[1])) as i64
         }
+
+        // equal-to
         7 => {
-            assert_eq!(p.num_packets(), 2);
-            // equal-to
+            assert_eq!(n, 2);
+            (eval_packet(&tree.args[0]) == eval_packet(&tree.args[1])) as i64
         }
         _ => unreachable!(),
     }
+}
 
-    todo!()
+fn build_tree(packets: &mut Vec<Packet>) -> PacketTree {
+    fn helper(p: &Packet, packets: &mut Vec<Packet>) -> PacketTree {
+        println!("Eval'ing packet {:?}, needs {} args", p, p.num_packets());
+        let mut args = vec![];
+
+        for _ in 0..p.num_packets() {
+            if packets.is_empty() {
+                break;
+            }
+
+            let arg_packet = packets.remove(0);
+            args.push(helper(&arg_packet, packets));
+        }
+
+        PacketTree { p: *p, args }
+    }
+
+    let p = packets.remove(0);
+    helper(&p, packets)
 }
 
 #[aoc(day16, part2)]
 #[inline(never)]
 pub fn part2(bits: &[u8]) -> i64 {
     let mut parser = PacketParser::new(bits);
-    let packets = parser.all_packets();
+    let mut packets = parser.all_packets();
 
-    eval_packet(&packets[0], &packets[1..])
+    let tree = build_tree(&mut packets);
+    dbg!(&tree);
+
+    eval_packet(&tree)
 }
 
 #[cfg(test)]
