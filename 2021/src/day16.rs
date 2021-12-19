@@ -119,14 +119,9 @@ impl<'a> PacketParser<'a> {
     fn all_packets(&mut self) -> Vec<Packet> {
         let mut packets = vec![];
 
-        // println!("## Parsing Packets");
         while let Some(p) = self.next_packet() {
             packets.push(p);
         }
-        // println!("## Parsed {} Packets", packets.len());
-
-        // println!("## Patching Packets...");
-        // patch num_packets field!
         for (i, p) in packets.iter_mut().enumerate() {
             // println!("Checking packet: {:?}... ", p);
 
@@ -234,82 +229,103 @@ struct PacketTree {
     args: Vec<PacketTree>,
 }
 
-fn eval_packet(tree: &PacketTree) -> i64 {
-    let n = tree.args.len();
-    match tree.p.id() {
-        // sum
-        0 => tree.args.iter().map(eval_packet).sum(),
+impl PacketTree {
+    fn eval(&self) -> i64 {
+        let n = self.args.len();
+        match self.p.id() {
+            // sum
+            0 => self.args.iter().map(PacketTree::eval).sum(),
 
-        // product
-        1 => tree.args.iter().map(eval_packet).product(),
+            // product
+            1 => self.args.iter().map(PacketTree::eval).product(),
 
-        // min
-        2 => tree.args.iter().map(eval_packet).min().unwrap(),
+            // min
+            2 => self.args.iter().map(PacketTree::eval).min().unwrap(),
 
-        // max
-        3 => tree.args.iter().map(eval_packet).max().unwrap(),
+            // max
+            3 => self.args.iter().map(PacketTree::eval).max().unwrap(),
 
-        // lit
-        4 => {
-            assert_eq!(n, 0);
-            match tree.p.payload {
-                Lit(x) => x as i64,
-                _ => unreachable!(),
+            // lit
+            4 => {
+                assert_eq!(n, 0);
+                match self.p.payload {
+                    Lit(x) => x as i64,
+                    _ => unreachable!(),
+                }
             }
+
+            // greater-than
+            5 => {
+                assert_eq!(n, 2);
+                (self.args[0].eval() > self.args[1].eval()) as i64
+            }
+
+            // less-than
+            6 => {
+                assert_eq!(n, 2);
+                (self.args[0].eval() < self.args[1].eval()) as i64
+            }
+
+            // equal-to
+            7 => {
+                assert_eq!(n, 2);
+                (self.args[0].eval() == self.args[1].eval()) as i64
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn len(&self) -> usize {
+        // count this node
+        let mut n = 1;
+
+        for arg in &self.args {
+            // count the length of each argument
+            n += arg.len();
         }
 
-        // greater-than
-        5 => {
-            assert_eq!(n, 2);
-            (eval_packet(&tree.args[0]) > eval_packet(&tree.args[1])) as i64
-        }
-
-        // less-than
-        6 => {
-            assert_eq!(n, 2);
-            (eval_packet(&tree.args[0]) < eval_packet(&tree.args[1])) as i64
-        }
-
-        // equal-to
-        7 => {
-            assert_eq!(n, 2);
-            (eval_packet(&tree.args[0]) == eval_packet(&tree.args[1])) as i64
-        }
-        _ => unreachable!(),
+        n
     }
 }
 
-fn build_tree(packets: &mut Vec<Packet>) -> PacketTree {
-    fn helper(p: &Packet, packets: &mut Vec<Packet>) -> PacketTree {
-        println!("Eval'ing packet {:?}, needs {} args", p, p.num_packets());
+fn build_tree(mut packets: Vec<Packet>) -> PacketTree {
+    fn helper(depth: u32, packets: &mut Vec<Packet>) -> PacketTree {
+        assert!(!packets.is_empty());
+
+        let p = packets.remove(0);
+
+        for _ in 0..depth {
+            print!("  ");
+        }
+        println!(
+            "Eval'ing packet id={:?}, needs {} args, {} left",
+            p.id(),
+            p.num_packets(),
+            packets.len()
+        );
+        assert!(p.num_packets() <= packets.len() as u64);
+
         let mut args = vec![];
 
         for _ in 0..p.num_packets() {
-            if packets.is_empty() {
-                break;
-            }
-
-            let arg_packet = packets.remove(0);
-            args.push(helper(&arg_packet, packets));
+            args.push(helper(depth + 1, packets));
         }
 
-        PacketTree { p: *p, args }
+        PacketTree { p, args }
     }
 
-    let p = packets.remove(0);
-    helper(&p, packets)
+    helper(0, &mut packets)
 }
 
 #[aoc(day16, part2)]
 #[inline(never)]
 pub fn part2(bits: &[u8]) -> i64 {
     let mut parser = PacketParser::new(bits);
-    let mut packets = parser.all_packets();
+    let packets = parser.all_packets();
+    let tree = build_tree(packets);
 
-    let tree = build_tree(&mut packets);
-    dbg!(&tree);
-
-    eval_packet(&tree)
+    dbg!(&tree.len());
+    tree.eval()
 }
 
 #[cfg(test)]
@@ -459,6 +475,62 @@ mod t {
 
     #[test]
     fn check_example_2_eval_7() {
-        assert_eq!(part2(&parse_input("9C0141080250320F1802104A08")), 1);
+        let bits = parse_input("9C0141080250320F1802104A08");
+        let mut parser = PacketParser::new(&bits);
+
+        // 1 + 3 == 2 * 2
+        let expected = vec![
+            Packet {
+                offset: 0,
+                version: 4,
+                payload: Op {
+                    id: 7,
+                    num_packets: 2,
+                },
+            },
+            // {
+            Packet {
+                offset: 22,
+                version: 2,
+                payload: Op {
+                    id: 0,
+                    num_packets: 2,
+                },
+            },
+            Packet {
+                offset: 40,
+                version: 2,
+                payload: Lit(1),
+            },
+            Packet {
+                offset: 51,
+                version: 4,
+                payload: Lit(3),
+            },
+            // }
+            // {
+            Packet {
+                offset: 62,
+                version: 6,
+                payload: Op {
+                    id: 1,
+                    num_packets: 2,
+                },
+            },
+            Packet {
+                offset: 80,
+                version: 0,
+                payload: Lit(2),
+            },
+            Packet {
+                offset: 91,
+                version: 2,
+                payload: Lit(2),
+            },
+            // }
+        ];
+
+        assert_eq!(expected, parser.all_packets());
+        assert_eq!(part2(&bits), 1);
     }
 }
