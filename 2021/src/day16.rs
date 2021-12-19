@@ -1,31 +1,73 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Packet {
     version: u8,
     payload: Payload,
     offset: u64,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum Payload {
     Lit(u64),
-    Op { id: u64, num_packets: u64 },
+    Op { id: u64, args: Vec<Packet> },
 }
 use Payload::*;
 
 impl Packet {
-    fn id(&self) -> u64 {
-        match self.payload {
-            Lit(_) => 4,
-            Op { id, .. } => id,
+    fn visit(&self, mut f: impl FnMut(&Packet)) {
+        fn helper(p: &Packet, ff: &mut impl FnMut(&Packet)) {
+            ff(p);
+            match &p.payload {
+                Lit(_) => {}
+                Op { args, .. } => {
+                    for arg in args.iter() {
+                        helper(arg, ff);
+                    }
+                }
+            }
         }
+
+        helper(self, &mut f);
     }
 
-    fn num_packets(&self) -> u64 {
-        match self.payload {
-            Lit(_) => 0,
-            Op { num_packets, .. } => num_packets,
+    fn eval(&self) -> i64 {
+        match &self.payload {
+            Lit(num) => *num as i64,
+            Op { id, args, .. } => {
+                match id {
+                    // sum
+                    0 => args.iter().map(Self::eval).sum(),
+
+                    // product
+                    1 => args.iter().map(Self::eval).product(),
+
+                    // min
+                    2 => args.iter().map(Self::eval).min().unwrap(),
+
+                    // max
+                    3 => args.iter().map(Self::eval).max().unwrap(),
+
+                    // greater-than
+                    5 => {
+                        assert_eq!(args.len(), 2);
+                        (args[0].eval() > args[1].eval()) as i64
+                    }
+
+                    // less-than
+                    6 => {
+                        assert_eq!(args.len(), 2);
+                        (args[0].eval() < args[1].eval()) as i64
+                    }
+
+                    // equal-to
+                    7 => {
+                        assert_eq!(args.len(), 2);
+                        (args[0].eval() == args[1].eval()) as i64
+                    }
+                    _ => unreachable!(),
+                }
+            }
         }
     }
 }
@@ -68,7 +110,8 @@ pub fn parse_input(input: &str) -> Vec<u8> {
 struct PacketParser<'a> {
     bits: &'a [u8],
     offset: usize,
-    packet_offsets: Vec<u64>,
+
+    depth: u64,
 }
 
 impl<'a> PacketParser<'a> {
@@ -76,7 +119,8 @@ impl<'a> PacketParser<'a> {
         PacketParser {
             bits,
             offset: 0,
-            packet_offsets: vec![],
+
+            depth: 0,
         }
     }
 
@@ -90,14 +134,11 @@ impl<'a> PacketParser<'a> {
         let s = std::str::from_utf8(&self.bits[a..b]).unwrap();
         let num = u64::from_str_radix(s, 2).unwrap();
 
-        // println!("  num: [{}, {}) -> {}", a, b, num);
-
         self.offset += nbits;
         num
     }
 
     fn var_num(&mut self) -> u64 {
-        // println!("Parsing var_num...");
         let _a = self.offset();
 
         let mut num = 0;
@@ -111,100 +152,59 @@ impl<'a> PacketParser<'a> {
         }
 
         let _b = self.offset();
-        // println!("var_num: [{}, {}) -> {}", _a, _b, num);
 
         num
     }
 
-    fn all_packets(&mut self) -> Vec<Packet> {
-        let mut packets = vec![];
-
-        while let Some(p) = self.next_packet() {
-            packets.push(p);
-        }
-        for (i, p) in packets.iter_mut().enumerate() {
-            // println!("Checking packet: {:?}... ", p);
-
-            let num_packets = p.num_packets();
-            if num_packets > (u32::MAX as u64) {
-                // println!("  Needs patching");
-                let bit_scope: u64 = num_packets - u32::MAX as u64;
-
-                let curr: u64 = self.packet_offsets[i];
-                let real_num_packets = self.packet_offsets[i..]
-                    .iter()
-                    .take_while(|o| **o <= curr + bit_scope)
-                    .count();
-
-                println!(
-                    "Patching {} bits into {} packets",
-                    bit_scope, real_num_packets
-                );
-
-                match &mut p.payload {
-                    Lit(_) => unreachable!(),
-                    Op { num_packets, .. } => *num_packets = real_num_packets as u64,
-                }
-            } else {
-                assert_ne!(num_packets, u32::MAX as u64);
-                // println!("  OK");
-            }
-        }
-
-        packets
-    }
-
-    fn next_packet(&mut self) -> Option<Packet> {
+    fn parse(&mut self) -> Packet {
+        self.depth += 1;
         let offset = self.offset();
-        // println!("Starting packet at {}", offset);
-
-        if self.offset >= self.bits.len() || self.bits[self.offset..].iter().all(|b| *b == b'0') {
-            return None;
-        }
 
         let version = self.fix_num(3) as u8;
         let id = self.fix_num(3);
 
-        // println!("version={}, id={}", version, id);
-
         let payload;
         if id == 4 {
-            payload = self.lit_payload();
+            payload = self.parse_lit();
         } else {
-            payload = self.op_payload(id);
+            payload = self.parse_op(id);
         }
 
-        self.packet_offsets.push(offset);
+        self.depth -= 1;
 
-        Some(Packet {
+        Packet {
             version,
             offset,
             payload,
-        })
+        }
     }
 
-    fn lit_payload(&mut self) -> Payload {
-        // println!("Parsing Lit");
+    fn parse_lit(&mut self) -> Payload {
         Lit(self.var_num())
     }
 
-    fn op_payload(&mut self, id: u64) -> Payload {
+    fn parse_op(&mut self, id: u64) -> Payload {
         let length_type_id = self.fix_num(1) as u8;
-        // println!("Parsing Op w/ length_type_id={}", length_type_id);
 
         if length_type_id == 0 {
             let nbits = self.fix_num(15) as usize;
-            // println!("--- TODO: Handle translating nbits={} into packets", nbits);
 
-            Op {
-                id,
-                num_packets: u32::MAX as u64 + nbits as u64,
+            let mut args = vec![];
+            let target = self.offset + nbits;
+            while self.offset < target {
+                args.push(self.parse());
             }
+
+            Op { id, args }
         } else if length_type_id == 1 {
             let num_packets = self.fix_num(11);
-            // println!("Expects {} packets", num_packets);
 
-            Op { id, num_packets }
+            let mut args = vec![];
+            for _ in 0..num_packets {
+                args.push(self.parse());
+            }
+
+            Op { id, args }
         } else {
             unreachable!("{} is not a valid length_type_id", length_type_id);
         }
@@ -216,116 +216,22 @@ impl<'a> PacketParser<'a> {
 #[inline(never)]
 pub fn part1(bits: &[u8]) -> u64 {
     let mut parser = PacketParser::new(bits);
-    let packets = parser.all_packets();
+    let packet = parser.parse();
 
-    packets.iter().map(|p| p.version as u64).sum()
+    let mut sum = 0;
+    packet.visit(|p| sum += p.version as u64);
+
+    sum
 }
 
 // Part2 ======================================================================
-
-#[derive(Debug)]
-struct PacketTree {
-    p: Packet,
-    args: Vec<PacketTree>,
-}
-
-impl PacketTree {
-    fn eval(&self) -> i64 {
-        let n = self.args.len();
-        match self.p.id() {
-            // sum
-            0 => self.args.iter().map(PacketTree::eval).sum(),
-
-            // product
-            1 => self.args.iter().map(PacketTree::eval).product(),
-
-            // min
-            2 => self.args.iter().map(PacketTree::eval).min().unwrap(),
-
-            // max
-            3 => self.args.iter().map(PacketTree::eval).max().unwrap(),
-
-            // lit
-            4 => {
-                assert_eq!(n, 0);
-                match self.p.payload {
-                    Lit(x) => x as i64,
-                    _ => unreachable!(),
-                }
-            }
-
-            // greater-than
-            5 => {
-                assert_eq!(n, 2);
-                (self.args[0].eval() > self.args[1].eval()) as i64
-            }
-
-            // less-than
-            6 => {
-                assert_eq!(n, 2);
-                (self.args[0].eval() < self.args[1].eval()) as i64
-            }
-
-            // equal-to
-            7 => {
-                assert_eq!(n, 2);
-                (self.args[0].eval() == self.args[1].eval()) as i64
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn len(&self) -> usize {
-        // count this node
-        let mut n = 1;
-
-        for arg in &self.args {
-            // count the length of each argument
-            n += arg.len();
-        }
-
-        n
-    }
-}
-
-fn build_tree(mut packets: Vec<Packet>) -> PacketTree {
-    fn helper(depth: u32, packets: &mut Vec<Packet>) -> PacketTree {
-        assert!(!packets.is_empty());
-
-        let p = packets.remove(0);
-
-        for _ in 0..depth {
-            print!("  ");
-        }
-        println!(
-            "Eval'ing packet id={:?}, needs {} args, {} left",
-            p.id(),
-            p.num_packets(),
-            packets.len()
-        );
-        assert!(p.num_packets() <= packets.len() as u64);
-
-        let mut args = vec![];
-
-        for _ in 0..p.num_packets() {
-            args.push(helper(depth + 1, packets));
-        }
-
-        PacketTree { p, args }
-    }
-
-    helper(0, &mut packets)
-}
-
 #[aoc(day16, part2)]
 #[inline(never)]
 pub fn part2(bits: &[u8]) -> i64 {
     let mut parser = PacketParser::new(bits);
-    let packets = parser.all_packets();
-    let tree = build_tree(packets);
+    let packet = parser.parse();
 
-    dbg!(&tree.len());
-    tree.eval()
+    packet.eval()
 }
 
 #[cfg(test)]
@@ -369,7 +275,7 @@ mod t {
             payload: Lit(2021),
         };
 
-        assert_eq!(vec![expected], parser.all_packets());
+        assert_eq!(expected, parser.parse());
     }
 
     #[test]
@@ -377,28 +283,27 @@ mod t {
         let bits = text_to_bits("00111000000000000110111101000101001010010001001000000000");
         let mut parser = PacketParser::new(&bits);
 
-        let expected = vec![
-            Packet {
-                offset: 0,
-                version: 1,
-                payload: Op {
-                    id: 6,
-                    num_packets: 2,
-                },
+        let expected = Packet {
+            offset: 0,
+            version: 1,
+            payload: Op {
+                id: 6,
+                args: vec![
+                    Packet {
+                        version: 6,
+                        payload: Lit(10),
+                        offset: 22,
+                    },
+                    Packet {
+                        version: 2,
+                        payload: Lit(20),
+                        offset: 33,
+                    },
+                ],
             },
-            Packet {
-                version: 6,
-                payload: Lit(10),
-                offset: 22,
-            },
-            Packet {
-                version: 2,
-                payload: Lit(20),
-                offset: 33,
-            },
-        ];
+        };
 
-        assert_eq!(expected, parser.all_packets());
+        assert_eq!(expected, parser.parse());
     }
 
     #[test]
@@ -406,33 +311,32 @@ mod t {
         let bits = text_to_bits("11101110000000001101010000001100100000100011000001100000");
         let mut parser = PacketParser::new(&bits);
 
-        let expected = vec![
-            Packet {
-                offset: 0,
-                version: 7,
-                payload: Op {
-                    id: 3,
-                    num_packets: 3,
-                },
+        let expected = Packet {
+            offset: 0,
+            version: 7,
+            payload: Op {
+                id: 3,
+                args: vec![
+                    Packet {
+                        offset: 18,
+                        version: 2,
+                        payload: Lit(1),
+                    },
+                    Packet {
+                        offset: 29,
+                        version: 4,
+                        payload: Lit(2),
+                    },
+                    Packet {
+                        offset: 40,
+                        version: 1,
+                        payload: Lit(3),
+                    },
+                ],
             },
-            Packet {
-                offset: 18,
-                version: 2,
-                payload: Lit(1),
-            },
-            Packet {
-                offset: 29,
-                version: 4,
-                payload: Lit(2),
-            },
-            Packet {
-                offset: 40,
-                version: 1,
-                payload: Lit(3),
-            },
-        ];
+        };
 
-        assert_eq!(expected, parser.all_packets());
+        assert_eq!(expected, parser.parse());
     }
 
     #[test]
@@ -479,58 +383,55 @@ mod t {
         let mut parser = PacketParser::new(&bits);
 
         // 1 + 3 == 2 * 2
-        let expected = vec![
-            Packet {
-                offset: 0,
-                version: 4,
-                payload: Op {
-                    id: 7,
-                    num_packets: 2,
-                },
+        let expected = Packet {
+            offset: 0,
+            version: 4,
+            payload: Op {
+                id: 7,
+                args: vec![
+                    Packet {
+                        offset: 22,
+                        version: 2,
+                        payload: Op {
+                            id: 0,
+                            args: vec![
+                                Packet {
+                                    offset: 40,
+                                    version: 2,
+                                    payload: Lit(1),
+                                },
+                                Packet {
+                                    offset: 51,
+                                    version: 4,
+                                    payload: Lit(3),
+                                },
+                            ],
+                        },
+                    },
+                    Packet {
+                        offset: 62,
+                        version: 6,
+                        payload: Op {
+                            id: 1,
+                            args: vec![
+                                Packet {
+                                    offset: 80,
+                                    version: 0,
+                                    payload: Lit(2),
+                                },
+                                Packet {
+                                    offset: 91,
+                                    version: 2,
+                                    payload: Lit(2),
+                                },
+                            ],
+                        },
+                    },
+                ],
             },
-            // {
-            Packet {
-                offset: 22,
-                version: 2,
-                payload: Op {
-                    id: 0,
-                    num_packets: 2,
-                },
-            },
-            Packet {
-                offset: 40,
-                version: 2,
-                payload: Lit(1),
-            },
-            Packet {
-                offset: 51,
-                version: 4,
-                payload: Lit(3),
-            },
-            // }
-            // {
-            Packet {
-                offset: 62,
-                version: 6,
-                payload: Op {
-                    id: 1,
-                    num_packets: 2,
-                },
-            },
-            Packet {
-                offset: 80,
-                version: 0,
-                payload: Lit(2),
-            },
-            Packet {
-                offset: 91,
-                version: 2,
-                payload: Lit(2),
-            },
-            // }
-        ];
+        };
 
-        assert_eq!(expected, parser.all_packets());
+        assert_eq!(expected, parser.parse());
         assert_eq!(part2(&bits), 1);
     }
 }
