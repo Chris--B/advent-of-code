@@ -5,10 +5,11 @@ Advent of Code is an [advent calendar]() where each day involves a ~~small~~ cod
 Some of these puzzles are incomplete, missing, or wrong. Some of the code here horrifies me, and some of it I'm quite proud of. It's a bit of a zoo.
 
 For more information about this annual event, see it's website:
-- https://adventofcode.com/2021/about
+- https://adventofcode.com/2022/about
 - https://adventofcode.com/
 
 #### Puzzle Links over the years
+- https://adventofcode.com/2022
 - https://adventofcode.com/2021
 - https://adventofcode.com/2020
 - https://adventofcode.com/2019

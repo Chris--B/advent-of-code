@@ -1,0 +1,37 @@
+[package]
+name = "aoc22"
+version = "0.1.0"
+authors = ["Chris Butler <chrisbutler296@gmail.com>"]
+edition = "2021"
+default-run = "aoc22"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "aoc22"
+path = "src/lib.rs"
+
+[dependencies]
+aoc-runner = "*"
+aoc-runner-derive = "*"
+
+core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
+image = { version = "0.24", default-features = false, features = ["png"] }
+itertools = "0.10"
+lazy_static = "1"
+pretty_assertions = "*"
+rand = "0.8"
+rayon = "1"
+regex = "1"
+scan_fmt = "0.2"
+smallvec = "1"
+
+# Enable aggressive optimizations for all dependencies all of the time
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+overflow-checks = true
+
+[features]
+default = []
+simd = ["core_simd"]

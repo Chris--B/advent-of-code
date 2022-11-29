@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cargo watch -c               \
+    -x "clippy --tests"      \
+    -x fmt                   \
+    -x "test --lib"       \
+    -x "aoc $*"
