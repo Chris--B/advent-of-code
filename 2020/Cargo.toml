@@ -8,8 +8,8 @@ default-run = "aoc20"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aoc-runner = ""
-aoc-runner-derive = ""
+aoc-runner = "*"
+aoc-runner-derive = "*"
 itertools = "0.9"
 lazy_static = "1"
 regex = "1"

@@ -8,8 +8,8 @@ default-run = "aoc19"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aoc-runner = ""
-aoc-runner-derive = ""
+aoc-runner = "*"
+aoc-runner-derive = "*"
 smallvec = "1"
 itertools = "0.8"
 intcode = { path = "../intcode" }

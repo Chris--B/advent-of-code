@@ -46,7 +46,8 @@ pub fn part1(input: &[u32]) -> u32 {
         .min_by_key(|counts| counts[0])
         .unwrap();
 
-    dbg!(counts[1]) * dbg!(counts[2])
+    // dbg!(counts[1]) * dbg!(counts[2]);
+    counts[1] * counts[2]
 }
 
 #[aoc(day8, part2)]
