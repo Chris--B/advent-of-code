@@ -1,3 +1,5 @@
+#![allow(clippy::needless_late_init)]
+
 use aoc_runner_derive::aoc;
 
 fn parse_input(input: &str) -> Vec<i64> {

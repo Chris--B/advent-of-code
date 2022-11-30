@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_to_owned)]
+
 use aoc_runner_derive::{aoc, aoc_generator};
 
 use std::collections::HashMap;

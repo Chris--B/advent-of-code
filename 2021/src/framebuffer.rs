@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_lazy_evaluations)]
+
 use smallvec::{smallvec, SmallVec};
 
 use image::ImageBuffer;
