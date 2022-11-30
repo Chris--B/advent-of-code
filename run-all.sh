@@ -4,11 +4,11 @@ set +e
 
 # Build everything
 echo "Building!"
-for d in $(find * -type d -name "20*" -maxdepth 1)
+for y in $(find * -type d -name "20*" -maxdepth 1)
 do
-    pushd $d > /dev/null
+    pushd $y > /dev/null
 
-    echo "    Advent of Code $d https://adventofcode.com/$d/"
+    echo "    Advent of Code $y https://adventofcode.com/$y/"
     cargo build --release
     echo ""
 
@@ -17,17 +17,17 @@ done
 
 # Run everything
 echo "Running!"
-for d in $(find * -type d -name "20*" -maxdepth 1)
+for y in $(find * -type d -name "20*" -maxdepth 1)
 do
-    pushd $d > /dev/null
+    pushd $y > /dev/null
 
-    echo "    Advent of Code $d https://adventofcode.com/$d/"
-    RUST_BACKTRACE=1 timeout 3s cargo run --release > target/output_$d.txt
+    echo "    Advent of Code $y https://adventofcode.com/$y/"
+    RUST_BACKTRACE=1 timeout 3s cargo run --release > target/output_$y.txt
     ret=$?
     if [[ "$ret" -eq "124" ]]; then
-        echo "[!!!] AOC $d timed out"
+        echo "[!!!] AOC $y timed out"
     fi
-    echo "    Run logs in $d/target/output_$d.txt"
+    echo "    Run logs in $y/target/output_$y.txt"
     echo ""
 
     popd     > /dev/null
