@@ -21,7 +21,7 @@ aoc-runner-derive = "*"
 itertools = "0.10"
 lazy_static = "1"
 regex = "1"
-smallvec = "1"
+smallvec = { version = "1", features = ["const_generics"] }
 rayon = "1"
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
 image = "0.23"
