@@ -36,9 +36,7 @@ pub fn part2(input: &[i64]) -> i64 {
 mod test {
     use super::*;
 
-    #[test]
-    fn check_example_1() {
-        let input = r"
+    const EXAMPLE_INPUT: &str = r"
 1000
 2000
 3000
@@ -52,29 +50,15 @@ mod test {
 8000
 9000
 
-10000"
-            .trim();
-        assert_eq!(part1(&parse_input(input)), 24_000);
+10000";
+
+    #[test]
+    fn check_example_1() {
+        assert_eq!(part1(&parse_input(EXAMPLE_INPUT)), 24_000);
     }
 
     #[test]
     fn check_example_2() {
-        let input = r"
-1000
-2000
-3000
-
-4000
-
-5000
-6000
-
-7000
-8000
-9000
-
-10000"
-            .trim();
-        assert_eq!(part2(&parse_input(input)), 45_000);
+        assert_eq!(part2(&parse_input(EXAMPLE_INPUT)), 45_000);
     }
 }

@@ -25,3 +25,21 @@ pub fn part1(input: &[i64]) -> i64 {
 pub fn part2(input: &[i64]) -> i64 {
     unimplemented!();
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const EXAMPLE_INPUT: &str = r"
+";
+
+    #[test]
+    fn check_example_1() {
+        assert_eq!(part1(&parse_input(EXAMPLE_INPUT)), 1);
+    }
+
+    #[test]
+    fn check_example_2() {
+        assert_eq!(part2(&parse_input(EXAMPLE_INPUT)), 1);
+    }
+}
