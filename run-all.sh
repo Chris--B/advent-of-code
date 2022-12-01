@@ -4,11 +4,12 @@ set +e
 
 # Build everything
 echo "Building!"
-for y in $(find * -type d -name "20*" -maxdepth 1)
+for y in $(find * -maxdepth 1 -type d -name "20*")
 do
     pushd $y > /dev/null
 
     echo "    Advent of Code $y https://adventofcode.com/$y/"
+    cargo update
     cargo build --release
     echo ""
 
@@ -17,7 +18,7 @@ done
 
 # Run everything
 echo "Running!"
-for y in $(find * -type d -name "20*" -maxdepth 1)
+for y in $(find * -maxdepth 1 -type d -name "20*")
 do
     pushd $y > /dev/null
 
