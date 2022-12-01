@@ -31,15 +31,34 @@ mod test {
     use super::*;
 
     const EXAMPLE_INPUT: &str = r"
+// todo
 ";
 
-    #[test]
-    fn check_example_1() {
-        assert_eq!(part1(&parse_input(EXAMPLE_INPUT)), 1);
+    #[rstest]
+    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_1(
+        #[notrace]
+        #[values(part1)]
+        p: impl FnOnce(&[i64]) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(&parse_input(input)), expected);
     }
 
-    #[test]
-    fn check_example_2() {
-        assert_eq!(part2(&parse_input(EXAMPLE_INPUT)), 1);
+    #[rstest]
+    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&[i64]) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(&parse_input(input)), expected);
     }
 }

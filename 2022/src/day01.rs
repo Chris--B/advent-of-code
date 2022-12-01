@@ -35,6 +35,7 @@ pub fn part2(input: &[i64]) -> i64 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use rstest::*;
 
     const EXAMPLE_INPUT: &str = r"
 1000
@@ -52,13 +53,67 @@ mod test {
 
 10000";
 
-    #[test]
-    fn check_example_1() {
-        assert_eq!(part1(&parse_input(EXAMPLE_INPUT)), 24_000);
+    #[rstest]
+    #[case::given(24_000, EXAMPLE_INPUT)]
+    #[case::one_elf(1_000, "1000")]
+    #[case::two_elf(
+        2_000,
+        r"
+1000
+
+2000"
+    )]
+    #[trace]
+    fn check_ex_part_1(
+        #[notrace]
+        #[values(part1)]
+        p: impl FnOnce(&[i64]) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(&parse_input(input)), expected);
     }
 
-    #[test]
-    fn check_example_2() {
-        assert_eq!(part2(&parse_input(EXAMPLE_INPUT)), 45_000);
+    #[rstest]
+    #[case::given(45_000, EXAMPLE_INPUT)]
+    #[case::one_elf(1_000, "1000")]
+    #[case::two_elf(
+        3_000,
+        r"
+1000
+
+2000"
+    )]
+    #[case::three_elf(
+        6_000,
+        r"
+1000
+
+2000
+
+3000"
+    )]
+    #[case::four_elf(
+        9_000,
+        r"
+1000
+
+2000
+
+3000
+
+4000"
+    )]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&[i64]) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(&parse_input(input)), expected);
     }
 }
