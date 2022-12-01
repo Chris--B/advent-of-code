@@ -52,6 +52,10 @@ where
             border_color,
         }
     }
+
+    pub fn with_dims_of<U>(other: &Framebuffer<U>) -> Self {
+        Self::with_dims(other.width(), other.height())
+    }
 }
 
 /// Construction Methods
@@ -141,6 +145,12 @@ where
                 ];
                 self[(x, y)] = kernel(x as usize, y as usize, &taps);
             }
+        }
+    }
+
+    pub fn clear(&mut self, clear_color: T) {
+        for t in self.flatten_mut() {
+            *t = clear_color.clone();
         }
     }
 }
@@ -244,7 +254,7 @@ impl<T> Framebuffer<T> {
     fn get_buf<'a>(&'a self, buf: &'a [T], x: isize, y: isize) -> &'a T {
         self.idx_from_xy(x, y)
             .map(|idx| &buf[idx])
-            .or_else(|| self.border_color.as_ref())
+            .or(self.border_color.as_ref())
             .expect("oob index but no border color set")
     }
 
@@ -264,7 +274,7 @@ impl<T> Index<(isize, isize)> for Framebuffer<T> {
 
     fn index(&self, idx: (isize, isize)) -> &Self::Output {
         self.get(idx.0, idx.1)
-            .or_else(|| self.border_color.as_ref())
+            .or(self.border_color.as_ref())
             .expect("oob index but no border color set")
     }
 }
