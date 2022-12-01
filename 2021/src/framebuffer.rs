@@ -54,6 +54,10 @@ where
             border_color,
         }
     }
+
+    pub fn with_dims_of<U>(other: &Framebuffer<U>) -> Self {
+        Self::with_dims(other.width(), other.height())
+    }
 }
 
 /// Construction Methods
@@ -143,6 +147,12 @@ where
                 ];
                 self[(x, y)] = kernel(x as usize, y as usize, &taps);
             }
+        }
+    }
+
+    pub fn clear(&mut self, clear_color: T) {
+        for t in self.flatten_mut() {
+            *t = clear_color.clone();
         }
     }
 }

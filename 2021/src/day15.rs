@@ -1,151 +1,71 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
-use smallvec::{smallvec, SmallVec};
+use crate::framebuffer::Framebuffer;
 
-use core::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::fmt;
 
 #[aoc_generator(day15)]
-pub fn parse_input(input: &str) -> Vec<Vec<u8>> {
-    input
-        .lines()
-        .map(|line| line.trim().chars().map(|c| c as u8 - b'0').collect())
-        .collect()
-}
+pub fn parse_input(input: &str) -> Framebuffer<u8> {
+    let lines = input.as_bytes().split(|b| *b == b'\n');
 
-#[derive(Clone, PartialEq, Eq)]
-struct Path(SmallVec<[(u8, isize, isize); 200]>);
+    let width = lines.clone().next().unwrap().len();
+    let height = lines.clone().count();
 
-impl Path {
-    fn last(&self) -> (u8, isize, isize) {
-        // Our Path object is never empty
-        *self.0.last().unwrap()
+    let mut fb = Framebuffer::with_dims(width, height);
+
+    for (y, line) in lines.enumerate() {
+        for (x, b) in line.iter().enumerate() {
+            fb[(x, y)] = *b - b'0';
+        }
     }
 
-    fn visted(&self, x: usize, y: usize) -> bool {
-        let (x, y) = (x as isize, y as isize);
-        self.0.iter().any(|(_r, xx, yy)| (*xx == x) && (*yy == y))
-    }
-
-    fn push(&mut self, risk: u8, x: usize, y: usize) {
-        self.0.push((risk, x as isize, y as isize))
-    }
-
-    fn len(&self) -> isize {
-        self.0.len() as isize
-    }
-
-    fn risk(&self) -> i64 {
-        assert_eq!(self.0[0], (1, 0, 0));
-        // First entry is skipped
-        self.0.iter().skip(1).map(|(r, _, _)| *r as i64).sum()
-    }
-}
-
-impl fmt::Debug for Path {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let points: Vec<_> = self.0.iter().map(|(r, _x, _y)| r).collect();
-
-        f.debug_struct("Path")
-            .field("risk", &self.risk())
-            .field("len", &self.len())
-            .field("path", &format!("{:?}", points))
-            .finish()
-    }
-}
-
-impl Ord for Path {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.risk().cmp(&other.risk())
-    }
-}
-
-impl PartialOrd for Path {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    fb
 }
 
 // Part1 ======================================================================
 #[aoc(day15, part1)]
 #[inline(never)]
-pub fn part1(input: &[Vec<u8>]) -> i64 {
-    let max_x = (input.len() - 1) as isize;
-    let max_y = (input[0].len() - 1) as isize;
+pub fn part1(risk_map: &Framebuffer<u8>) -> i64 {
+    let mut total_risk_map: Framebuffer<i64> = Framebuffer::with_dims_of(risk_map);
+    total_risk_map.clear(i64::MAX);
 
-    let mut paths = BinaryHeap::new();
-    paths.push(Path(smallvec![(input[0][0], 0, 0)]));
+    let mut points_to_explore_from: BinaryHeap<(usize, usize)> = BinaryHeap::new();
+    // "explore" (0, 0) first
+    points_to_explore_from.push((0, 0));
+    total_risk_map[(0_u32, 0_u32)] = 0;
 
-    let mut shortest: Option<Path> = None;
+    while let Some((prev_x, prev_y)) = points_to_explore_from.pop() {
+        // println!(
+        //     "Exploring ({prev_x}, {prev_y}) risk={}",
+        //     total_risk_map[(prev_x, prev_y)]
+        // );
 
-    let mut times = 0;
-    while let Some(path) = paths.pop() {
-        times += 1;
-        if times % 5_000 == 0 {
-            println!("[{times:>10}] {} paths in queue", paths.len());
-            // println!("Looking at: {:?}", path.0);
-        }
-
-        let mut grew = false;
-
-        let (_, x, y) = path.last();
+        // Check in all directions for low risk paths
         for (dx, dy) in [
-            // No diagonals
-            (1, 0),
+            (1_isize, 0_isize),
             (0, 1),
             (-1, 0),
             (0, -1),
+            // No diagonals
         ] {
-            // TODO: Are x and y flipped here...?
-            let x = (x + dx) as usize;
-            let y = (y + dy) as usize;
+            let x = (prev_x as isize + dx) as usize;
+            let y = (prev_y as isize + dy) as usize;
 
-            if (x < input.len()) && (y < input[0].len()) && !path.visted(x, y) {
-                grew = true;
+            if (x < total_risk_map.width()) && (y < total_risk_map.height()) {
+                let old_risk = total_risk_map[(x, y)];
+                let new_risk = risk_map[(x, y)] as i64 + total_risk_map[(prev_x, prev_y)];
 
-                let mut new = path.clone();
-                new.push(input[x][y], x, y);
-
-                // If we have a shortest, we can skip anything that gets too long
-                if let Some(ref s) = shortest {
-                    if new.risk() < s.risk() {
-                        paths.push(new);
-                    }
-                } else {
-                    // If we don't have a shortest, save this unconditionally
-                    paths.push(new);
+                // If the path we're on is less risky than whatever found this point before, take it
+                // (Note: first-explored points have a maximum risk of i64::MAX, so they always get overwritten)
+                if new_risk < old_risk {
+                    total_risk_map[(x, y)] = new_risk;
+                    points_to_explore_from.push((x, y));
                 }
-            }
-        }
-
-        // If it didn't grow, then it reached an end.
-        if !grew {
-            // If it finished in the bottom right, we're good
-            let (_, x, y) = path.last();
-
-            if (x == max_x) && (y == max_y) {
-                if let Some(ref s) = shortest {
-                    if s.risk() > path.risk() {
-                        println!("Updating shortest: {:?}", path);
-                        shortest = Some(path);
-                    }
-                } else {
-                    println!("Found first shortest: {:?}", path);
-                    shortest = Some(path);
-                }
-            } else {
-                // Otherwise it might have gotten stuck and we ignore it
-                dbg!(path);
             }
         }
     }
 
-    dbg!(times);
-    let shortest = shortest.unwrap();
-
-    dbg!(&shortest);
-    shortest.risk()
+    total_risk_map[(risk_map.width() - 1, risk_map.height() - 1)]
 }
 
 // Part2 ======================================================================
