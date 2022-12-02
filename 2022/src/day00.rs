@@ -29,6 +29,7 @@ pub fn part2(input: &[i64]) -> i64 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use rstest::*;
 
     const EXAMPLE_INPUT: &str = r"
 // todo
