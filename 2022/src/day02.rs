@@ -79,9 +79,16 @@ pub fn part1_as_u32(input: &str) -> i64 {
 
     let mut score: i64 = 0;
     for word in words {
-        let word = word & 0b0000_0000_0011_0000_0000_0000_0011;
         let word = (word >> 14) | (word & 0b11);
-        score += LUT[word as usize] as i64;
+        let word = (word & 0b1111) as usize;
+
+        if cfg!(debug_assertions) {
+            score += LUT[word] as i64;
+        } else {
+            unsafe {
+                score += *LUT.get_unchecked(word) as i64;
+            }
+        }
     }
 
     fn make_lut() -> [u8; 12] {
