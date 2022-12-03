@@ -29,7 +29,7 @@ pub fn parse_input_part_1(input: &str) -> Vec<(HashSet<u8>, HashSet<u8>)> {
 }
 
 // Part1 ========================================================================
-#[aoc(day3, part1)]
+#[aoc(day3, part1, std_set)]
 #[inline(never)]
 pub fn part1(input: &str) -> i64 {
     let input = parse_input_part_1(input);
@@ -43,6 +43,51 @@ pub fn part1(input: &str) -> i64 {
     }
 
     priority
+}
+
+#[aoc(day3, part1, int_bitset)]
+#[inline(never)]
+pub fn part1_intbitset(input: &str) -> i64 {
+    let input = input.as_bytes();
+
+    let mut priority = 0;
+
+    for line in input.split(|b| *b == b'\n') {
+        let m = line.len() / 2;
+        let (a, b) = line.split_at(m);
+        debug_assert_eq!(a.len(), b.len());
+
+        let a: u64 = a
+            .iter()
+            .copied()
+            .map(|x| {
+                let x = match x {
+                    b'a'..=b'z' => x - b'a' + 1,
+                    b'A'..=b'Z' => x - b'A' + 27,
+                    _ => unreachable!(),
+                };
+                1 << x
+            })
+            .fold(0, |acc, x| acc | x);
+
+        let b: u64 = b
+            .iter()
+            .copied()
+            .map(|x| {
+                let x = match x {
+                    b'a'..=b'z' => x - b'a' + 1,
+                    b'A'..=b'Z' => x - b'A' + 27,
+                    _ => unreachable!(),
+                };
+                1 << x
+            })
+            .fold(0, |acc, x| acc | x);
+
+        debug_assert_eq!((a & b).count_ones(), 1);
+        priority += (a & b).trailing_zeros();
+    }
+
+    priority as i64
 }
 
 // Part2 ========================================================================
@@ -87,9 +132,9 @@ pub fn parse_input_part_2(input: &str) -> Vec<(u64, u64)> {
     pairs
 }
 
-#[aoc(day3, part2)]
+#[aoc(day3, part2, int_bitset)]
 #[inline(never)]
-pub fn part2(input: &str) -> i64 {
+pub fn part2_intbitset(input: &str) -> i64 {
     debug_assert_eq!(input.lines().count() % 6, 0);
     let input = parse_input_part_2(input);
 
@@ -127,7 +172,7 @@ CrZsJsPPZsGzwwsLwLmpwMDw
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_intbitset)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -141,7 +186,7 @@ CrZsJsPPZsGzwwsLwLmpwMDw
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2_intbitset)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
