@@ -2,6 +2,18 @@ use aoc_runner_derive::aoc;
 
 use std::collections::HashSet;
 
+fn ascii_to_priority(x: u32) -> i64 {
+    let x = x as u8;
+    let p = match x {
+        b'a'..=b'z' => x - b'a' + 1,
+        b'A'..=b'Z' => x - b'A' + 27,
+        _ => unreachable!(),
+    };
+
+    p as i64
+}
+
+// Part1 ========================================================================
 pub fn parse_input_part_1(input: &str) -> Vec<(HashSet<u8>, HashSet<u8>)> {
     let mut bytes = input.as_bytes().to_owned();
 
@@ -28,7 +40,6 @@ pub fn parse_input_part_1(input: &str) -> Vec<(HashSet<u8>, HashSet<u8>)> {
         .collect()
 }
 
-// Part1 ========================================================================
 #[aoc(day3, part1, std_set)]
 #[inline(never)]
 pub fn part1(input: &str) -> i64 {
@@ -45,9 +56,9 @@ pub fn part1(input: &str) -> i64 {
     priority
 }
 
-#[aoc(day3, part1, int_bitset)]
+#[aoc(day3, part1, bitset_u64)]
 #[inline(never)]
-pub fn part1_intbitset(input: &str) -> i64 {
+pub fn part1_bitset_u64(input: &str) -> i64 {
     let input = input.as_bytes();
 
     let mut priority = 0;
@@ -88,6 +99,27 @@ pub fn part1_intbitset(input: &str) -> i64 {
     }
 
     priority as i64
+}
+
+#[aoc(day3, part1, bitset_u128)]
+#[inline(never)]
+pub fn part1_bitset_u128(input: &str) -> i64 {
+    input
+        .as_bytes()
+        .split(|b| *b == b'\n')
+        .map(|line| {
+            let m = line.len() / 2;
+            let (a, b) = line.split_at(m);
+            debug_assert_eq!(a.len(), b.len());
+
+            let a: u128 = a.iter().copied().fold(0, |acc, x| acc | (1 << x));
+            let b: u128 = b.iter().copied().fold(0, |acc, x| acc | (1 << x));
+
+            debug_assert_eq!((a & b).count_ones(), 1);
+
+            ascii_to_priority((a & b).trailing_zeros())
+        })
+        .sum()
 }
 
 // Part2 ========================================================================
@@ -132,9 +164,9 @@ pub fn parse_input_part_2(input: &str) -> Vec<(u64, u64)> {
     pairs
 }
 
-#[aoc(day3, part2, int_bitset)]
+#[aoc(day3, part2, bitset_u64)]
 #[inline(never)]
-pub fn part2_intbitset(input: &str) -> i64 {
+pub fn part2_bitset_u64(input: &str) -> i64 {
     debug_assert_eq!(input.lines().count() % 6, 0);
     let input = parse_input_part_2(input);
 
@@ -149,6 +181,21 @@ pub fn part2_intbitset(input: &str) -> i64 {
     }
 
     priority as i64
+}
+
+#[aoc(day3, part2, bitset_u128)]
+#[inline(never)]
+pub fn part2_bitset_u128(input: &str) -> i64 {
+    use itertools::Itertools;
+
+    input
+        .as_bytes()
+        .split(|b| *b == b'\n')
+        .map(|line| line.iter().copied().fold(0_u128, |acc, x| acc | (1 << x)))
+        .tuples()
+        .map(|(a, b, c)| a & b & c)
+        .map(|x| ascii_to_priority(x.trailing_zeros()))
+        .sum()
 }
 
 #[cfg(test)]
@@ -172,7 +219,7 @@ CrZsJsPPZsGzwwsLwLmpwMDw
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_intbitset)]
+        #[values(part1, part1_bitset_u64, part1_bitset_u128)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -186,7 +233,7 @@ CrZsJsPPZsGzwwsLwLmpwMDw
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2_intbitset)]
+        #[values(part2_bitset_u64, part2_bitset_u128)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
