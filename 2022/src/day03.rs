@@ -46,10 +46,64 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
+
+pub fn parse_input_part_2(input: &str) -> Vec<(u64, u64)> {
+    let mut bytes = input.as_bytes().to_owned();
+
+    for b in &mut bytes {
+        *b = match *b {
+            b'a'..=b'z' => *b - b'a' + 1,
+            b'A'..=b'Z' => *b - b'A' + 27,
+            b'\n' => u8::MAX,
+            _ => unreachable!("Unexpected byte: {} ({})", *b as char, *b),
+        };
+    }
+
+    let mut pairs = vec![];
+
+    for (idx, line) in bytes.split(|b| *b == u8::MAX).enumerate() {
+        if idx % 6 == 0 {
+            pairs.push((0_u64, 0_u64));
+        }
+        let p = &mut pairs.last_mut().unwrap();
+        let s: &mut u64 = if idx % 6 < 3 { &mut p.0 } else { &mut p.1 };
+
+        if idx % 3 == 0 {
+            // first entry, erase what's there
+            for b in line {
+                *s |= 1 << *b;
+            }
+        } else {
+            // second or 3rd entry, intersect what's there
+            let mut r = 0_u64;
+            for b in line {
+                r |= 1 << *b;
+            }
+
+            *s &= r;
+        }
+    }
+
+    pairs
+}
+
 #[aoc(day3, part2)]
 #[inline(never)]
 pub fn part2(input: &str) -> i64 {
-    unimplemented!();
+    debug_assert_eq!(input.lines().count() % 6, 0);
+    let input = parse_input_part_2(input);
+
+    let mut priority = 0;
+
+    for (a, b) in &input {
+        // println!("a: 0b{a:064b} - {}", a.trailing_zeros());
+        // println!("b: 0b{b:064b} - {}", b.trailing_zeros());
+        // println!();
+
+        priority += a.trailing_zeros() + b.trailing_zeros();
+    }
+
+    priority as i64
 }
 
 #[cfg(test)]
@@ -82,17 +136,17 @@ CrZsJsPPZsGzwwsLwLmpwMDw
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&[i64]) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(&parse_input(input)), expected);
-    // }
+    #[rstest]
+    #[case::given(70, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
