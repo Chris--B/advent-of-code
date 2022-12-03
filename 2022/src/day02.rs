@@ -423,13 +423,30 @@ C Z
     // BY
     // CZ
 
+    // Only enable this test if we're using simd
+    #[cfg(all(feature = "simd", target_feature = "neon"))]
+    #[rstest]
+    #[case::given(15, EXAMPLE_INPUT)]
+    #[case::long_given(3*15, LONG_EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_1_simd(
+        #[notrace]
+        #[values(part1_as_simd)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim_start();
+        assert_eq!(p(input), expected);
+    }
+
     #[rstest]
     #[case::given(15, EXAMPLE_INPUT)]
     #[case::long_given(3*15, LONG_EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_as_bytes, part1_as_u32, part1_as_simd)]
+        #[values(part1, part1_as_bytes, part1_as_u32)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
