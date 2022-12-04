@@ -18,6 +18,10 @@ impl Section {
     fn fully_contains(&self, other: &Self) -> bool {
         ((self.0 & other.0) == self.0) || ((self.0 & other.0) == other.0)
     }
+
+    fn overlap_any(&self, other: &Self) -> bool {
+        (self.0 & other.0) != 0
+    }
 }
 
 #[aoc_generator(day4)]
@@ -41,8 +45,8 @@ pub fn part1(input: &[(Section, Section)]) -> i64 {
 // Part2 ========================================================================
 #[aoc(day4, part2)]
 #[inline(never)]
-pub fn part2(input: &[i64]) -> i64 {
-    unimplemented!();
+pub fn part2(input: &[(Section, Section)]) -> i64 {
+    input.iter().filter(|(a, b)| a.overlap_any(b)).count() as i64
 }
 
 #[cfg(test)]
@@ -89,12 +93,12 @@ mod test {
     }
 
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[case::given(4, EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
-        p: impl FnOnce(&[i64]) -> i64,
+        p: impl FnOnce(&[(Section, Section)]) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
