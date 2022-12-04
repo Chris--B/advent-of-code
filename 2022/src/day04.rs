@@ -1,4 +1,4 @@
-use aoc_runner_derive::{aoc, aoc_generator};
+use aoc_runner_derive::aoc;
 
 use scan_fmt::scan_fmt;
 
@@ -24,29 +24,27 @@ impl Section {
     }
 }
 
-#[aoc_generator(day4)]
-pub fn parse_input(input: &str) -> Vec<(Section, Section)> {
-    input
-        .lines()
-        .map(|line| {
-            let (a0, a1, b0, b1) = scan_fmt!(line, "{}-{},{}-{}", u8, u8, u8, u8).unwrap();
-            (Section::from_pair(a0, a1), Section::from_pair(b0, b1))
-        })
-        .collect()
+pub fn parse_input(input: &str) -> impl Iterator<Item = (Section, Section)> + '_ {
+    input.lines().map(|line| {
+        let (a0, a1, b0, b1) = scan_fmt!(line, "{}-{},{}-{}", u8, u8, u8, u8).unwrap();
+        (Section::from_pair(a0, a1), Section::from_pair(b0, b1))
+    })
 }
 
 // Part1 ========================================================================
 #[aoc(day4, part1)]
 #[inline(never)]
-pub fn part1(input: &[(Section, Section)]) -> i64 {
-    input.iter().filter(|(a, b)| a.fully_contains(b)).count() as i64
+pub fn part1(input: &str) -> i64 {
+    parse_input(input)
+        .filter(|(a, b)| a.fully_contains(b))
+        .count() as i64
 }
 
 // Part2 ========================================================================
 #[aoc(day4, part2)]
 #[inline(never)]
-pub fn part2(input: &[(Section, Section)]) -> i64 {
-    input.iter().filter(|(a, b)| a.overlap_any(b)).count() as i64
+pub fn part2(input: &str) -> i64 {
+    parse_input(input).filter(|(a, b)| a.overlap_any(b)).count() as i64
 }
 
 #[cfg(test)]
@@ -84,12 +82,12 @@ mod test {
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&[(Section, Section)]) -> i64,
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
         let input = input.trim();
-        assert_eq!(p(&parse_input(input)), expected);
+        assert_eq!(p(input), expected);
     }
 
     #[rstest]
@@ -98,11 +96,11 @@ mod test {
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
-        p: impl FnOnce(&[(Section, Section)]) -> i64,
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
         let input = input.trim();
-        assert_eq!(p(&parse_input(input)), expected);
+        assert_eq!(p(input), expected);
     }
 }
