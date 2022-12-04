@@ -25,8 +25,18 @@ impl Section {
     }
 }
 
-// Part1 ========================================================================
+fn fast_parse(input: &[u8]) -> u8 {
+    debug_assert!(input.len() <= 2);
 
+    let mut bytes = [0_u8; 2];
+    for (i, b) in input.iter().rev().enumerate() {
+        bytes[i] = *b - b'0';
+    }
+
+    bytes[1] * 10 + bytes[0]
+}
+
+// Part1 ========================================================================
 #[aoc(day4, part1)]
 #[inline(never)]
 pub fn part1(input: &str) -> i64 {
@@ -34,7 +44,8 @@ pub fn part1(input: &str) -> i64 {
 
     input
         .split(|c| ",-\n".contains(c))
-        .map(|x| x.parse::<u8>().unwrap())
+        .map(str::as_bytes)
+        .map(fast_parse)
         .tuples()
         .map(|(a, b, c, d)| (Section::from_pair(a, b), Section::from_pair(c, d)))
         .filter(|(a, b)| a.fully_contains(b))
@@ -42,7 +53,6 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-
 #[aoc(day4, part2)]
 #[inline(never)]
 pub fn part2(input: &str) -> i64 {
@@ -50,7 +60,8 @@ pub fn part2(input: &str) -> i64 {
 
     input
         .split(|c| ",-\n".contains(c))
-        .map(|x| x.parse::<u8>().unwrap())
+        .map(str::as_bytes)
+        .map(fast_parse)
         .tuples()
         .map(|(a, b, c, d)| (Section::from_pair(a, b), Section::from_pair(c, d)))
         .filter(|(a, b)| a.overlap_any(b))
@@ -104,6 +115,7 @@ mod test {
 
     #[rstest]
     #[case::given(2, EXAMPLE_INPUT)]
+    #[case::parser_checks(0, "90-99,1-9")]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
@@ -118,6 +130,7 @@ mod test {
 
     #[rstest]
     #[case::given(4, EXAMPLE_INPUT)]
+    #[case::parser_checks(0, "90-99,1-9")]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
