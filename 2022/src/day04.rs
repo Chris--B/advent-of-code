@@ -57,8 +57,7 @@ pub fn part1_iter_parse(input: &str) -> i64 {
 pub fn part1_loop_parse(input: &str) -> i64 {
     let mut count = 0;
 
-    for line in input.lines() {
-        let line = line.as_bytes();
+    for line in input.as_bytes().split(|b| *b == b'\n') {
         let mut p = [0_u8; 4];
         let mut i = 0;
 
@@ -139,8 +138,7 @@ pub fn part2_iter_parse(input: &str) -> i64 {
 pub fn part2_loop_parse(input: &str) -> i64 {
     let mut count = 0;
 
-    for line in input.lines() {
-        let line = line.as_bytes();
+    for line in input.as_bytes().split(|b| *b == b'\n') {
         let mut p = [0_u8; 4];
         let mut i = 0;
 
