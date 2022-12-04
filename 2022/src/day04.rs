@@ -37,9 +37,9 @@ fn fast_parse(input: &[u8]) -> u8 {
 }
 
 // Part1 ========================================================================
-#[aoc(day4, part1)]
+#[aoc(day4, part1, iter_parse)]
 #[inline(never)]
-pub fn part1(input: &str) -> i64 {
+pub fn part1_iter_parse(input: &str) -> i64 {
     use itertools::Itertools;
 
     input
@@ -52,10 +52,76 @@ pub fn part1(input: &str) -> i64 {
         .count() as i64
 }
 
-// Part2 ========================================================================
-#[aoc(day4, part2)]
+#[aoc(day4, part1, loop_parse)]
 #[inline(never)]
-pub fn part2(input: &str) -> i64 {
+pub fn part1_loop_parse(input: &str) -> i64 {
+    let mut count = 0;
+
+    for line in input.lines() {
+        let line = line.as_bytes();
+        let mut p = [0_u8; 4];
+        let mut i = 0;
+
+        // First pair
+        {
+            // parse 1 or 2 bytes as a 2 digit int
+            p[0] = line[i] - b'0';
+            i += 1;
+            if line[i] != b'-' {
+                p[0] = p[0] * 10 + line[i] - b'0';
+                i += 1;
+            }
+
+            // skip '-'
+            i += 1;
+
+            // parse 1 or 2 bytes as a 2 digit int
+            p[1] = line[i] - b'0';
+            i += 1;
+            if line[i] != b',' {
+                p[1] = p[1] * 10 + line[i] - b'0';
+                i += 1;
+            }
+
+            // skip ','
+            i += 1
+        }
+
+        // Second pair
+        {
+            // parse 1 or 2 bytes as a 2 digit int
+            p[2] = line[i] - b'0';
+            i += 1;
+            if line[i] != b'-' {
+                p[2] = p[2] * 10 + line[i] - b'0';
+                i += 1;
+            }
+
+            // skip '-'
+            i += 1;
+
+            // parse 1 or 2 bytes as a 2 digit int
+            p[3] = line[i] - b'0';
+            i += 1;
+            if i < line.len() {
+                p[3] = p[3] * 10 + line[i] - b'0';
+                // i += 1;
+            }
+        }
+
+        let a = Section::from_pair(p[0], p[1]);
+        let b = Section::from_pair(p[2], p[3]);
+
+        count += a.fully_contains(&b) as i64;
+    }
+
+    count
+}
+
+// Part2 ========================================================================
+#[aoc(day4, part2, iter_parse)]
+#[inline(never)]
+pub fn part2_iter_parse(input: &str) -> i64 {
     use itertools::Itertools;
 
     input
@@ -66,6 +132,73 @@ pub fn part2(input: &str) -> i64 {
         .map(|(a, b, c, d)| (Section::from_pair(a, b), Section::from_pair(c, d)))
         .filter(|(a, b)| a.overlap_any(b))
         .count() as i64
+}
+
+#[aoc(day4, part2, loop_parse)]
+#[inline(never)]
+pub fn part2_loop_parse(input: &str) -> i64 {
+    let mut count = 0;
+
+    for line in input.lines() {
+        let line = line.as_bytes();
+        let mut p = [0_u8; 4];
+        let mut i = 0;
+
+        // First pair
+        {
+            // parse 1 or 2 bytes as a 2 digit int
+            p[0] = line[i] - b'0';
+            i += 1;
+            if line[i] != b'-' {
+                p[0] = p[0] * 10 + line[i] - b'0';
+                i += 1;
+            }
+
+            // skip '-'
+            i += 1;
+
+            // parse 1 or 2 bytes as a 2 digit int
+            p[1] = line[i] - b'0';
+            i += 1;
+            if line[i] != b',' {
+                p[1] = p[1] * 10 + line[i] - b'0';
+                i += 1;
+            }
+
+            // skip ','
+            i += 1
+        }
+
+        // Second pair
+        {
+            // parse 1 or 2 bytes as a 2 digit int
+            p[2] = line[i] - b'0';
+            i += 1;
+            if line[i] != b'-' {
+                p[2] = p[2] * 10 + line[i] - b'0';
+                i += 1;
+            }
+
+            // skip '-'
+            i += 1;
+
+            // parse 1 or 2 bytes as a 2 digit int
+            p[3] = line[i] - b'0';
+            i += 1;
+            if i < line.len() {
+                p[3] = p[3] * 10 + line[i] - b'0';
+                // We don't use i after this
+                // i += 1;
+            }
+        }
+
+        let a = Section::from_pair(p[0], p[1]);
+        let b = Section::from_pair(p[2], p[3]);
+
+        count += a.overlap_any(&b) as i64;
+    }
+
+    count
 }
 
 #[cfg(test)]
@@ -119,7 +252,7 @@ mod test {
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1_iter_parse, part1_loop_parse)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -134,7 +267,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2_iter_parse, part2_loop_parse)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
