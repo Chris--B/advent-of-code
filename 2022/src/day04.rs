@@ -2,11 +2,12 @@ use aoc_runner_derive::aoc;
 
 use scan_fmt::scan_fmt;
 
+#[repr(transparent)]
 pub struct Section(u128);
 
 impl Section {
     fn from_pair(a0: u8, a1: u8) -> Self {
-        assert!(a0 <= a1);
+        debug_assert!(a0 <= a1);
 
         let x = (1 << a1) - 1;
         let y = (1 << (a0 - 1)) - 1;
@@ -32,7 +33,7 @@ pub fn parse_input(input: &str) -> impl Iterator<Item = (Section, Section)> + '_
 }
 
 // Part1 ========================================================================
-#[aoc(day4, part1)]
+#[aoc(day4, part1, parse_scan_fmt)]
 #[inline(never)]
 pub fn part1(input: &str) -> i64 {
     parse_input(input)
@@ -40,11 +41,39 @@ pub fn part1(input: &str) -> i64 {
         .count() as i64
 }
 
+#[aoc(day4, part1, parse_manual)]
+#[inline(never)]
+pub fn part1_parse_manual(input: &str) -> i64 {
+    use itertools::Itertools;
+
+    input
+        .split(|c| ",-\n".contains(c))
+        .map(|x| x.parse::<u8>().unwrap())
+        .tuples()
+        .map(|(a, b, c, d)| (Section::from_pair(a, b), Section::from_pair(c, d)))
+        .filter(|(a, b)| a.fully_contains(b))
+        .count() as i64
+}
+
 // Part2 ========================================================================
-#[aoc(day4, part2)]
+#[aoc(day4, part2, parse_scan_fmt)]
 #[inline(never)]
 pub fn part2(input: &str) -> i64 {
     parse_input(input).filter(|(a, b)| a.overlap_any(b)).count() as i64
+}
+
+#[aoc(day4, part2, parse_manual)]
+#[inline(never)]
+pub fn part2_parse_manual(input: &str) -> i64 {
+    use itertools::Itertools;
+
+    input
+        .split(|c| ",-\n".contains(c))
+        .map(|x| x.parse::<u8>().unwrap())
+        .tuples()
+        .map(|(a, b, c, d)| (Section::from_pair(a, b), Section::from_pair(c, d)))
+        .filter(|(a, b)| a.overlap_any(b))
+        .count() as i64
 }
 
 #[cfg(test)]
