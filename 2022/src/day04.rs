@@ -1,5 +1,6 @@
 use aoc_runner_derive::aoc;
 
+#[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct Section(u128);
 
@@ -71,7 +72,7 @@ mod test {
 ";
 
     #[test]
-    fn check_section_init_1() {
+    fn check_section_from_pair() {
         // from 2: 0b0001 (1 << 0) - 1
         // from 4: 0b1111 (1 << 5) - 1
         //       ^
@@ -82,6 +83,22 @@ mod test {
             s.0, b,
             "Section(2, 4) needs to have binary of 0b{:04b} but has 0b{:04b}",
             b, s.0
+        );
+    }
+
+    #[test]
+    fn check_section_fully_contains() {
+        // Ex:
+        //      .2345678.  2-8
+        //      ...456...  4-6
+        let a = Section::from_pair(2, 8);
+        let b = Section::from_pair(4, 6);
+
+        assert!(
+            a.fully_contains(&b),
+            "Oops:\na: 0b{:010b}\nb: 0b{:010b}",
+            a.0,
+            b.0
         );
     }
 
