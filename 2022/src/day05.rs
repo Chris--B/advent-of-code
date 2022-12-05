@@ -1,7 +1,5 @@
 use aoc_runner_derive::aoc;
 
-use scan_fmt::scan_fmt;
-
 #[derive(Copy, Clone, Debug)]
 struct Move {
     count: usize,
@@ -26,8 +24,17 @@ fn parse(input: &str) -> State {
         .lines()
         .filter(|line| line.trim().starts_with("move"))
         .map(|line| {
-            let (count, from, to) =
-                scan_fmt!(line, "move {} from {} to {}", usize, usize, usize).unwrap();
+            let mut parts = line.split_whitespace();
+
+            let _ = parts.next(); // "move"
+            let count = parts.next().unwrap().parse().unwrap();
+
+            let _ = parts.next(); // "from"
+            let from = parts.next().unwrap().parse().unwrap();
+
+            let _ = parts.next(); // "to"
+            let to = parts.next().unwrap().parse().unwrap();
+
             Move { count, from, to }
         })
         .collect();
@@ -84,7 +91,7 @@ pub fn part2(input: &str) -> String {
             tmp.push(c);
         }
         tmp.reverse();
-        state.stacks[to - 1].extend(&tmp);
+        state.stacks[to - 1].extend_from_slice(&tmp);
         tmp.clear();
     }
 
