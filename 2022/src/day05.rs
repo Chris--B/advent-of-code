@@ -46,6 +46,9 @@ fn parse(input: &str) -> State {
             let _ = parts.next(); // "to"
             let to = fast_parse_u8(parts.next().unwrap()) as usize;
 
+            // This is a nonsense move, and could break some of our logic below.
+            debug_assert_ne!(from, to);
+
             Move { count, from, to }
         })
         .collect();
@@ -74,6 +77,7 @@ pub fn part1(input: &str) -> String {
     for Move { count, from, to } in state.moves {
         debug_assert!(state.stacks[from - 1].len() >= count);
 
+        // Copy `count` items from the top of one stack, onto the other, reversing their order.
         for _ in 0..count {
             let c = state.stacks[from - 1].pop().unwrap();
             state.stacks[to - 1].push(c);
@@ -96,14 +100,20 @@ pub fn part2(input: &str) -> String {
     for Move { count, from, to } in state.moves {
         debug_assert!(state.stacks[from - 1].len() >= count);
 
-        // Copy the crates over, but preserve their order.
-        let new_len = state.stacks[to - 1].len() + count;
-        state.stacks[to - 1].resize(new_len, '@');
+        // Because both stacks are in the same object (state.stacks), we cannot statically
+        // convince the compiler that they don't alias are aren't allowed to create two &mut that
+        // live at the same time.
+        // We know however, that they do not overlap so we'll skip the borrow checker and create
+        // our own mutable references.
+        unsafe {
+            let stacks_from = &mut *state.stacks.as_mut_ptr().add(from - 1);
+            let stacks_to = &mut *state.stacks.as_mut_ptr().add(to - 1);
 
-        let t = state.stacks[to - 1].len() - 1;
-        for i in 0..count {
-            let c = state.stacks[from - 1].pop().unwrap();
-            state.stacks[to - 1][t - i] = c;
+            // Copy `count` items from the top of one stack, onto the other, preserving their order.
+            // (Note: Part 1 reverses their order)
+            let t = stacks_from.len() - count;
+            stacks_to.extend(&stacks_from[t..]);
+            stacks_from.resize(t, '@');
         }
     }
 
