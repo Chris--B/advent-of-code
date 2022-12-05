@@ -13,6 +13,17 @@ struct State {
     moves: Vec<Move>,
 }
 
+fn fast_parse_u8(input: &[u8]) -> u8 {
+    debug_assert!(input.len() <= 2);
+
+    let mut bytes = [0_u8; 2];
+    for (i, b) in input.iter().rev().enumerate() {
+        bytes[i] = *b - b'0';
+    }
+
+    bytes[1] * 10 + bytes[0]
+}
+
 fn parse(input: &str) -> State {
     let crate_lines: Vec<&str> = input
         .lines()
@@ -22,18 +33,18 @@ fn parse(input: &str) -> State {
 
     let moves: Vec<Move> = input
         .lines()
-        .filter(|line| line.trim().starts_with("move"))
+        .filter(|line| line.trim().as_bytes().starts_with(b"move"))
         .map(|line| {
-            let mut parts = line.split_whitespace();
+            let mut parts = line.as_bytes().split(|b| *b == b' ');
 
             let _ = parts.next(); // "move"
-            let count = parts.next().unwrap().parse().unwrap();
+            let count = fast_parse_u8(parts.next().unwrap()) as usize;
 
             let _ = parts.next(); // "from"
-            let from = parts.next().unwrap().parse().unwrap();
+            let from = fast_parse_u8(parts.next().unwrap()) as usize;
 
             let _ = parts.next(); // "to"
-            let to = parts.next().unwrap().parse().unwrap();
+            let to = fast_parse_u8(parts.next().unwrap()) as usize;
 
             Move { count, from, to }
         })
