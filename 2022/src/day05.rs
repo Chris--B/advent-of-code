@@ -15,41 +15,43 @@ struct State {
     moves: Vec<Move>,
 }
 
+fn parse(input: &str) -> State {
+    let crate_lines: Vec<&str> = input
+        .lines()
+        .filter(|l| l.trim().starts_with('['))
+        .rev()
+        .collect();
+
+    let moves: Vec<Move> = input
+        .lines()
+        .filter(|line| line.trim().starts_with("move"))
+        .map(|line| {
+            let (count, from, to) =
+                scan_fmt!(line, "move {} from {} to {}", usize, usize, usize).unwrap();
+            Move { count, from, to }
+        })
+        .collect();
+
+    let mut stacks = vec![vec![]; crate_lines.len() + 1];
+
+    for line in crate_lines {
+        for (i, c) in line.as_bytes().chunks(4).enumerate() {
+            let c = c[1] as char;
+
+            if c != ' ' {
+                stacks[i].push(c);
+            }
+        }
+    }
+
+    State { stacks, moves }
+}
+
 // Part1 ========================================================================
 #[aoc(day5, part1)]
 #[inline(never)]
 pub fn part1(input: &str) -> String {
-    let mut state: State = {
-        let crate_lines: Vec<&str> = input
-            .lines()
-            .filter(|l| l.trim().starts_with('['))
-            .rev()
-            .collect();
-
-        let moves: Vec<Move> = input
-            .lines()
-            .filter(|line| line.trim().starts_with("move"))
-            .map(|line| {
-                let (count, from, to) =
-                    scan_fmt!(line, "move {} from {} to {}", usize, usize, usize).unwrap();
-                Move { count, from, to }
-            })
-            .collect();
-
-        let mut stacks = vec![vec![]; crate_lines.len() + 1];
-
-        for line in crate_lines {
-            for (i, c) in line.as_bytes().chunks(4).enumerate() {
-                let c = c[1] as char;
-
-                if c != ' ' {
-                    stacks[i].push(c);
-                }
-            }
-        }
-
-        State { stacks, moves }
-    };
+    let mut state = parse(input);
 
     for Move { count, from, to } in state.moves {
         debug_assert!(state.stacks[from - 1].len() >= count);
@@ -71,37 +73,7 @@ pub fn part1(input: &str) -> String {
 #[aoc(day5, part2)]
 #[inline(never)]
 pub fn part2(input: &str) -> String {
-    let mut state: State = {
-        let crate_lines: Vec<&str> = input
-            .lines()
-            .filter(|l| l.trim().starts_with('['))
-            .rev()
-            .collect();
-
-        let moves: Vec<Move> = input
-            .lines()
-            .filter(|line| line.trim().starts_with("move"))
-            .map(|line| {
-                let (count, from, to) =
-                    scan_fmt!(line, "move {} from {} to {}", usize, usize, usize).unwrap();
-                Move { count, from, to }
-            })
-            .collect();
-
-        let mut stacks = vec![vec![]; crate_lines.len() + 1];
-
-        for line in crate_lines {
-            for (i, c) in line.as_bytes().chunks(4).enumerate() {
-                let c = c[1] as char;
-
-                if c != ' ' {
-                    stacks[i].push(c);
-                }
-            }
-        }
-
-        State { stacks, moves }
-    };
+    let mut state = parse(input);
 
     let mut tmp = vec![];
     for Move { count, from, to } in state.moves {
