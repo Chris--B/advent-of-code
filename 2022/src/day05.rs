@@ -93,17 +93,18 @@ pub fn part1(input: &str) -> String {
 pub fn part2(input: &str) -> String {
     let mut state = parse(input);
 
-    let mut tmp = vec![];
     for Move { count, from, to } in state.moves {
         debug_assert!(state.stacks[from - 1].len() >= count);
 
-        for _ in 0..count {
+        // Copy the crates over, but preserve their order.
+        let new_len = state.stacks[to - 1].len() + count;
+        state.stacks[to - 1].resize(new_len, '@');
+
+        let t = state.stacks[to - 1].len() - 1;
+        for i in 0..count {
             let c = state.stacks[from - 1].pop().unwrap();
-            tmp.push(c);
+            state.stacks[to - 1][t - i] = c;
         }
-        tmp.reverse();
-        state.stacks[to - 1].extend_from_slice(&tmp);
-        tmp.clear();
     }
 
     state
