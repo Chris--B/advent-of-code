@@ -13,6 +13,21 @@ struct State {
     moves: Vec<Move>,
 }
 
+// See: https://doc.rust-lang.org/stable/std/primitive.slice.html#method.trim_ascii_start
+// Using this for stable
+const fn trim_ascii_start(mut bytes: &[u8]) -> &[u8] {
+    // Note: A pattern matching based approach (instead of indexing) allows
+    // making the function const.
+    while let [first, rest @ ..] = bytes {
+        if first.is_ascii_whitespace() {
+            bytes = rest;
+        } else {
+            break;
+        }
+    }
+    bytes
+}
+
 fn fast_parse_u8(input: &[u8]) -> u8 {
     debug_assert!(input.len() <= 2);
 
@@ -25,17 +40,19 @@ fn fast_parse_u8(input: &[u8]) -> u8 {
 }
 
 fn parse(input: &str) -> State {
-    let crate_lines: Vec<&str> = input
-        .lines()
-        .filter(|l| l.trim().starts_with('['))
+    let input = input.as_bytes();
+
+    let crate_lines: Vec<&[u8]> = input
+        .split(|b| *b == b'\n')
+        .filter(|l| trim_ascii_start(l).starts_with(b"["))
         .rev()
         .collect();
 
     let moves: Vec<Move> = input
-        .lines()
-        .filter(|line| line.trim().as_bytes().starts_with(b"move"))
+        .split(|b| *b == b'\n')
+        .filter(|line| line.starts_with(b"move"))
         .map(|line| {
-            let mut parts = line.as_bytes().split(|b| *b == b' ');
+            let mut parts = line.split(|b| *b == b' ');
 
             let _ = parts.next(); // "move"
             let count = fast_parse_u8(parts.next().unwrap()) as usize;
@@ -56,7 +73,7 @@ fn parse(input: &str) -> State {
     let mut stacks = vec![vec![]; crate_lines.len() + 1];
 
     for line in crate_lines {
-        for (i, c) in line.as_bytes().chunks(4).enumerate() {
+        for (i, c) in line.chunks(4).enumerate() {
             let c = c[1] as char;
 
             if c != ' ' {
