@@ -130,11 +130,6 @@ fn track_crates(input: &str, is_part1: bool) -> String {
         idx: usize,
     }
 
-    let mut crates: SmallVec<[Crate; 10]> = smallvec![];
-    for stack in 0..stack_count {
-        crates.push(Crate { stack, idx: 0 })
-    }
-
     let mut stacks = vec![vec![]; stack_count];
 
     for line in input.split(|b| *b == b'\n').take(crates_max_height) {
@@ -170,36 +165,84 @@ fn track_crates(input: &str, is_part1: bool) -> String {
             Move { count, from, to }
         });
 
-    for Move { count, from, to } in moves {
-        for c in &mut crates {
-            if c.stack == to {
-                if c.idx >= count {
-                    // Crate doesn't move, adjust position
-                    c.idx -= count;
-                } else {
-                    // Crate moves
-                    c.stack = from;
-                    if is_part1 {
-                        c.idx = count - c.idx - 1;
+    if moves.size_hint().1.unwrap_or(0) >= 500_000 {
+        use rayon::prelude::*;
+
+        let moves: Vec<_> = moves.collect();
+        println!("Using Rayon! Processing {} moves", moves.len());
+
+        let mut crates = vec![];
+        for stack in 0..stack_count {
+            crates.push(Crate { stack, idx: 0 })
+        }
+
+        crates.par_iter_mut().for_each(|c: &mut Crate| {
+            for Move { count, from, to } in moves.iter().copied() {
+                if c.stack == to {
+                    if c.idx >= count {
+                        // Crate doesn't move, adjust position
+                        c.idx -= count;
+                    } else {
+                        // Crate moves
+                        c.stack = from;
+                        if is_part1 {
+                            c.idx = count - c.idx - 1;
+                        }
                     }
+                } else if c.stack == from {
+                    // Crate doesn't move, adjust position
+                    c.idx += count;
                 }
-            } else if c.stack == from {
-                // Crate doesn't move, adjust position
-                c.idx += count;
+            }
+        });
+
+        crates
+            .into_iter()
+            .map(|c| {
+                if let Some(c) = stacks[c.stack].get(c.idx) {
+                    *c
+                } else {
+                    '_'
+                }
+            })
+            .collect()
+    } else {
+        let mut crates: SmallVec<[Crate; 10]> = smallvec![];
+        for stack in 0..stack_count {
+            crates.push(Crate { stack, idx: 0 })
+        }
+
+        for Move { count, from, to } in moves {
+            for c in &mut crates {
+                if c.stack == to {
+                    if c.idx >= count {
+                        // Crate doesn't move, adjust position
+                        c.idx -= count;
+                    } else {
+                        // Crate moves
+                        c.stack = from;
+                        if is_part1 {
+                            c.idx = count - c.idx - 1;
+                        }
+                    }
+                } else if c.stack == from {
+                    // Crate doesn't move, adjust position
+                    c.idx += count;
+                }
             }
         }
-    }
 
-    crates
-        .into_iter()
-        .map(|c| {
-            if let Some(c) = stacks[c.stack].get(c.idx) {
-                *c
-            } else {
-                '_'
-            }
-        })
-        .collect()
+        crates
+            .into_iter()
+            .map(|c| {
+                if let Some(c) = stacks[c.stack].get(c.idx) {
+                    *c
+                } else {
+                    '_'
+                }
+            })
+            .collect()
+    }
 }
 
 #[aoc(day5, part1, track_crates)]
