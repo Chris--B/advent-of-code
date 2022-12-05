@@ -143,7 +143,7 @@ pub fn part1_as_u32(input: &str) -> i64 {
     score
 }
 
-#[cfg(all(feature = "simd", target_feature = "neon"))]
+#[cfg(target_feature = "neon")]
 #[aoc(day2, part1, simd)]
 #[inline(never)]
 pub fn part1_as_simd(input: &str) -> i64 {
@@ -424,7 +424,7 @@ C Z
     // CZ
 
     // Only enable this test if we're using simd
-    #[cfg(all(feature = "simd", target_feature = "neon"))]
+    #[cfg(target_feature = "neon")]
     #[rstest]
     #[case::given(15, EXAMPLE_INPUT)]
     #[case::long_given(3*15, LONG_EXAMPLE_INPUT)]
