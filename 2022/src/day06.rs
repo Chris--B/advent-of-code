@@ -2,11 +2,12 @@ use aoc_runner_derive::aoc;
 
 use itertools::Itertools;
 
-// Part1 ========================================================================
-#[aoc(day6, part1)]
+// First =======================================================================
+#[aoc(day6, part1, first)]
 #[inline(never)]
 pub fn part1(input: &str) -> usize {
     let input = input.as_bytes();
+
     for i in 0..(input.len()) {
         let xs = &input[i..i + 4];
         let n = xs.iter().unique().count();
@@ -18,8 +19,7 @@ pub fn part1(input: &str) -> usize {
     unreachable!();
 }
 
-// Part2 ========================================================================
-#[aoc(day6, part2)]
+#[aoc(day6, part2, first)]
 #[inline(never)]
 pub fn part2(input: &str) -> usize {
     let input = input.as_bytes();
@@ -35,18 +35,56 @@ pub fn part2(input: &str) -> usize {
     unreachable!();
 }
 
+// Bits ========================================================================
+fn check_for_runs<const N: usize>(input: &[u8]) -> usize {
+    if cfg!(debug_assertions) {
+        debug_assert_ne!(N, 0);
+        debug_assert!(N <= 32);
+
+        for x in input {
+            debug_assert!((b'a'..=b'z').contains(x));
+        }
+    }
+
+    for i in 0..(input.len() - N) {
+        let j = i + N;
+        let seen = input[i..j]
+            .iter()
+            .fold(0_u32, |seen, x| seen | (1_u32 << (x - b'a')));
+        if seen.count_ones() == N as u32 {
+            return j;
+        }
+    }
+
+    unreachable!("Reached end of input with no runs of unique markers");
+}
+
+#[aoc(day6, part1, bits)]
+#[inline(never)]
+pub fn part1_bits(input: &str) -> usize {
+    check_for_runs::<4>(input.as_bytes())
+}
+
+#[aoc(day6, part2, bits)]
+#[inline(never)]
+pub fn part2_bits(input: &str) -> usize {
+    check_for_runs::<14>(input.as_bytes())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use rstest::*;
 
     #[rstest]
-    #[case::given(7, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
-    #[case::given(5, "bvwbjplbgvbhsrlpgdmjqwftvncz")]
+    #[case::given_mjqj(7, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
+    #[case::given_bvwb(5, "bvwbjplbgvbhsrlpgdmjqwftvncz")]
+    #[case::given_nznr(10, "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")]
+    #[case::given_zcfz(11, "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_bits)]
         p: impl FnOnce(&str) -> usize,
         #[case] expected: usize,
         #[case] input: &str,
@@ -60,7 +98,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_bits)]
         p: impl FnOnce(&str) -> usize,
         #[case] expected: usize,
         #[case] input: &str,
