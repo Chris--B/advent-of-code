@@ -46,13 +46,25 @@ fn check_for_runs<const N: usize>(input: &[u8]) -> usize {
         }
     }
 
-    for i in 0..(input.len() - N) {
-        let j = i + N;
-        let seen = input[i..j]
-            .iter()
-            .fold(0_u32, |seen, x| seen | (1_u32 << (x - b'a')));
+    let mut seen = 0_u32;
+
+    for x in input.iter().take(N) {
+        seen ^= 1_u32 << (x - b'a');
+    }
+
+    if seen.count_ones() == N as u32 {
+        return N;
+    }
+
+    for i in N..input.len() {
+        // Remove the earliest input
+        seen ^= 1_u32 << (input[i - N] - b'a');
+
+        // Add the newest
+        seen ^= 1_u32 << (input[i] - b'a');
+
         if seen.count_ones() == N as u32 {
-            return j;
+            return i + 1;
         }
     }
 
