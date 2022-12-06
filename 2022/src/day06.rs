@@ -79,6 +79,7 @@ mod test {
     #[rstest]
     #[case::given_mjqj(7, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
     #[case::given_bvwb(5, "bvwbjplbgvbhsrlpgdmjqwftvncz")]
+    #[case::given_nppd(6, "nppdvjthqldpwncqszvftbrmjlhg")]
     #[case::given_nznr(10, "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")]
     #[case::given_zcfz(11, "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")]
     #[trace]
@@ -94,7 +95,11 @@ mod test {
     }
 
     #[rstest]
-    #[case::given(19, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
+    #[case::given_mjqj(19, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
+    #[case::given_bvwb(23, "bvwbjplbgvbhsrlpgdmjqwftvncz")]
+    #[case::given_nppd(23, "nppdvjthqldpwncqszvftbrmjlhg")]
+    #[case::given_nznr(29, "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")]
+    #[case::given_zcfz(26, "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
