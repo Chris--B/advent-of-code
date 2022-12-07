@@ -1,4 +1,4 @@
-use aoc_runner_derive::{aoc, aoc_generator};
+use aoc_runner_derive::aoc;
 
 use std::collections::HashMap;
 
@@ -31,11 +31,6 @@ fn join_dirs(dirs: &[&str]) -> String {
         path.remove(0);
     }
     path
-}
-
-#[aoc_generator(day7)]
-fn parse_input(input: &str) -> HashMap<String, u32> {
-    build_sizes_list(input)
 }
 
 fn build_sizes_list(input: &str) -> HashMap<String, u32> {
@@ -177,14 +172,17 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
 // Part1 ========================================================================
 #[aoc(day7, part1)]
 #[inline(never)]
-pub fn part1(sizes: &HashMap<String, u32>) -> u32 {
+pub fn part1(input: &str) -> u32 {
+    let sizes = build_sizes_list(input);
     sizes.values().filter(|size| **size <= 100_000).sum()
 }
 
 // Part2 ========================================================================
 #[aoc(day7, part2)]
 #[inline(never)]
-pub fn part2(sizes: &HashMap<String, u32>) -> u32 {
+pub fn part2(input: &str) -> u32 {
+    let sizes = build_sizes_list(input);
+
     const TOTAL_SPACE: u32 = 70_000_000;
     const UNUSED_TARGET: u32 = 30_000_000;
 
@@ -256,12 +254,12 @@ $ ls
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&HashMap<String, u32>) -> u32,
+        p: impl FnOnce(&str) -> u32,
         #[case] expected: u32,
         #[case] input: &str,
     ) {
         let input = input.trim_start();
-        assert_eq!(p(&parse_input(input)), expected);
+        assert_eq!(p(input), expected);
     }
 
     #[rstest]
@@ -270,11 +268,11 @@ $ ls
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
-        p: impl FnOnce(&HashMap<String, u32>) -> u32,
+        p: impl FnOnce(&str) -> u32,
         #[case] expected: u32,
         #[case] input: &str,
     ) {
         let input = input.trim_start();
-        assert_eq!(p(&parse_input(input)), expected);
+        assert_eq!(p(input), expected);
     }
 }
