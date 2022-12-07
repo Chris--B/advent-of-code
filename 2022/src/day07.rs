@@ -253,12 +253,12 @@ fn parse_sizes(input: &str) -> Vec<u32> {
             b"$ ls" => { /* Nothing to do, prepare for parsing file and dir lists*/ }
             b"dir " => { /* Ignore and wait for a cd */ }
             _ => {
-                let e = line;
-                // file, comes with a size!
-                let n = e.iter().position(|b| *b == b' ').unwrap();
-                let size = fast_parse_u32(&e[..n]);
-                let idx = *dirs.last().unwrap();
-                sizes[idx] += size;
+                if let Some(idx) = dirs.last() {
+                    // file, comes with a size!
+                    let n = line.iter().position(|b| *b == b' ').unwrap();
+                    let size = fast_parse_u32(&line[..n]);
+                    sizes[*idx] += size;
+                }
             }
         }
 
@@ -352,10 +352,19 @@ $ ls
 300 d
 ";
 
+    const A_FEW_A_DIRS: &str = r"
+$ cd /
+$ cd a
+$ cd a
+$ ls
+10 a
+";
+
     #[rstest]
     #[case::given(94853 + 584, EXAMPLE_INPUT)]
     #[case::no_dirs(300, NO_DIRS_INPUT)]
     #[case::files_and_1_dir(900, ONE_DIR_INPUT)]
+    #[case::a_few_a_dirs(30, A_FEW_A_DIRS)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
