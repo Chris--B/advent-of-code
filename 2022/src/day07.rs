@@ -9,10 +9,7 @@ enum Entry<'a> {
 }
 use Entry::*;
 
-// Part1 ========================================================================
-#[aoc(day7, part1)]
-#[inline(never)]
-pub fn part1(input: &str) -> u32 {
+fn build_sizes_list(input: &str) -> HashMap<String, u32> {
     let mut fs: HashMap<String, Vec<Entry<'_>>> = HashMap::new();
     let mut dir_stack: Vec<&str> = vec![];
 
@@ -146,14 +143,37 @@ pub fn part1(input: &str) -> u32 {
         }
     }
 
+    sizes
+}
+
+// Part1 ========================================================================
+#[aoc(day7, part1)]
+#[inline(never)]
+pub fn part1(input: &str) -> u32 {
+    let sizes = build_sizes_list(input);
+
     sizes.values().filter(|size| **size <= 100_000).sum()
 }
 
 // Part2 ========================================================================
 #[aoc(day7, part2)]
 #[inline(never)]
-pub fn part2(_input: &str) -> u32 {
-    unimplemented!();
+pub fn part2(input: &str) -> u32 {
+    const TOTAL_SPACE: u32 = 70_000_000;
+    const UNUSED_TARGET: u32 = 30_000_000;
+
+    let sizes = build_sizes_list(input);
+
+    let current_unused = TOTAL_SPACE - sizes[""];
+    let need_to_delete = UNUSED_TARGET - current_unused;
+
+    let (_path_to_delete, deleted_size) = sizes
+        .iter()
+        .filter(|(_path, size)| **size >= need_to_delete)
+        .min_by_key(|(_path, size)| *size)
+        .unwrap();
+
+    *deleted_size
 }
 
 #[cfg(test)]
@@ -201,17 +221,17 @@ $ ls
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    // p: impl FnOnce(&str) -> u32,
-    //     #[case] expected: u32,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim_start();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(24933642, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> u32,
+        #[case] expected: u32,
+        #[case] input: &str,
+    ) {
+        let input = input.trim_start();
+        assert_eq!(p(input), expected);
+    }
 }
