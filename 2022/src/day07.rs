@@ -9,6 +9,24 @@ enum Entry<'a> {
 }
 use Entry::*;
 
+fn join_dirs(dirs: &[&str]) -> String {
+    let mut path = String::new();
+
+    if let Some(dir) = dirs.first() {
+        path.push_str(dir);
+    }
+
+    for dir in dirs.iter().skip(1) {
+        path.push('/');
+        path.push_str(dir);
+    }
+
+    if path.starts_with('/') {
+        path.remove(0);
+    }
+    path
+}
+
 fn build_sizes_list(input: &str) -> HashMap<String, u32> {
     let mut fs: HashMap<String, Vec<Entry<'_>>> = HashMap::new();
     let mut dir_stack: Vec<&str> = vec![];
@@ -36,8 +54,8 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
                             dir_stack.pop();
                         }
                         dir => {
-                            let path = dir_stack.join("/");
-                            let entry: &mut Vec<_> = fs.entry(path).or_default();
+                            let path = join_dirs(&dir_stack);
+                            let entry = fs.entry(path).or_default();
                             entry.sort();
                             if !entry.contains(&Dir(dir)) {
                                 entry.push(Dir(dir));
@@ -70,7 +88,7 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
                         File(name, size)
                     };
 
-                    let path = dir_stack.join("/");
+                    let path = join_dirs(&dir_stack);
                     fs.entry(path).or_default().push(entry);
                 }
             }
@@ -108,8 +126,7 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
                 size
             }
             Dir(dir) => {
-                let path = format!("{prefix}/{dir}");
-                let path = path.trim_start_matches('/').to_string();
+                let path = join_dirs(&[prefix, dir]);
 
                 // Create our directory if it wasn't already
                 sizes.entry(path.clone()).or_insert(0);
@@ -130,7 +147,7 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
 
     // Cumulative size for each directory in fs.
     let mut sizes: HashMap<String, u32> = HashMap::new();
-    sizes.insert("".to_string(), 0);
+    sizes.insert("".into(), 0);
 
     for entry in &fs[""] {
         just_do_it(&fs, &mut sizes, "", *entry);
