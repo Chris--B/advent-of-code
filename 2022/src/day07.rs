@@ -230,8 +230,28 @@ $ ls
 7214296 k
 ";
 
+    const NO_DIRS_INPUT: &str = r"
+$ cd /
+$ ls
+100 a
+200 b
+";
+
+    const ONE_DIR_INPUT: &str = r"
+$ cd /
+$ ls
+100 a
+200 b
+dir c
+$ cd c
+$ ls
+300 d
+";
+
     #[rstest]
     #[case::given(94853 + 584, EXAMPLE_INPUT)]
+    #[case::no_dirs(300, NO_DIRS_INPUT)]
+    #[case::files_and_1_dir(900, ONE_DIR_INPUT)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
