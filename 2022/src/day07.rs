@@ -197,6 +197,112 @@ pub fn part2(input: &str) -> u32 {
         .unwrap()
 }
 
+fn fast_parse_u32(input: &[u8]) -> u32 {
+    let mut digits = [0_u32; 10];
+    let mut x = 1;
+    for (i, b) in input.iter().rev().enumerate() {
+        digits[i] = x * (*b - b'0') as u32;
+        x *= 10;
+    }
+
+    digits.into_iter().sum()
+}
+
+fn parse_sizes(input: &str) -> Vec<u32> {
+    let input = input.as_bytes();
+
+    // Aggregate sizes for each folder we find
+    let mut sizes = vec![0];
+
+    // Stack of indices for the parent folders that we're looking at
+    let mut dirs: SmallVec<[usize; 32]> = SmallVec::new();
+
+    for line in input.split(|b| *b == b'\n') {
+        if line.is_empty() {
+            continue;
+        }
+
+        match &line[..4] {
+            b"$ cd" => {
+                match &line[5..] {
+                    b"/" => {
+                        // Reset to root & propagate sizes up to root
+                        while let Some(child_idx) = dirs.pop() {
+                            if let Some(parent_idx) = dirs.last() {
+                                sizes[*parent_idx] += sizes[child_idx];
+                            }
+                        }
+                        dirs.push(0);
+                    }
+                    b".." => {
+                        // Back track one level
+                        debug_assert_ne!(dirs.len(), 0, "trying to cd out of '/'");
+
+                        // propagate sizes up
+                        let child_idx: usize = dirs.pop().unwrap();
+                        let parent_idx: usize = *dirs.last().unwrap();
+                        sizes[parent_idx] += sizes[child_idx];
+                    }
+                    _ => {
+                        // Create a new dir
+                        dirs.push(sizes.len());
+                        sizes.push(0);
+                    }
+                }
+            }
+            b"$ ls" => { /* Nothing to do, prepare for parsing file and dir lists*/ }
+            b"dir " => { /* Ignore and wait for a cd */ }
+            _ => {
+                let e = line;
+                // file, comes with a size!
+                let n = e.iter().position(|b| *b == b' ').unwrap();
+                let size = fast_parse_u32(&e[..n]);
+                let idx = *dirs.last().unwrap();
+                sizes[idx] += size;
+            }
+        }
+
+        // println!("dirs  {dirs:?}",);
+        // println!("sizes {sizes:?}",);
+        // println!();
+    }
+
+    // Reset to root & propagate sizes up to root
+    while let Some(child_idx) = dirs.pop() {
+        if let Some(parent_idx) = dirs.last() {
+            sizes[*parent_idx] += sizes[child_idx];
+        }
+    }
+
+    sizes
+}
+
+#[aoc(day7, part1, inplace)]
+#[inline(never)]
+pub fn part1_inplace(input: &str) -> u32 {
+    let sizes: Vec<u32> = parse_sizes(input);
+
+    sizes.into_iter().filter(|size| *size < 100_000).sum()
+}
+
+#[aoc(day7, part2, inplace)]
+#[inline(never)]
+pub fn part2_inplace(input: &str) -> u32 {
+    const TOTAL_SPACE: u32 = 70_000_000;
+    const UNUSED_TARGET: u32 = 30_000_000;
+
+    let sizes: Vec<u32> = parse_sizes(input);
+
+    let current_unused = TOTAL_SPACE - sizes[0];
+    let need_to_delete = UNUSED_TARGET - current_unused;
+
+    sizes
+        .into_iter()
+        .filter(|size| *size >= need_to_delete)
+        .min_by_key(|size| *size)
+        .unwrap()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -253,7 +359,7 @@ $ ls
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_inplace)]
         p: impl FnOnce(&str) -> u32,
         #[case] expected: u32,
         #[case] input: &str,
@@ -267,7 +373,7 @@ $ ls
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_inplace)]
         p: impl FnOnce(&str) -> u32,
         #[case] expected: u32,
         #[case] input: &str,
