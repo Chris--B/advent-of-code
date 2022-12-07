@@ -25,6 +25,7 @@ regex = "1"
 rstest = { version= "0.16", default-features = false }
 scan_fmt = "0.2"
 smallvec = { version = "1", features = ["const_generics"] }
+smallstr = { version = "0.3", features = ["std"] }
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]

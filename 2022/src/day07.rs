@@ -2,6 +2,12 @@ use aoc_runner_derive::aoc;
 
 use std::collections::HashMap;
 
+use smallstr::SmallString;
+use smallvec::SmallVec;
+
+type String = SmallString<[u8; 64]>;
+type Entries<'a> = SmallVec<[Entry<'a>; 32]>;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Entry<'a> {
     Dir(&'a str),
@@ -28,8 +34,8 @@ fn join_dirs(dirs: &[&str]) -> String {
 }
 
 fn build_sizes_list(input: &str) -> HashMap<String, u32> {
-    let mut fs: HashMap<String, Vec<Entry<'_>>> = HashMap::new();
-    let mut dir_stack: Vec<&str> = vec![];
+    let mut fs: HashMap<String, Entries> = HashMap::new();
+    let mut dir_stack: SmallVec<[&str; 32]> = SmallVec::new();
 
     #[derive(Debug)]
     enum Cmd {
@@ -114,7 +120,7 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
     }
 
     fn just_do_it<'a>(
-        fs: &'a HashMap<String, Vec<Entry>>,
+        fs: &'a HashMap<String, Entries>,
         sizes: &'a mut HashMap<String, u32>,
         prefix: &'a str,
         entry: Entry,
