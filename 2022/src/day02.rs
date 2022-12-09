@@ -1,7 +1,7 @@
 // The 0s are for padding, leave me alone
 #![allow(clippy::identity_op)]
 
-use aoc_runner_derive::{aoc, aoc_generator};
+use crate::prelude::*;
 
 #[aoc_generator(day2)]
 fn parse(input: &str) -> String {

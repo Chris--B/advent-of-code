@@ -18,12 +18,16 @@ pub mod framebuffer;
 aoc_lib! { year = 2022 }
 
 mod prelude {
-    pub use aoc_runner_derive::aoc;
+    pub use aoc_runner_derive::{aoc, aoc_generator};
+
     pub use itertools::Itertools;
+    pub use smallstr::SmallString;
+    pub use smallvec::{smallvec, SmallVec};
     pub use ultraviolet::IVec2;
 
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
+    pub use std::num::Wrapping;
 
     pub fn sign(x: i32) -> i32 {
         use std::cmp::Ordering::*;

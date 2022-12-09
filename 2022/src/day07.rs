@@ -1,9 +1,4 @@
-use aoc_runner_derive::aoc;
-
-use std::collections::HashMap;
-
-use smallstr::SmallString;
-use smallvec::SmallVec;
+use crate::prelude::*;
 
 type String = SmallString<[u8; 64]>;
 type Entries<'a> = SmallVec<[Entry<'a>; 32]>;

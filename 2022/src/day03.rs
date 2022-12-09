@@ -1,6 +1,4 @@
-use aoc_runner_derive::aoc;
-
-use std::collections::HashSet;
+use crate::prelude::*;
 
 fn ascii_to_priority(x: u32) -> i64 {
     let x = x as u8;

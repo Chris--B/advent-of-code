@@ -1,8 +1,4 @@
-use aoc_runner_derive::aoc;
-
-use smallvec::{smallvec, SmallVec};
-
-use crate::prelude::fast_parse_u32;
+use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug)]
 struct Move {

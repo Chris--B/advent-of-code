@@ -1,6 +1,4 @@
-use aoc_runner_derive::aoc;
-
-use std::collections::HashSet;
+use crate::prelude::*;
 
 // Part1 ========================================================================
 #[aoc(day8, part1)]
@@ -76,8 +74,6 @@ pub fn part1(input: &str) -> i64 {
 }
 
 fn scenic_score(forest: &[Vec<u8>], x: usize, y: usize) -> i64 {
-    use std::num::Wrapping;
-
     let width = forest[0].len();
     let height = forest.len();
 

@@ -1,4 +1,4 @@
-use aoc_runner_derive::aoc;
+use crate::prelude::*;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -40,8 +40,6 @@ fn fast_parse(input: &[u8]) -> u8 {
 #[aoc(day4, part1, iter_parse)]
 #[inline(never)]
 pub fn part1_iter_parse(input: &str) -> i64 {
-    use itertools::Itertools;
-
     input
         .split(|c| ",-\n".contains(c))
         .map(str::as_bytes)

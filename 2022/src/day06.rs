@@ -1,6 +1,4 @@
-use aoc_runner_derive::aoc;
-
-use itertools::Itertools;
+use crate::prelude::*;
 
 // First =======================================================================
 #[aoc(day6, part1, first)]
