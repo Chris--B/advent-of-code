@@ -2,6 +2,8 @@ use aoc_runner_derive::aoc;
 
 use smallvec::{smallvec, SmallVec};
 
+use crate::prelude::fast_parse_u32;
+
 #[derive(Copy, Clone, Debug)]
 struct Move {
     count: usize,
@@ -28,19 +30,6 @@ const fn trim_ascii_start(mut bytes: &[u8]) -> &[u8] {
         }
     }
     bytes
-}
-
-fn fast_parse_u32(input: &[u8]) -> u32 {
-    debug_assert!(input.len() <= 2);
-
-    let mut digits = [0_u32; 10];
-    let mut x = 1;
-    for (i, b) in input.iter().rev().enumerate() {
-        digits[i] = x * (*b - b'0') as u32;
-        x *= 10;
-    }
-
-    digits.into_iter().sum()
 }
 
 fn parse_to_move(input: &str) -> State {
