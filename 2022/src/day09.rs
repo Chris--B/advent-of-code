@@ -34,12 +34,7 @@ pub fn part1(input: &str) -> i64 {
 
         // Move tail if it's no longer adjacent
         if dist.abs().component_max() > 1 {
-            match dist.as_array() {
-                [0, 0] => unreachable!("Shouldn't have gotten here"),
-                [x, 0] => tail += (sign(x), 0).into(),
-                [0, y] => tail += (0, sign(y)).into(),
-                [x, y] => tail += (sign(x), sign(y)).into(),
-            }
+            tail += IVec2::new(sign(dist.x), sign(dist.y))
         }
 
         seen.insert(tail);
