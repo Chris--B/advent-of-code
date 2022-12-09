@@ -23,7 +23,7 @@ pub fn part1(input: &str) -> i64 {
     let mut head = IVec2::zero();
     let mut tail = IVec2::zero();
 
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::with_capacity(3_000);
     seen.insert(tail);
 
     for dir in moves {
@@ -87,7 +87,7 @@ pub fn part2(input: &str) -> i64 {
 
     const ROPE_LEN: usize = 10;
     let mut rope = [IVec2::zero(); ROPE_LEN];
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::with_capacity(3_000);
 
     seen.insert(rope[ROPE_LEN - 1]);
 
