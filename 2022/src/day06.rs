@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 // First =======================================================================
 #[aoc(day6, part1, first)]
-#[inline(never)]
 pub fn part1(input: &str) -> usize {
     let input = input.as_bytes();
 
@@ -18,7 +17,6 @@ pub fn part1(input: &str) -> usize {
 }
 
 #[aoc(day6, part2, first)]
-#[inline(never)]
 pub fn part2(input: &str) -> usize {
     let input = input.as_bytes();
 
@@ -70,13 +68,11 @@ fn check_for_runs<const N: usize>(input: &[u8]) -> usize {
 }
 
 #[aoc(day6, part1, bits)]
-#[inline(never)]
 pub fn part1_bits(input: &str) -> usize {
     check_for_runs::<4>(input.as_bytes())
 }
 
 #[aoc(day6, part2, bits)]
-#[inline(never)]
 pub fn part2_bits(input: &str) -> usize {
     check_for_runs::<14>(input.as_bytes())
 }

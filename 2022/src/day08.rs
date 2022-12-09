@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 // Part1 ========================================================================
 #[aoc(day8, part1)]
-#[inline(never)]
 pub fn part1(input: &str) -> i64 {
     let mut visible = 0;
     let mut seen: HashSet<(usize, usize)> = HashSet::new();
@@ -162,7 +161,6 @@ fn scenic_score(forest: &[Vec<u8>], x: usize, y: usize) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day8, part2)]
-#[inline(never)]
 pub fn part2(input: &str) -> i64 {
     let forest: Vec<Vec<u8>> = input
         .lines()

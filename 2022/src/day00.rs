@@ -6,14 +6,12 @@ use crate::prelude::*;
 
 // Part1 ========================================================================
 #[aoc(dayN, part1)]
-#[inline(never)]
 pub fn part1(input: &str) -> i64 {
     unimplemented!();
 }
 
 // Part2 ========================================================================
 #[aoc(dayN, part2)]
-#[inline(never)]
 pub fn part2(input: &str) -> i64 {
     unimplemented!();
 }

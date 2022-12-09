@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 // Part1 ========================================================================
 #[aoc(day9, part1)]
-#[inline(never)]
 pub fn part1(input: &str) -> i64 {
     let moves = input
         .as_bytes()
@@ -65,7 +64,6 @@ pub fn part1(input: &str) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day9, part2)]
-#[inline(never)]
 pub fn part2(input: &str) -> i64 {
     let moves = input
         .as_bytes()

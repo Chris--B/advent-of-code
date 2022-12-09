@@ -13,7 +13,6 @@ fn parse(input: &str) -> String {
 
 // Part1 ========================================================================
 #[aoc(day2, part1, as_str)]
-#[inline(never)]
 pub fn part1(input: &str) -> i64 {
     input
         .lines()
@@ -38,7 +37,6 @@ pub fn part1(input: &str) -> i64 {
 }
 
 #[aoc(day2, part1, as_bytes)]
-#[inline(never)]
 pub fn part1_as_bytes(input: &str) -> i64 {
     input
         .as_bytes()
@@ -63,7 +61,6 @@ pub fn part1_as_bytes(input: &str) -> i64 {
 }
 
 #[aoc(day2, part1, as_u32)]
-#[inline(never)]
 pub fn part1_as_u32(input: &str) -> i64 {
     let bytes = input.trim_start().as_bytes();
     debug_assert_eq!(bytes.len() % 4, 0);
@@ -145,7 +142,6 @@ pub fn part1_as_u32(input: &str) -> i64 {
 
 #[cfg(target_feature = "neon")]
 #[aoc(day2, part1, simd)]
-#[inline(never)]
 pub fn part1_as_simd(input: &str) -> i64 {
     let bytes = input.trim_start().as_bytes();
     debug_assert_eq!(bytes.len() % 4, 0);
@@ -271,7 +267,6 @@ pub fn part1_as_simd(input: &str) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day2, part2, as_str)]
-#[inline(never)]
 pub fn part2(input: &str) -> i64 {
     input
         .lines()
@@ -296,7 +291,6 @@ pub fn part2(input: &str) -> i64 {
 }
 
 #[aoc(day2, part2, as_bytes)]
-#[inline(never)]
 pub fn part2_as_bytes(input: &str) -> i64 {
     input
         .as_bytes()
@@ -322,7 +316,6 @@ pub fn part2_as_bytes(input: &str) -> i64 {
 }
 
 #[aoc(day2, part2, as_u32)]
-#[inline(never)]
 pub fn part2_as_u32(input: &str) -> i64 {
     let bytes = input.trim_start().as_bytes();
     debug_assert_eq!(bytes.len() % 4, 0);

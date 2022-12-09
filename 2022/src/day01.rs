@@ -18,14 +18,12 @@ pub fn parse_input(input: &str) -> Vec<i64> {
 
 // Part1 ========================================================================
 #[aoc(day1, part1)]
-#[inline(never)]
 pub fn part1(input: &[i64]) -> i64 {
     *input.iter().max().unwrap()
 }
 
 // Part2 ========================================================================
 #[aoc(day1, part2)]
-#[inline(never)]
 pub fn part2(input: &[i64]) -> i64 {
     let mut input = Vec::from(input);
     input.sort();

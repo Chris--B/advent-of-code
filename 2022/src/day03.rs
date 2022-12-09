@@ -39,7 +39,6 @@ pub fn parse_input_part_1(input: &str) -> Vec<(HashSet<u8>, HashSet<u8>)> {
 }
 
 #[aoc(day3, part1, std_set)]
-#[inline(never)]
 pub fn part1(input: &str) -> i64 {
     let input = parse_input_part_1(input);
     let mut priority = 0;
@@ -55,7 +54,6 @@ pub fn part1(input: &str) -> i64 {
 }
 
 #[aoc(day3, part1, bitset_u64)]
-#[inline(never)]
 pub fn part1_bitset_u64(input: &str) -> i64 {
     let input = input.as_bytes();
 
@@ -100,7 +98,6 @@ pub fn part1_bitset_u64(input: &str) -> i64 {
 }
 
 #[aoc(day3, part1, bitset_u128)]
-#[inline(never)]
 pub fn part1_bitset_u128(input: &str) -> i64 {
     input
         .as_bytes()
@@ -163,7 +160,6 @@ pub fn parse_input_part_2(input: &str) -> Vec<(u64, u64)> {
 }
 
 #[aoc(day3, part2, bitset_u64)]
-#[inline(never)]
 pub fn part2_bitset_u64(input: &str) -> i64 {
     debug_assert_eq!(input.lines().count() % 6, 0);
     let input = parse_input_part_2(input);
@@ -182,7 +178,6 @@ pub fn part2_bitset_u64(input: &str) -> i64 {
 }
 
 #[aoc(day3, part2, bitset_u128)]
-#[inline(never)]
 pub fn part2_bitset_u128(input: &str) -> i64 {
     use itertools::Itertools;
 

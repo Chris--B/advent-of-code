@@ -76,7 +76,6 @@ fn parse_to_move(input: &str) -> State {
 
 // Part1 ========================================================================
 #[aoc(day5, part1, move_crates)]
-#[inline(never)]
 pub fn part1(input: &str) -> String {
     let mut state = parse_to_move(input);
 
@@ -231,20 +230,17 @@ fn track_crates(input: &str, is_part1: bool) -> String {
 }
 
 #[aoc(day5, part1, track_crates)]
-#[inline(never)]
 pub fn part1_track(input: &str) -> String {
     track_crates(input, true)
 }
 
 #[aoc(day5, part2, track_crates)]
-#[inline(never)]
 pub fn part2_track(input: &str) -> String {
     track_crates(input, false)
 }
 
 // Part2 ========================================================================
 #[aoc(day5, part2, move_crates)]
-#[inline(never)]
 pub fn part2(input: &str) -> String {
     let mut state = parse_to_move(input);
 

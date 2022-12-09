@@ -38,7 +38,6 @@ fn fast_parse(input: &[u8]) -> u8 {
 
 // Part1 ========================================================================
 #[aoc(day4, part1, iter_parse)]
-#[inline(never)]
 pub fn part1_iter_parse(input: &str) -> i64 {
     input
         .split(|c| ",-\n".contains(c))
@@ -51,7 +50,6 @@ pub fn part1_iter_parse(input: &str) -> i64 {
 }
 
 #[aoc(day4, part1, loop_parse)]
-#[inline(never)]
 pub fn part1_loop_parse(input: &str) -> i64 {
     let mut count = 0;
 
@@ -117,7 +115,6 @@ pub fn part1_loop_parse(input: &str) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day4, part2, iter_parse)]
-#[inline(never)]
 pub fn part2_iter_parse(input: &str) -> i64 {
     use itertools::Itertools;
 
@@ -132,7 +129,6 @@ pub fn part2_iter_parse(input: &str) -> i64 {
 }
 
 #[aoc(day4, part2, loop_parse)]
-#[inline(never)]
 pub fn part2_loop_parse(input: &str) -> i64 {
     let mut count = 0;
 

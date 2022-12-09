@@ -166,7 +166,6 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
 
 // Part1 ========================================================================
 #[aoc(day7, part1)]
-#[inline(never)]
 pub fn part1(input: &str) -> u32 {
     let sizes = build_sizes_list(input);
     sizes.values().filter(|size| **size <= 100_000).sum()
@@ -174,7 +173,6 @@ pub fn part1(input: &str) -> u32 {
 
 // Part2 ========================================================================
 #[aoc(day7, part2)]
-#[inline(never)]
 pub fn part2(input: &str) -> u32 {
     let sizes = build_sizes_list(input);
 
@@ -273,7 +271,6 @@ fn parse_sizes(input: &str) -> Vec<u32> {
 }
 
 #[aoc(day7, part1, inplace)]
-#[inline(never)]
 pub fn part1_inplace(input: &str) -> u32 {
     let sizes: Vec<u32> = parse_sizes(input);
 
@@ -281,7 +278,6 @@ pub fn part1_inplace(input: &str) -> u32 {
 }
 
 #[aoc(day7, part2, inplace)]
-#[inline(never)]
 pub fn part2_inplace(input: &str) -> u32 {
     const TOTAL_SPACE: u32 = 70_000_000;
     const UNUSED_TARGET: u32 = 30_000_000;
