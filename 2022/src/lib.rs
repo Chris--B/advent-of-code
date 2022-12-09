@@ -11,6 +11,7 @@ pub mod day05;
 pub mod day06;
 pub mod day07;
 pub mod day08;
+pub mod day09;
 
 pub mod framebuffer;
 
@@ -40,15 +41,15 @@ mod prelude {
     where
         I: IntoIterator<Item = T>,
         P: FnMut(&I::Item) -> bool,
-{
-    let mut iter = iter.into_iter().filter(p);
-    let t: T = iter
-        .next()
-        .expect("Expected to find one item in iterator, but found none");
-    debug_assert!(
-        iter.next().is_none(),
-        "Expected to find one item in iterator, but found more than 1"
-    );
+    {
+        let mut iter = iter.into_iter().filter(p);
+        let t: T = iter
+            .next()
+            .expect("Expected to find one item in iterator, but found none");
+        debug_assert!(
+            iter.next().is_none(),
+            "Expected to find one item in iterator, but found more than 1"
+        );
 
         t
     }
