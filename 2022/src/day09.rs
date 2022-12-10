@@ -22,8 +22,25 @@ pub fn part1(input: &str) -> i64 {
     let mut head = IVec2::zero();
     let mut tail = IVec2::zero();
 
-    let mut seen = HashSet::with_capacity(3_000);
-    seen.insert(tail);
+    let mut seen = Framebuffer::new_with_ranges_square(-200..200);
+
+    // Mark our starting point (our origin too) as seen
+    let mut count = 1;
+    seen[(0, 0)] = true;
+
+    if cfg!(debug_assertions) {
+        seen.print_range_with(
+            0..6,
+            0..5,
+            |x, y, _: &bool| {
+                if (x, y) == (0, 0) {
+                    'H'
+                } else {
+                    '.'
+                }
+            },
+        );
+    }
 
     for dir in moves {
         // Move head
@@ -36,30 +53,26 @@ pub fn part1(input: &str) -> i64 {
             tail += IVec2::new(sign(dist.x), sign(dist.y))
         }
 
-        seen.insert(tail);
+        if !seen[tail] {
+            count += 1;
+            seen[tail] = true;
+        }
 
         if cfg!(debug_assertions) {
-            print_ex_grid(&[('H', head), ('T', tail), ('s', IVec2::zero())]);
-
-            fn print_ex_grid(points: &[(char, IVec2)]) {
-                for y in (0..5).rev() {
-                    for x in 0..6 {
-                        if let Some((c, _)) = points.iter().find(|(_c, pt)| *pt == (x, y).into()) {
-                            print!("{c}");
-                        } else if (x, y) == (0, 0) {
-                            print!("s");
-                        } else {
-                            print!(".");
-                        }
-                    }
-                    println!();
+            let rope = [('H', head), ('T', tail), ('s', IVec2::zero())];
+            seen.print_range_with(0..6, 0..5, |x, y, _s| {
+                if let Some((c, _)) = rope.iter().find(|(_c, pt)| *pt == (x, y).into()) {
+                    *c
+                } else if (x, y) == (0, 0) {
+                    's'
+                } else {
+                    '.'
                 }
-                println!();
-            }
+            });
         }
     }
 
-    seen.len() as i64
+    count
 }
 
 // Part2 ========================================================================
@@ -85,65 +98,82 @@ pub fn part2(input: &str) -> i64 {
 
     const ROPE_LEN: usize = 10;
     let mut rope = [IVec2::zero(); ROPE_LEN];
-    let mut seen = HashSet::with_capacity(3_000);
+    let mut seen = Framebuffer::new_with_ranges_square(-200..200);
 
-    seen.insert(rope[ROPE_LEN - 1]);
+    // Mark our starting point (our origin too) as seen
+    let mut count = 1;
+    seen[(0, 0)] = true;
 
-    for dir in moves {
-        // Pretty print the grid
-        if cfg!(debug_assertions) && dir == IVec2::zero() {
-            let chain = [
-                ('H', rope[0]),
-                ('1', rope[1]),
-                ('2', rope[2]),
-                ('3', rope[3]),
-                ('4', rope[4]),
-                ('5', rope[5]),
-                ('6', rope[6]),
-                ('7', rope[7]),
-                ('8', rope[8]),
-                ('9', rope[9]),
-            ];
-            print_ex_grid(&chain);
-
-            continue;
-
-            fn print_ex_grid(points: &[(char, IVec2)]) {
-                for y in (-7..15).rev() {
-                    for x in -11..15 {
-                        if let Some((c, _)) = points.iter().find(|(_c, pt)| *pt == (x, y).into()) {
-                            print!("{c}");
-                        } else if (x, y) == (0, 0) {
-                            print!("s");
-                        } else {
-                            print!(".");
-                        }
-                    }
-                    println!();
+    if cfg!(debug_assertions) {
+        println!("== Initial State ==");
+        seen.print_range_with(
+            -11..15,
+            -5..16,
+            |x, y, _: &bool| {
+                if (x, y) == (0, 0) {
+                    'H'
+                } else {
+                    '.'
                 }
-                println!();
-            }
-        }
+            },
+        );
+    }
 
+    'moves: for dir in moves {
         // Move head
         rope[0] += dir;
 
         // Update the rest of the rope movement
         for i in 0..(rope.len() - 1) {
-            let lead = rope[i];
-            let tail = &mut rope[i + 1];
-            let dist = lead - *tail;
+            let prev = rope[i];
+            let next = &mut rope[i + 1];
+            let dist = prev - *next;
 
-            // Move tail if it's no longer adjacent
+            // Move next if it's no longer adjacent
             if dist.abs().component_max() > 1 {
-                *tail += IVec2::new(sign(dist.x), sign(dist.y))
+                *next += IVec2::new(sign(dist.x), sign(dist.y))
+            } else {
+                // If this knot didn't move, nothing after it will either.
+                // Early out, because nothing has changed.
+                //
+                // Note: THIS STOPS THE BOARD FROM PRINTING!
+                continue 'moves;
             }
         }
 
         // Mark where the final tail node has been
-        seen.insert(rope[ROPE_LEN - 1]);
+        let tail = rope[ROPE_LEN - 1];
+        if !seen[tail] {
+            count += 1;
+            seen[tail] = true;
+        }
+
+        // Pretty print the grid
+        if cfg!(debug_assertions) && dir == IVec2::zero() {
+            let labels = ['H', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+            seen.print_range_with(-11..15, -5..16, |x, y, _: &bool| {
+                if let Some(pos) = rope.iter().position(|pt| *pt == (x, y).into()) {
+                    return labels[pos];
+                }
+
+                if (x, y) == (0, 0) {
+                    's'
+                } else {
+                    '.'
+                }
+            });
+
+            continue;
+        }
     }
-    seen.len() as i64
+
+    if cfg!(debug_assertions) {
+        let bounds = seen.content_bounds();
+        dbg!(bounds);
+    }
+
+    count
 }
 
 #[cfg(test)]
