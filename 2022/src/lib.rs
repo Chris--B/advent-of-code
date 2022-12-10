@@ -61,8 +61,16 @@ mod prelude {
         t
     }
 
+    pub fn fast_parse_i32(input: &[u8]) -> i32 {
+        if input[0] == b'-' {
+            -(fast_parse_u32(&input[1..]) as i32)
+        } else {
+            fast_parse_u32(input) as i32
+        }
+    }
+
     pub fn fast_parse_u32(input: &[u8]) -> u32 {
-        let mut digits = [0_u32; 10];
+        let mut digits = [0_u32; 5];
         let mut x = 1;
         for (i, b) in input.iter().rev().enumerate() {
             digits[i] = x * (*b - b'0') as u32;

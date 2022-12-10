@@ -126,6 +126,62 @@ pub fn part2(input: &str) -> SmallString<[u8; 256]> {
     output
 }
 
+/// Produces 0 or more 0s before optionally producing a final i32
+struct LeadingZeroIterI32 {
+    n_zeros: usize,
+    item: Option<i32>,
+}
+
+impl Iterator for LeadingZeroIterI32 {
+    type Item = i32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.n_zeros > 0 {
+            self.n_zeros -= 1;
+            Some(0)
+        } else {
+            self.item.take()
+        }
+    }
+}
+
+#[aoc(day10, part1, iter)]
+pub fn part1_iter(input: &str) -> i64 {
+    input
+        .as_bytes()
+        .split(|b| *b == b'\n')
+        .flat_map(|line| {
+            if line[0] == b'a' {
+                // ex: addx -100
+                //     ^    ^
+                //     0    5
+                LeadingZeroIterI32 {
+                    n_zeros: 1,
+                    item: Some(fast_parse_i32(&line[5..])),
+                }
+            } else {
+                LeadingZeroIterI32 {
+                    n_zeros: 1,
+                    item: None,
+                }
+            }
+        })
+        .enumerate()
+        .map(|(i, v)| (i + 1, v)) // i is 1-indexed
+        .fold((1, 0_i32), |(mut x, mut signal), (i, v)| {
+            // Update signal strength only on certain cycles
+            if i % 40 == 20 {
+                signal += i as i32 * x;
+            }
+
+            // Update X after computing signal strength
+            x += v;
+
+            (x, signal)
+        })
+        .1 as i64
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -140,7 +196,7 @@ mod test {
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_iter)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
