@@ -1,10 +1,11 @@
-use smallvec::{smallvec, SmallVec};
-
 use image::ImageBuffer;
+use smallvec::{smallvec, SmallVec};
+use ultraviolet::IVec2;
 
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::ops::Range;
 use std::ops::{Index, IndexMut};
 
 /*
@@ -26,6 +27,8 @@ pub struct Framebuffer<T> {
     width: isize,
     height: isize,
 
+    offsets: IVec2,
+
     /// When accessing out of bounds elements, return this
     ///
     /// All OOB accesses panic if this is `None`
@@ -38,40 +41,80 @@ where
     T: Default + Clone,
 {
     /// Construct a framebuffer with specified dimensions. Elements are default constructed.
-    pub fn with_dims(width: usize, height: usize) -> Self {
-        let buf_len = width * height;
+    pub fn new(width: u32, height: u32) -> Self {
+        let w = width as i32;
+        let h = height as i32;
 
+        Self::new_with_ranges(0..w, 0..h)
+    }
+
+    pub fn new_with_ranges_square(xs: Range<i32>) -> Self {
+        let ys = xs.clone();
+        Self::new_with_ranges(xs, ys)
+    }
+
+    pub fn new_with_ranges(xs: Range<i32>, ys: Range<i32>) -> Self {
+        let mut offsets = IVec2::zero();
+
+        let width = (xs.end - xs.start) as isize;
+        offsets.x = 0 - xs.start; // We'll add this to all x lookups
+
+        let height = (ys.end - ys.start) as isize;
+        offsets.y = 0 - ys.start; // We'll add this to all y lookups
+
+        let buf_len = (width * height) as usize;
         let buf = smallvec![T::default(); buf_len];
-        let (width, height) = (width as isize, height as isize);
-        let border_color = None;
 
         Framebuffer {
             buf,
             width,
             height,
-            border_color,
+            offsets,
+            border_color: None,
         }
     }
 
-    pub fn with_dims_of<U>(other: &Framebuffer<U>) -> Self {
-        Self::with_dims(other.width(), other.height())
+    pub fn new_matching_size<U>(other: &Framebuffer<U>) -> Self {
+        let width = other.width;
+        let height = other.height;
+        let offsets = other.offsets;
+
+        let buf_len = (width * height) as usize;
+        let buf = smallvec![T::default(); buf_len];
+
+        Self {
+            buf,
+            width,
+            height,
+            offsets,
+            border_color: None,
+        }
     }
 }
 
 /// Construction Methods
 impl<T> Framebuffer<T> {
-    pub fn from_func(width: usize, height: usize, func: impl Fn(usize, usize) -> T) -> Self {
-        let buf_len = width * height;
+    pub fn new_with_ranges_and(
+        xs: Range<i32>,
+        ys: Range<i32>,
+        func: impl Fn(i32, i32) -> T,
+    ) -> Self {
+        let mut offsets = IVec2::zero();
 
+        let width = (xs.end - xs.start) as isize;
+        offsets.x = -xs.start; // We'll add this to all x lookups
+
+        let height = (ys.end - ys.start) as isize;
+        offsets.y = -ys.start; // We'll add this to all y lookups
+
+        let buf_len = (width * height) as usize;
         let mut buf = SmallVec::with_capacity(buf_len);
-        let (width, height) = (width as isize, height as isize);
-        let border_color = None;
 
         // Generate elements in row-major order
         // We choose this order so we can .push() each new element. This will change if we modify
         // the backing memory tiling.
-        for y in 0..(height as usize) {
-            for x in 0..(width as usize) {
+        for y in xs {
+            for x in ys.clone() {
                 buf.push(func(x, y));
             }
         }
@@ -80,12 +123,9 @@ impl<T> Framebuffer<T> {
             buf,
             width,
             height,
-            border_color,
+            offsets,
+            border_color: None,
         }
-    }
-
-    pub fn into_inner(self) -> SmallVec<[T; LOCAL_SIZE]> {
-        self.buf
     }
 }
 
@@ -119,6 +159,53 @@ impl<T> Framebuffer<T> {
 
     pub fn flatten_mut(&mut self) -> std::slice::IterMut<T> {
         self.buf.iter_mut()
+    }
+
+    pub fn range_x(&self) -> Range<i32> {
+        let x_start = 0 - self.offsets.x;
+        let x_end = (self.width as i32) - self.offsets.x;
+
+        x_start..x_end
+    }
+
+    pub fn range_y(&self) -> Range<i32> {
+        let y_start = 0 - self.offsets.y;
+        let y_end = self.height as i32 - self.offsets.y;
+
+        y_start..y_end
+    }
+
+    pub fn iter_coords(&self) -> impl Iterator<Item = (i32, i32)> {
+        let xs = self.range_x();
+        let ys = self.range_y();
+
+        ys.flat_map(move |y| xs.clone().map(move |x| (x, y)))
+    }
+}
+
+impl<T: Default + PartialEq> Framebuffer<T> {
+    // Return an axis aligned bounding region of all content that's not default constructed
+    pub fn content_bounds(&self) -> Option<[IVec2; 2]> {
+        let ignore = T::default();
+
+        let mut bounds = None;
+
+        for (x, y) in self.iter_coords() {
+            if self[(x, y)] != ignore {
+                let xy = IVec2::new(x, y);
+
+                if bounds.is_none() {
+                    bounds = Some([xy, xy]);
+                }
+
+                if let Some([min, max]) = &mut bounds {
+                    *min = min.min_by_component(xy);
+                    *max = max.max_by_component(xy);
+                }
+            }
+        }
+
+        bounds
     }
 }
 
@@ -171,6 +258,24 @@ where
     }
 }
 
+/// Ascii Art - assume display is 1 character per
+impl<T> Framebuffer<T> {
+    pub fn print_range_with(
+        &self,
+        xs: Range<i32>,
+        ys: Range<i32>,
+        func: impl Fn(i32, i32, &T) -> char,
+    ) {
+        for y in ys.rev() {
+            for x in xs.clone() {
+                print!("{}", func(x, y, &self[(x, y)]));
+            }
+            println!();
+        }
+        println!();
+    }
+}
+
 /// Interop with `image` crate
 impl<T> Framebuffer<T> {
     pub fn make_image<P, F>(&self, scale: u32, f: F) -> ImageBuffer<P, Vec<P::Subpixel>>
@@ -193,52 +298,55 @@ impl<T> Framebuffer<T> {
 }
 
 // ==== Index using anything that can be converted to `usize` ==================
-impl<T> Index<(u32, u32)> for Framebuffer<T> {
+macro_rules! impl_indexing {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl<T> Index<($t, $t)> for Framebuffer<T> {
+                type Output = T;
+
+                fn index(&self, idx: ($t, $t)) -> &Self::Output {
+                    &self[(idx.0 as isize, idx.1 as isize)]
+                }
+            }
+
+            impl<T> IndexMut<($t, $t)> for Framebuffer<T> {
+                fn index_mut(&mut self, idx: ($t, $t)) -> &mut Self::Output {
+                    &mut self[(idx.0 as isize, idx.1 as isize)]
+                }
+            }
+        )+
+    }
+}
+
+// Route all integer types to isize
+impl_indexing![
+    // Unsigned
+    u8, u16, u32, u64, usize, // Signed
+    i8, i16, i32, i64,
+];
+
+impl<T> Index<IVec2> for Framebuffer<T> {
     type Output = T;
 
-    fn index(&self, idx: (u32, u32)) -> &Self::Output {
-        &self[(idx.0 as isize, idx.1 as isize)]
+    fn index(&self, idx: IVec2) -> &Self::Output {
+        &self[(idx.x as isize, idx.y as isize)]
     }
 }
 
-impl<T> IndexMut<(u32, u32)> for Framebuffer<T> {
-    fn index_mut(&mut self, idx: (u32, u32)) -> &mut Self::Output {
-        &mut self[(idx.0 as isize, idx.1 as isize)]
+impl<T> IndexMut<IVec2> for Framebuffer<T> {
+    fn index_mut(&mut self, idx: IVec2) -> &mut Self::Output {
+        &mut self[(idx.x as isize, idx.y as isize)]
     }
 }
 
-impl<T> Index<(u64, u64)> for Framebuffer<T> {
-    type Output = T;
-
-    fn index(&self, idx: (u64, u64)) -> &Self::Output {
-        &self[(idx.0 as isize, idx.1 as isize)]
-    }
-}
-
-impl<T> IndexMut<(u64, u64)> for Framebuffer<T> {
-    fn index_mut(&mut self, idx: (u64, u64)) -> &mut Self::Output {
-        &mut self[(idx.0 as isize, idx.1 as isize)]
-    }
-}
-
-impl<T> Index<(usize, usize)> for Framebuffer<T> {
-    type Output = T;
-
-    fn index(&self, idx: (usize, usize)) -> &Self::Output {
-        &self[(idx.0 as isize, idx.1 as isize)]
-    }
-}
-
-impl<T> IndexMut<(usize, usize)> for Framebuffer<T> {
-    fn index_mut(&mut self, idx: (usize, usize)) -> &mut Self::Output {
-        &mut self[(idx.0 as isize, idx.1 as isize)]
-    }
-}
-
-// The real index logic
+// The real index logic, using isize
 
 impl<T> Framebuffer<T> {
-    fn idx_from_xy(&self, x: isize, y: isize) -> Option<usize> {
+    fn idx_from_xy(&self, mut x: isize, mut y: isize) -> Option<usize> {
+        // Offset back to unsigned coordinates
+        x += self.offsets.x as isize;
+        y += self.offsets.y as isize;
+
         if x < 0 || y < 0 {
             return None;
         }

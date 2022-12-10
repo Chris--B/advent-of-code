@@ -18,6 +18,8 @@ pub mod framebuffer;
 aoc_lib! { year = 2022 }
 
 mod prelude {
+    pub use crate::framebuffer::Framebuffer;
+
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use itertools::Itertools;
