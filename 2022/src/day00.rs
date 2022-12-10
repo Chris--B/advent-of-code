@@ -20,6 +20,8 @@ pub fn part2(input: &str) -> i64 {
 mod test {
     use super::*;
     use rstest::*;
+    #[allow(unused_imports)]
+    use pretty_assertions::{assert_eq, assert_ne};
 
     const EXAMPLE_INPUT: &str = r"
 // todo
@@ -31,7 +33,7 @@ mod test {
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&[i64]) -> i64,
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
@@ -45,7 +47,7 @@ mod test {
     // fn check_ex_part_2(
     //     #[notrace]
     //     #[values(part2)]
-    //     p: impl FnOnce(&[i64]) -> i64,
+    //     p: impl FnOnce(&str) -> i64,
     //     #[case] expected: i64,
     //     #[case] input: &str,
     // ) {
