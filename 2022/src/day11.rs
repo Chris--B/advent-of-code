@@ -10,9 +10,10 @@ enum Op {
 }
 use Op::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 struct Monkey {
     op: Op,
+    items: Vec<u64>,
     divisible_by: u64,
     if_true: u64,
     if_false: u64,
@@ -34,8 +35,11 @@ fn parse_monkey(s: [&str; 7]) -> Monkey {
     debug_assert_eq!(&s[0][..6], "Monkey");
 
     // Text followed by a list of items
-    // We also skip this, since we're parsing items separately
     debug_assert_eq!(&s[1][..17], "  Starting items:");
+    let items: Vec<_> = s[1][18..]
+        .split(',')
+        .map(|e| e.trim().parse().unwrap())
+        .collect();
 
     // Text followed by one of three lines to describe a math op
     debug_assert_eq!(&s[2][..19], "  Operation: new = ");
@@ -65,52 +69,42 @@ fn parse_monkey(s: [&str; 7]) -> Monkey {
     Monkey {
         op,
         divisible_by,
+        items,
         if_true,
         if_false,
         throws: 0,
     }
 }
 
-fn parse(input: &str) -> (Vec<Monkey>, Vec<Vec<u64>>) {
-    let mut monkeys = vec![];
-    let mut all_items = vec![];
-
-    // TODO: We can use arrays() when that lands in stable
-    for chunk in &input.lines().chunks(7) {
-        let lines = iter_to_array_or_default(chunk);
-        let monkey = parse_monkey(lines);
-
-        let items_line = lines[1];
-        debug_assert_eq!(&items_line[..17], "  Starting items:");
-        let items: Vec<u64> = items_line[18..]
-            .split(',')
-            .map(|e| e.trim().parse().unwrap())
-            .collect();
-
-        monkeys.push(monkey);
-        all_items.push(items);
-    }
-
-    (monkeys, all_items)
+fn parse(input: &str) -> Vec<Monkey> {
+    input
+        .lines()
+        .chunks(7)
+        .into_iter()
+        .map(|chunk| {
+            let lines = iter_to_array_or_default(chunk);
+            parse_monkey(lines)
+        })
+        .collect()
 }
 
-fn do_monkey_business<const N: u64>(rounds: u16, monkeys: &mut [Monkey], items: &mut [Vec<u64>]) {
+fn do_monkey_business<const N: u64>(rounds: u16, monkeys: &mut [Monkey]) {
     let m: u64 = monkeys.iter().map(|m| m.divisible_by).product();
 
     if cfg!(debug_assertions) {
-        // print_state(0, items);
+        print_state(0, monkeys);
     }
 
     for round in 1..=rounds {
         // Each monkey inspects each item in order
-        for monkey_idx in 0..monkeys.len() {
-            let curr = monkeys[monkey_idx];
-
-            for item_idx in 0..items[monkey_idx].len() {
-                let mut item = items[monkey_idx][item_idx];
+        for id in 0..monkeys.len() {
+            // Note: looping with indices here to satisfy the borrow checker.
+            // (We're indexing twice, mutability into the same Monkeys slice)
+            for item_idx in 0..monkeys[id].items.len() {
+                let mut item: u64 = monkeys[id].items[item_idx];
 
                 // ... getting worried
-                item = match curr.op {
+                item = match monkeys[id].op {
                     Mul(x) => (item * x) % m,
                     Add(x) => (item + x) % m,
                     Square => (item * item) % m,
@@ -120,36 +114,36 @@ fn do_monkey_business<const N: u64>(rounds: u16, monkeys: &mut [Monkey], items: 
                 item /= N;
 
                 // uh...
-                let next_monkey = if item % curr.divisible_by == 0 {
-                    curr.if_true as usize
+                let next_id = if item % monkeys[id].divisible_by == 0 {
+                    monkeys[id].if_true as usize
                 } else {
-                    curr.if_false as usize
+                    monkeys[id].if_false as usize
                 };
 
                 // ohno, the monkey threw it
-                items[next_monkey].push(item);
+                monkeys[next_id].items.push(item);
             }
 
             // conservation of... matter...?
-            monkeys[monkey_idx].throws += items[monkey_idx].len() as u64;
-            items[monkey_idx].clear();
+            monkeys[id].throws += monkeys[id].items.len() as u64;
+            monkeys[id].items.clear();
         }
 
         if cfg!(debug_assertions) {
-            // print_state(round, items);
+            print_state(round, monkeys);
         }
     }
 }
 
-fn print_state(round: u16, all_items: &[Vec<u64>]) {
+fn print_state(round: u16, monkeys: &[Monkey]) {
     if round == 0 {
         println!("=== Starting");
     } else {
         println!("=== Round {round}");
     }
 
-    for (id, items) in all_items.iter().enumerate() {
-        println!("Monkey {id}: {items:?}");
+    for (id, monkey) in monkeys.iter().enumerate() {
+        println!("Monkey {id}: {:?}", monkey.items);
     }
     println!();
 }
@@ -157,13 +151,11 @@ fn print_state(round: u16, all_items: &[Vec<u64>]) {
 // Part1 ========================================================================
 #[aoc(day11, part1)]
 pub fn part1(input: &str) -> u64 {
-    let (mut monkeys, mut items) = parse(input);
+    let mut monkeys = parse(input);
 
-    do_monkey_business::<3>(20, &mut monkeys, &mut items);
+    do_monkey_business::<3>(20, &mut monkeys);
 
-    // TODO: Do this without allocing
-    let mut counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
-
+    let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
     counts.sort();
     counts.reverse();
 
@@ -175,14 +167,12 @@ pub fn part1(input: &str) -> u64 {
 
 #[aoc(day11, part2)]
 pub fn part2(input: &str) -> u64 {
-    let (mut monkeys, mut items) = parse(input);
+    let mut monkeys = parse(input);
 
     // Note: We do a few more rounds than part 1 did
-    do_monkey_business::<1>(10_000, &mut monkeys, &mut items);
-
+    do_monkey_business::<1>(10_000, &mut monkeys);
     // TODO: Do this without allocing
-    let mut counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
-
+    let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
     counts.sort();
     counts.reverse();
 
@@ -257,8 +247,8 @@ Monkey 3:
 
     #[test]
     fn check_ex_part_1_counts() {
-        let (mut monkeys, mut items) = parse(EXAMPLE_INPUT.trim());
-        do_monkey_business::<3>(20, &mut monkeys, &mut items);
+        let mut monkeys = parse(EXAMPLE_INPUT.trim());
+        do_monkey_business::<3>(20, &mut monkeys);
 
         let counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
         assert_eq!(counts, [101, 95, 7, 105]);
@@ -266,8 +256,8 @@ Monkey 3:
 
     #[test]
     fn check_ex_part_2_counts() {
-        let (mut monkeys, mut items) = parse(EXAMPLE_INPUT.trim());
-        do_monkey_business::<1>(10_000, &mut monkeys, &mut items);
+        let mut monkeys = parse(EXAMPLE_INPUT.trim());
+        do_monkey_business::<1>(10_000, &mut monkeys);
 
         let counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
         assert_eq!(counts, [52166, 47830, 1938, 52013]);
