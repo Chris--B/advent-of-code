@@ -62,6 +62,48 @@ mod prelude {
         t
     }
 
+    pub fn iter_to_array<T: Copy, const N: usize>(mut iter: impl Iterator<Item = T>) -> [T; N] {
+        use core::mem::transmute;
+        use core::mem::MaybeUninit;
+
+        // We need Copy for this to work
+        let mut arr = [MaybeUninit::uninit(); N];
+
+        for elem in &mut arr {
+            elem.write(iter.next().unwrap());
+        }
+
+        // This is just a bug
+        // https://github.com/rust-lang/rust/issues/61956
+        unsafe {
+            let p_arr: *const [MaybeUninit<T>; N] = &arr as *const [std::mem::MaybeUninit<T>; N];
+            let p_res: *const [T; N] = transmute(p_arr);
+            p_res.read()
+        }
+    }
+
+    pub fn iter_to_array_or_default<T: Copy + Default, const N: usize>(
+        mut iter: impl Iterator<Item = T>,
+    ) -> [T; N] {
+        use core::mem::transmute;
+        use core::mem::MaybeUninit;
+
+        // We need Copy for this to work
+        let mut arr = [MaybeUninit::uninit(); N];
+
+        for elem in &mut arr {
+            elem.write(iter.next().unwrap_or_default());
+        }
+
+        // This is just a bug
+        // https://github.com/rust-lang/rust/issues/61956
+        unsafe {
+            let p_arr: *const [MaybeUninit<T>; N] = &arr as *const [std::mem::MaybeUninit<T>; N];
+            let p_res: *const [T; N] = transmute(p_arr);
+            p_res.read()
+        }
+    }
+
     pub fn fast_parse_i32(input: &[u8]) -> i32 {
         if input[0] == b'-' {
             -(fast_parse_u32(&input[1..]) as i32)
