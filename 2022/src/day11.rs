@@ -1,5 +1,3 @@
-#![allow(unused_variables)]
-
 use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -11,7 +9,7 @@ enum Op {
 use Op::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Monkey {
+pub struct Monkey {
     op: Op,
     items: Vec<u64>,
     divisible_by: u64,
@@ -143,8 +141,8 @@ fn print_state(round: u16, monkeys: &[Monkey]) {
     println!();
 }
 
-// Part1 ========================================================================
-#[aoc(day11, part1)]
+// First Algo ==================================================================
+#[aoc(day11, part1, first)]
 pub fn part1(input: &str) -> u64 {
     let mut monkeys = parse(input);
 
@@ -158,9 +156,7 @@ pub fn part1(input: &str) -> u64 {
     counts[0] * counts[1]
 }
 
-// Part2 ========================================================================
-
-#[aoc(day11, part2)]
+#[aoc(day11, part2, first)]
 pub fn part2(input: &str) -> u64 {
     let mut monkeys = parse(input);
 
@@ -258,8 +254,13 @@ Monkey 3:
         assert_eq!(counts, [52166, 47830, 1938, 52013]);
     }
 
-    #[test]
-    fn check_monkey_parsse_str() {
+    #[rstest]
+    #[trace]
+    fn check_monkey_parse(
+        #[notrace]
+        #[values(parse)]
+        parse: impl FnOnce(&str) -> Vec<Monkey>,
+    ) {
         let monkeys = parse(EXAMPLE_INPUT.trim());
         assert_eq!(
             monkeys,
