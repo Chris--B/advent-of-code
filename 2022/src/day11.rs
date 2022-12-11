@@ -178,7 +178,6 @@ struct MonkeyInfo {
     divisible_by: u64,
     if_true: usize,
     if_false: usize,
-    throws: u64,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -248,10 +247,8 @@ fn parse_tracking(input: &str) -> (Vec<MonkeyInfo>, Vec<Item>) {
             MonkeyInfo {
                 op,
                 divisible_by,
-
                 if_true,
                 if_false,
-                throws: 0,
             }
         })
         .collect();
@@ -261,15 +258,44 @@ fn parse_tracking(input: &str) -> (Vec<MonkeyInfo>, Vec<Item>) {
 
 fn do_monkey_business_tracking<const N: u64>(
     rounds: u16,
-    monkeys: &mut [MonkeyInfo],
+    monkeys: &[MonkeyInfo],
     items: &mut [Item],
-) {
+) -> SmallVec<[u64; 8]> {
     let m: u64 = monkeys.iter().map(|m| m.divisible_by).product();
 
+    let mut throws: SmallVec<[u64; 8]> = smallvec![0; monkeys.len()];
+
     for item in items.iter_mut() {
-        for _ in 1..=rounds {
+        let mut history = vec![];
+        let mut item_throws: SmallVec<[u64; 8]> = smallvec![0; monkeys.len()];
+
+        let mut loop_start = 0;
+        let mut loop_end = 0;
+
+        let mut round = 0;
+        for r in 1..=rounds {
+            round = r;
+            // We've started looping and can do math for the rest
+            if let Some(pos) = history
+                .iter()
+                .position(|(w, m, _)| (w, m) == (&item.worry, &item.monkey))
+            {
+                assert_ne!(pos, history.len());
+                assert_ne!(pos, history.len() - 1);
+                loop_start = pos;
+                loop_end = history.len();
+
+                // We need this for the final throws count
+                history.push((item.worry, item.monkey, item_throws.clone()));
+                break;
+            }
+
+            let old_worry = item.worry;
+            let old_monkey = item.monkey;
+
+            // Iterate through a full round for this item
             loop {
-                let monkey = &mut monkeys[item.monkey];
+                let monkey = &monkeys[item.monkey];
 
                 // ... getting worried
                 item.worry = match monkey.op {
@@ -290,8 +316,8 @@ fn do_monkey_business_tracking<const N: u64>(
                 };
 
                 // ohno, the monkey threw it
+                item_throws[item.monkey] += 1;
                 item.monkey = next_id;
-                monkey.throws += 1;
 
                 // If we threw the item to a monkey earlier in the round, we won't be updated
                 // again this round and we can count this round as over.
@@ -299,17 +325,67 @@ fn do_monkey_business_tracking<const N: u64>(
                     break;
                 }
             }
+
+            history.push((old_worry, old_monkey, item_throws.clone()));
+        }
+
+        // No loop
+        if round == rounds {
+            for i in 0..monkeys.len() {
+                throws[i] += item_throws[i];
+            }
+            continue;
+        }
+
+        let rounds = rounds as usize;
+        let loops_len: usize = loop_end - loop_start;
+        let loops_count: usize = (rounds - loop_start) / loops_len;
+        let post_loop_count: usize = rounds - (loop_start + loops_count * loops_len);
+
+        println!(
+            "{loop_start} rounds, {loops_count} loops ({loops_len} ea), {post_loop_count} rounds",
+        );
+
+        let throws_pre_loop: SmallVec<[u64; 8]> = history[loop_start - 1].2.clone();
+
+        // Compute throws for a loop of rounds
+        let throws_from_loops: SmallVec<[u64; 8]> = {
+            let (_, _, start) = &history[loop_start];
+            let (_, _, end) = &history[loop_end];
+
+            start
+                .iter()
+                .zip(end.iter())
+                .map(|(a, b)| loops_count as u64 * (a + b))
+                .collect()
+        };
+
+        // Compute throws from a partial loop at the end
+        let throws_post_loops: SmallVec<[u64; 8]> = {
+            let (_, _, start) = &history[loop_start];
+            let (_, _, end) = &history[loop_start + post_loop_count];
+
+            start.iter().zip(end.iter()).map(|(a, b)| a + b).collect()
+        };
+
+        debug_assert_eq!(throws_pre_loop.len(), monkeys.len());
+        debug_assert_eq!(throws_pre_loop.len(), throws_from_loops.len());
+        debug_assert_eq!(throws_from_loops.len(), throws_post_loops.len());
+
+        for i in 0..monkeys.len() {
+            throws[i] = throws_pre_loop[i] + throws_from_loops[i] + throws_post_loops[i];
         }
     }
+
+    throws
 }
 
 #[aoc(day11, part1, tracking)]
 pub fn part1_tracking(input: &str) -> u64 {
-    let (mut monkeys, mut items) = parse_tracking(input);
+    let (monkeys, mut items) = parse_tracking(input);
 
-    do_monkey_business_tracking::<3>(20, &mut monkeys, &mut items);
+    let mut counts = do_monkey_business_tracking::<3>(20, &monkeys, &mut items);
 
-    let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
     counts.sort();
     counts.reverse();
 
@@ -319,11 +395,10 @@ pub fn part1_tracking(input: &str) -> u64 {
 
 #[aoc(day11, part2, tracking)]
 pub fn part2_tracking(input: &str) -> u64 {
-    let (mut monkeys, mut items) = parse_tracking(input);
+    let (monkeys, mut items) = parse_tracking(input);
 
-    do_monkey_business_tracking::<1>(10_000, &mut monkeys, &mut items);
+    let mut counts = do_monkey_business_tracking::<1>(10_000, &monkeys, &mut items);
 
-    let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
     counts.sort();
     counts.reverse();
 
@@ -412,6 +487,25 @@ Monkey 3:
 
         let counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
         assert_eq!(counts, [52166, 47830, 1938, 52013]);
+    }
+
+    #[test]
+    fn check_ex_part_1_counts_tracking() {
+        let (monkeys, mut items) = parse_tracking(EXAMPLE_INPUT.trim());
+        let counts = do_monkey_business_tracking::<3>(20, &monkeys, &mut items);
+
+        assert_eq!(counts.as_slice(), [101_u64, 95, 7, 105].as_slice());
+    }
+
+    #[test]
+    fn check_ex_part_2_counts_tracking() {
+        let (monkeys, mut items) = parse_tracking(EXAMPLE_INPUT.trim());
+        let counts = do_monkey_business_tracking::<1>(10_000, &monkeys, &mut items);
+
+        assert_eq!(
+            counts.as_slice(),
+            [52166_u64, 47830, 1938, 52013].as_slice()
+        );
     }
 
     #[test]
