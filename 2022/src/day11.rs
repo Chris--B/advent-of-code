@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum Op {
     Mul(u64),
     Add(u64),
@@ -10,7 +10,7 @@ enum Op {
 }
 use Op::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Monkey {
     op: Op,
     items: Vec<u64>,
@@ -20,70 +20,65 @@ struct Monkey {
     throws: u64,
 }
 
-/*
-    Example parse:
-        [0] Monkey 0:
-        [1]   Starting items: 50, 70, 89, 75, 66, 66
-        [2]   Operation: new = old * 5
-        [3]   Test: divisible by 2
-        [4]     If true: throw to monkey 2
-        [5]     If false: throw to monkey 1
-        [6] <empty line>
-*/
-fn parse_monkey(s: [&str; 7]) -> Monkey {
-    // Ignore line 0
-    debug_assert_eq!(&s[0][..6], "Monkey");
-
-    // Text followed by a list of items
-    debug_assert_eq!(&s[1][..17], "  Starting items:");
-    let items: Vec<_> = s[1][18..]
-        .split(',')
-        .map(|e| e.trim().parse().unwrap())
-        .collect();
-
-    // Text followed by one of three lines to describe a math op
-    debug_assert_eq!(&s[2][..19], "  Operation: new = ");
-    let ops: [&str; 3] = iter_to_array(s[2][19..].split_whitespace());
-    let op: Op = match ops {
-        ["old", "*", "old"] => Square,
-        [a, "*", "old"] | ["old", "*", a] => Mul(a.parse().unwrap()),
-        [a, "+", "old"] | ["old", "+", a] => Add(a.parse().unwrap()),
-        _ => unreachable!("Unrecognized op sequence: {ops:?}"),
-    };
-
-    // Text followed by a number
-    debug_assert_eq!(&s[3][..20], "  Test: divisible by");
-    let divisible_by: u64 = s[3][21..].parse().unwrap();
-
-    // Text followed by a number
-    debug_assert_eq!(&s[4][..28], "    If true: throw to monkey");
-    let if_true: u64 = s[4][29..].parse().unwrap();
-
-    // Text followed by a number
-    debug_assert_eq!(&s[5][..29], "    If false: throw to monkey");
-    let if_false: u64 = s[5][30..].parse().unwrap();
-
-    // Trailing empty line
-    debug_assert_eq!(s[6].trim(), "");
-
-    Monkey {
-        op,
-        divisible_by,
-        items,
-        if_true,
-        if_false,
-        throws: 0,
-    }
-}
-
 fn parse(input: &str) -> Vec<Monkey> {
     input
         .lines()
         .chunks(7)
         .into_iter()
         .map(|chunk| {
-            let lines = iter_to_array_or_default(chunk);
-            parse_monkey(lines)
+            /*
+                    [0] Monkey 0:
+                    [1]   Starting items: 50, 70, 89, 75, 66, 66
+                    [2]   Operation: new = old * 5
+                    [3]   Test: divisible by 2
+                    [4]     If true: throw to monkey 2
+                    [5]     If false: throw to monkey 1
+                    [6] <empty line>
+            */
+            let s: [&str; 7] = iter_to_array_or_default(chunk);
+            // Ignore line 0
+            debug_assert_eq!(&s[0][..6], "Monkey");
+
+            // Text followed by a list of items
+            debug_assert_eq!(&s[1][..17], "  Starting items:");
+            let items: Vec<_> = s[1][18..]
+                .split(',')
+                .map(|e| e.trim().parse().unwrap())
+                .collect();
+
+            // Text followed by one of three lines to describe a math op
+            debug_assert_eq!(&s[2][..19], "  Operation: new = ");
+            let ops: [&str; 3] = iter_to_array(s[2][19..].split_whitespace());
+            let op: Op = match ops {
+                ["old", "*", "old"] => Square,
+                [a, "*", "old"] | ["old", "*", a] => Mul(a.parse().unwrap()),
+                [a, "+", "old"] | ["old", "+", a] => Add(a.parse().unwrap()),
+                _ => unreachable!("Unrecognized op sequence: {ops:?}"),
+            };
+
+            // Text followed by a number
+            debug_assert_eq!(&s[3][..20], "  Test: divisible by");
+            let divisible_by: u64 = s[3][21..].parse().unwrap();
+
+            // Text followed by a number
+            debug_assert_eq!(&s[4][..28], "    If true: throw to monkey");
+            let if_true: u64 = s[4][29..].parse().unwrap();
+
+            // Text followed by a number
+            debug_assert_eq!(&s[5][..29], "    If false: throw to monkey");
+            let if_false: u64 = s[5][30..].parse().unwrap();
+
+            // Trailing empty line
+            debug_assert_eq!(s[6].trim(), "");
+
+            Monkey {
+                op,
+                divisible_by,
+                items,
+                if_true,
+                if_false,
+                throws: 0,
+            }
         })
         .collect()
 }
@@ -261,5 +256,47 @@ Monkey 3:
 
         let counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
         assert_eq!(counts, [52166, 47830, 1938, 52013]);
+    }
+
+    #[test]
+    fn check_monkey_parsse_str() {
+        let monkeys = parse(EXAMPLE_INPUT.trim());
+        assert_eq!(
+            monkeys,
+            [
+                Monkey {
+                    items: vec![79, 98],
+                    op: Mul(19),
+                    divisible_by: 23,
+                    if_true: 2,
+                    if_false: 3,
+                    throws: 0,
+                },
+                Monkey {
+                    items: vec![54, 65, 75, 74],
+                    op: Add(6),
+                    divisible_by: 19,
+                    if_true: 2,
+                    if_false: 0,
+                    throws: 0,
+                },
+                Monkey {
+                    items: vec![79, 60, 97],
+                    op: Square,
+                    divisible_by: 13,
+                    if_true: 1,
+                    if_false: 3,
+                    throws: 0,
+                },
+                Monkey {
+                    items: vec![74],
+                    op: Add(3),
+                    divisible_by: 17,
+                    if_true: 0,
+                    if_false: 1,
+                    throws: 0,
+                },
+            ]
+        )
     }
 }
