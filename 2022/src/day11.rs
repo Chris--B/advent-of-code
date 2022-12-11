@@ -18,7 +18,7 @@ pub struct Monkey {
     throws: u64,
 }
 
-fn parse(input: &str) -> Vec<Monkey> {
+fn parse_first(input: &str) -> Vec<Monkey> {
     input
         .lines()
         .chunks(7)
@@ -144,7 +144,7 @@ fn print_state(round: u16, monkeys: &[Monkey]) {
 // First Algo ==================================================================
 #[aoc(day11, part1, first)]
 pub fn part1(input: &str) -> u64 {
-    let mut monkeys = parse(input);
+    let mut monkeys = parse_first(input);
 
     do_monkey_business::<3>(20, &mut monkeys);
 
@@ -158,11 +158,171 @@ pub fn part1(input: &str) -> u64 {
 
 #[aoc(day11, part2, first)]
 pub fn part2(input: &str) -> u64 {
-    let mut monkeys = parse(input);
+    let mut monkeys = parse_first(input);
 
     // Note: We do a few more rounds than part 1 did
     do_monkey_business::<1>(10_000, &mut monkeys);
-    // TODO: Do this without allocing
+
+    let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
+    counts.sort();
+    counts.reverse();
+
+    // Only need the 2 max, not a full sort
+    counts[0] * counts[1]
+}
+
+// Item Tracking ===============================================================
+#[derive(Copy, Clone, Debug)]
+struct MonkeyInfo {
+    op: Op,
+    divisible_by: u64,
+    if_true: usize,
+    if_false: usize,
+    throws: u64,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Item {
+    /// Current modulated worry level for this item
+    worry: u64,
+
+    /// Monkey currently holding this item
+    monkey: usize,
+}
+
+fn parse_tracking(input: &str) -> (Vec<MonkeyInfo>, Vec<Item>) {
+    let mut items = vec![];
+
+    let monkeys: Vec<_> = input
+        .lines()
+        .chunks(7)
+        .into_iter()
+        .map(|chunk| {
+            /*
+                    [0] Monkey 0:
+                    [1]   Starting items: 50, 70, 89, 75, 66, 66
+                    [2]   Operation: new = old * 5
+                    [3]   Test: divisible by 2
+                    [4]     If true: throw to monkey 2
+                    [5]     If false: throw to monkey 1
+                    [6] <empty line>
+            */
+            let s: [&str; 7] = iter_to_array_or_default(chunk);
+            debug_assert_eq!(&s[0][..6], "Monkey");
+            let monkey = s[0][7..].split(':').next().unwrap().parse().unwrap();
+
+            // Text followed by a list of items
+            debug_assert_eq!(&s[1][..17], "  Starting items:");
+            for item in s[1][18..].split(',').map(|e| {
+                let worry = e.trim().parse().unwrap();
+                Item { worry, monkey }
+            }) {
+                items.push(item);
+            }
+
+            // Text followed by one of three lines to describe a math op
+            debug_assert_eq!(&s[2][..19], "  Operation: new = ");
+            let ops: [&str; 3] = iter_to_array(s[2][19..].split_whitespace());
+            let op: Op = match ops {
+                ["old", "*", "old"] => Square,
+                [a, "*", "old"] | ["old", "*", a] => Mul(a.parse().unwrap()),
+                [a, "+", "old"] | ["old", "+", a] => Add(a.parse().unwrap()),
+                _ => unreachable!("Unrecognized op sequence: {ops:?}"),
+            };
+
+            // Text followed by a number
+            debug_assert_eq!(&s[3][..20], "  Test: divisible by");
+            let divisible_by = s[3][21..].parse().unwrap();
+
+            // Text followed by a number
+            debug_assert_eq!(&s[4][..28], "    If true: throw to monkey");
+            let if_true = s[4][29..].parse().unwrap();
+
+            // Text followed by a number
+            debug_assert_eq!(&s[5][..29], "    If false: throw to monkey");
+            let if_false = s[5][30..].parse().unwrap();
+
+            // Trailing empty line
+            debug_assert_eq!(s[6].trim(), "");
+
+            MonkeyInfo {
+                op,
+                divisible_by,
+
+                if_true,
+                if_false,
+                throws: 0,
+            }
+        })
+        .collect();
+
+    (monkeys, items)
+}
+
+fn do_monkey_business_tracking<const N: u64>(
+    rounds: u16,
+    monkeys: &mut [MonkeyInfo],
+    items: &mut [Item],
+) {
+    let m: u64 = monkeys.iter().map(|m| m.divisible_by).product();
+
+    for item in items.iter_mut() {
+        for _ in 1..=rounds {
+            loop {
+                let monkey = &mut monkeys[item.monkey];
+
+                // ... getting worried
+                item.worry = match monkey.op {
+                    Mul(x) => (item.worry * x) % m,
+                    Add(x) => (item.worry + x) % m,
+                    Square => (item.worry * item.worry) % m,
+                };
+
+                // okay phew
+                item.worry /= N;
+
+                // uh...
+                let prev_id = item.monkey;
+                let next_id = if item.worry % monkey.divisible_by == 0 {
+                    monkey.if_true
+                } else {
+                    monkey.if_false
+                };
+
+                // ohno, the monkey threw it
+                item.monkey = next_id;
+                monkey.throws += 1;
+
+                // If we threw the item to a monkey earlier in the round, we won't be updated
+                // again this round and we can count this round as over.
+                if next_id < prev_id {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+#[aoc(day11, part1, tracking)]
+pub fn part1_tracking(input: &str) -> u64 {
+    let (mut monkeys, mut items) = parse_tracking(input);
+
+    do_monkey_business_tracking::<3>(20, &mut monkeys, &mut items);
+
+    let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
+    counts.sort();
+    counts.reverse();
+
+    // Only need the 2 max, not a full sort
+    counts[0] * counts[1]
+}
+
+#[aoc(day11, part2, tracking)]
+pub fn part2_tracking(input: &str) -> u64 {
+    let (mut monkeys, mut items) = parse_tracking(input);
+
+    do_monkey_business_tracking::<1>(10_000, &mut monkeys, &mut items);
+
     let mut counts: SmallVec<[_; 4]> = monkeys.iter().map(|m| m.throws).collect();
     counts.sort();
     counts.reverse();
@@ -213,7 +373,7 @@ Monkey 3:
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_tracking)]
         p: impl FnOnce(&str) -> u64,
         #[case] expected: u64,
         #[case] input: &str,
@@ -227,7 +387,7 @@ Monkey 3:
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_tracking)]
         p: impl FnOnce(&str) -> u64,
         #[case] expected: u64,
         #[case] input: &str,
@@ -238,7 +398,7 @@ Monkey 3:
 
     #[test]
     fn check_ex_part_1_counts() {
-        let mut monkeys = parse(EXAMPLE_INPUT.trim());
+        let mut monkeys = parse_first(EXAMPLE_INPUT.trim());
         do_monkey_business::<3>(20, &mut monkeys);
 
         let counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
@@ -247,21 +407,16 @@ Monkey 3:
 
     #[test]
     fn check_ex_part_2_counts() {
-        let mut monkeys = parse(EXAMPLE_INPUT.trim());
+        let mut monkeys = parse_first(EXAMPLE_INPUT.trim());
         do_monkey_business::<1>(10_000, &mut monkeys);
 
         let counts: Vec<_> = monkeys.iter().map(|m| m.throws).collect();
         assert_eq!(counts, [52166, 47830, 1938, 52013]);
     }
 
-    #[rstest]
-    #[trace]
-    fn check_monkey_parse(
-        #[notrace]
-        #[values(parse)]
-        parse: impl FnOnce(&str) -> Vec<Monkey>,
-    ) {
-        let monkeys = parse(EXAMPLE_INPUT.trim());
+    #[test]
+    fn check_monkey_parse() {
+        let monkeys = parse_first(EXAMPLE_INPUT.trim());
         assert_eq!(
             monkeys,
             [
