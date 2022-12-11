@@ -82,8 +82,9 @@ mod prelude {
         }
     }
 
-    pub fn iter_to_array_or_default<T: Copy + Default, const N: usize>(
+    pub fn iter_to_array_or<T: Copy, const N: usize>(
         mut iter: impl Iterator<Item = T>,
+        default: T,
     ) -> [T; N] {
         use core::mem::transmute;
         use core::mem::MaybeUninit;
@@ -92,7 +93,7 @@ mod prelude {
         let mut arr = [MaybeUninit::uninit(); N];
 
         for elem in &mut arr {
-            elem.write(iter.next().unwrap_or_default());
+            elem.write(iter.next().unwrap_or(default));
         }
 
         // This is just a bug
@@ -102,6 +103,12 @@ mod prelude {
             let p_res: *const [T; N] = transmute(p_arr);
             p_res.read()
         }
+    }
+
+    pub fn iter_to_array_or_default<T: Copy + Default, const N: usize>(
+        iter: impl Iterator<Item = T>,
+    ) -> [T; N] {
+        iter_to_array_or(iter, T::default())
     }
 
     pub fn fast_parse_i32(input: &[u8]) -> i32 {
