@@ -3,9 +3,9 @@ use crate::prelude::*;
 use std::collections::BinaryHeap;
 
 pub struct Day12 {
-    start: (i32, i32),
-    end: (i32, i32),
-    heightmap: Framebuffer<u8>,
+    pub start: (i32, i32),
+    pub end: (i32, i32),
+    pub heightmap: Framebuffer<u8>,
 }
 
 #[aoc_generator(day12)]
@@ -38,7 +38,7 @@ pub fn parse(input: &str) -> Day12 {
     }
 }
 
-fn find_path(day: &Day12, start: (i32, i32)) -> Framebuffer<i64> {
+pub fn find_path(day: &Day12, start: (i32, i32)) -> Framebuffer<i64> {
     let mut total_steps_map: Framebuffer<i64> = Framebuffer::new_matching_size(&day.heightmap);
     total_steps_map.clear(i64::MAX);
 
