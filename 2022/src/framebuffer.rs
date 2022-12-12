@@ -97,7 +97,7 @@ impl<T> Framebuffer<T> {
     pub fn new_with_ranges_and(
         xs: Range<i32>,
         ys: Range<i32>,
-        func: impl Fn(i32, i32) -> T,
+        mut func: impl FnMut(i32, i32) -> T,
     ) -> Self {
         let mut offsets = IVec2::zero();
 
@@ -113,8 +113,8 @@ impl<T> Framebuffer<T> {
         // Generate elements in row-major order
         // We choose this order so we can .push() each new element. This will change if we modify
         // the backing memory tiling.
-        for y in xs {
-            for x in ys.clone() {
+        for y in ys {
+            for x in xs.clone() {
                 buf.push(func(x, y));
             }
         }
