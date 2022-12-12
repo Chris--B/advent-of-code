@@ -19,9 +19,9 @@ pub fn part2(input: &str) -> i64 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use rstest::*;
     #[allow(unused_imports)]
     use pretty_assertions::{assert_eq, assert_ne};
+    use rstest::*;
 
     const EXAMPLE_INPUT: &str = r"
 // todo
