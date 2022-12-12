@@ -131,6 +131,12 @@ fn find_path_reverse(day: &Day12, end: (i32, i32)) -> Framebuffer<i64> {
 // Part1 ========================================================================
 #[aoc(day12, part1)]
 pub fn part1(day: &Day12) -> i64 {
+    println!(
+        "Height Map size: ({}, {}),",
+        day.heightmap.width(),
+        day.heightmap.height()
+    );
+
     // Use given start to find shortest path to the end
     let total_steps_map = find_path(day, day.start);
 
@@ -154,6 +160,12 @@ pub fn part1(day: &Day12) -> i64 {
 // Part2 ========================================================================
 #[aoc(day12, part2)]
 pub fn part2(day: &Day12) -> i64 {
+    println!(
+        "Height Map size: ({}, {}),",
+        day.heightmap.width(),
+        day.heightmap.height()
+    );
+
     // Find a new start with the shortest path to the end, but maintains minimum height for the start.
     let total_steps_map = find_path_reverse(day, day.end);
 
