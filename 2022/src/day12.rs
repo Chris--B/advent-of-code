@@ -157,6 +157,34 @@ pub fn part1(day: &Day12) -> i64 {
     total_steps_map[day.end]
 }
 
+#[aoc(day12, part1, reverse)]
+pub fn part1_reverse(day: &Day12) -> i64 {
+    println!(
+        "Height Map size: ({}, {}),",
+        day.heightmap.width(),
+        day.heightmap.height()
+    );
+
+    // Use given start to find shortest path to the end
+    let total_steps_map = find_path_reverse(day, day.end);
+
+    if cfg!(debug_assertions) {
+        for y in total_steps_map.range_y() {
+            for x in total_steps_map.range_x() {
+                let steps = total_steps_map[(x, y)];
+                if steps == i64::MAX {
+                    print!("{:>4}", 'X');
+                } else {
+                    print!("{:>4}", steps);
+                }
+            }
+            println!();
+        }
+    }
+
+    total_steps_map[day.start]
+}
+
 // Part2 ========================================================================
 #[aoc(day12, part2)]
 pub fn part2(day: &Day12) -> i64 {
@@ -215,7 +243,7 @@ abdefghi
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_reverse)]
         p: impl FnOnce(&Day12) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
