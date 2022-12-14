@@ -395,6 +395,110 @@ pub fn part2_tracking(input: &str) -> i64 {
     spawned
 }
 
+#[aoc(day14, part2, smol_tracking)]
+pub fn part2_smol_tracking(input: &str) -> i64 {
+    let mut cave = parse_cave_to_fb(input, NoFloor);
+    cave.set_border_color(Some(BLOCK_ROCK));
+
+    // Add our own floor
+    let floor_y = cave.range_y().end - 2;
+    let std::ops::Range { start, end } = cave.range_x();
+    for x in start..end {
+        cave[(x, floor_y)] = BLOCK_ROCK;
+    }
+
+    const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
+    const DOWN_LEFT: IVec2 = IVec2::new(-1, 1);
+    const DOWN_RIGHT: IVec2 = IVec2::new(1, 1);
+
+    let mut path = vec![IVec2::new(500, 0)];
+    let mut spawned = 0;
+
+    let mut left_h = 0;
+    let mut right_h = 0;
+
+    let min_x = cave.range_x().start;
+    let max_x = cave.range_x().end;
+
+    // Spawning
+    // 'spawning: for _ in 0..5_000 {
+    // 'spawning: for _ in 0..25 {
+    'spawning: loop {
+        // Copy the last block and use it as a starting point
+        // We don't need to pop this until it ends up as sand
+        let mut sand: IVec2 = if let Some(sand) = path.last() {
+            *sand
+        } else {
+            break 'spawning;
+        };
+        debug_assert_eq!(cave[sand], BLOCK_AIR, "{sand:?} isn't air but should be");
+
+        // Falling
+        'falling: loop {
+            while cave.range_y().contains(&sand.y) && cave[sand + DOWN] == BLOCK_AIR {
+                sand += DOWN;
+                path.push(sand);
+            }
+
+            // We're falling into the void
+            if !cave.range_y().contains(&sand.y) {
+                break 'spawning;
+            }
+            debug_assert_eq!(cave[sand], BLOCK_AIR, "{sand:?} isn't air but should be");
+
+            // We're ontop of not-air. Figure out if we're done, or rolling
+            if cave[sand + DOWN_LEFT] == BLOCK_AIR {
+                sand += DOWN_LEFT;
+                if cave[sand] == BLOCK_AIR {
+                    path.push(sand);
+                }
+
+                continue 'falling;
+            } else if cave[sand + DOWN_RIGHT] == BLOCK_AIR {
+                sand += DOWN_RIGHT;
+                if cave[sand] == BLOCK_AIR {
+                    path.push(sand);
+                }
+
+                continue 'falling;
+            } else {
+                // We'll rest here just fine
+                spawned += 1;
+                break 'falling;
+            }
+        }
+
+        // Fell
+        cave[sand] = BLOCK_SAND;
+
+        if sand.x == min_x {
+            left_h = sand.y;
+        }
+
+        if sand.x + 1 == max_x {
+            right_h = sand.y;
+        }
+
+        // Remove this block from out path
+        path.pop();
+    }
+
+    // If we break early, there's a trail of sand to render!
+    while let Some(s) = path.pop() {
+        if let Some(x) = cave.get_mut(s.x as isize, s.y as isize) {
+            *x = BLOCK_FALLING_SAND;
+        }
+    }
+
+    spawned += (left_h * (left_h - 1)) as i64 / 2;
+    spawned += (right_h * (right_h - 1)) as i64 / 2;
+
+    cave[(500, 0)] = BLOCK_SPAWN;
+    save_image(&cave, "day14_smol-tracking-pt2.png");
+
+    spawned
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -426,7 +530,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2, part2_tracking)]
+        #[values(part2, part2_tracking, part2_smol_tracking)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
