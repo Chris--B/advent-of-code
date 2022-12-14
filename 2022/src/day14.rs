@@ -3,7 +3,18 @@ use crate::prelude::*;
 const BLOCK_AIR: u8 = 0;
 const BLOCK_SAND: u8 = 1;
 const BLOCK_ROCK: u8 = 2;
-const BLOCK_SPAWN: u8 = 255;
+
+fn save_image(cave: &Framebuffer<u8>, name: &str) {
+    use image::Rgb;
+    let img = cave.make_image(30, |block| match *block {
+        // https://www.schemecolor.com/latest-news.php
+        BLOCK_AIR => Rgb([65, 65, 125]),
+        BLOCK_SAND => Rgb([235, 130, 61]),
+        BLOCK_ROCK => Rgb([92, 51, 51]),
+        _ => Rgb([0_u8; 3]),
+    });
+    img.save(name).unwrap();
+}
 
 // Part1 ========================================================================
 #[aoc(day14, part1)]
@@ -111,18 +122,7 @@ pub fn part1(input: &str) -> i64 {
         cave[sand] = BLOCK_SAND;
     }
 
-    cave[IVec2::new(500, 0)] = BLOCK_SPAWN;
-
-    {
-        let img = cave.make_image(1, |block| match *block {
-            BLOCK_AIR => image::Luma([230_u8]),
-            BLOCK_SAND => image::Luma([85 + 128]),
-            BLOCK_ROCK => image::Luma([32]),
-            BLOCK_SPAWN => image::Luma([255]),
-            _ => image::Luma([0_u8]),
-        });
-        img.save("day14_out.png").unwrap();
-    }
+    save_image(&cave, "day14_out-pt1.png");
 
     spawned
 }
@@ -233,16 +233,7 @@ pub fn part2(input: &str) -> i64 {
         cave[sand] = BLOCK_SAND;
     }
 
-    // {
-    //     let img = cave.make_image(30, |block| match *block {
-    //         BLOCK_AIR => image::Luma([230_u8]),
-    //         BLOCK_SAND => image::Luma([85 + 128]),
-    //         BLOCK_ROCK => image::Luma([32]),
-    //         BLOCK_SPAWN => image::Luma([255]),
-    //         _ => image::Luma([0_u8]),
-    //     });
-    //     img.save("day14_out.png").unwrap();
-    // }
+    save_image(&cave, "day14_out-pt2.png");
 
     spawned
 }
