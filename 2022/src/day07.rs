@@ -96,23 +96,23 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
         }
     }
 
-    if cfg!(debug_assertions) {
-        println!("{} entries", fs.len());
-        for (path, entries) in &fs {
-            print!("- {path}: ");
+    // if cfg!(debug_assertions) {
+    //     println!("{} entries", fs.len());
+    //     for (path, entries) in &fs {
+    //         print!("- {path}: ");
 
-            print!("[");
-            for entry in entries {
-                match entry {
-                    Dir(dir) => print!("{dir}/, "),
-                    File(name, _) => print!("{name}, "),
-                }
-            }
-            print!("]");
+    //         print!("[");
+    //         for entry in entries {
+    //             match entry {
+    //                 Dir(dir) => print!("{dir}/, "),
+    //                 File(name, _) => print!("{name}, "),
+    //             }
+    //         }
+    //         print!("]");
 
-            println!();
-        }
-    }
+    //         println!();
+    //     }
+    // }
 
     fn just_do_it<'a>(
         fs: &'a HashMap<String, Entries>,
@@ -154,12 +154,12 @@ fn build_sizes_list(input: &str) -> HashMap<String, u32> {
         just_do_it(&fs, &mut sizes, "", *entry);
     }
 
-    if cfg!(debug_assertions) {
-        println!("{} entries", fs.len());
-        for (path, size) in &sizes {
-            println!("- {path}: {size}");
-        }
-    }
+    // if cfg!(debug_assertions) {
+    //     println!("{} entries", fs.len());
+    //     for (path, size) in &sizes {
+    //         println!("- {path}: {size}");
+    //     }
+    // }
 
     sizes
 }

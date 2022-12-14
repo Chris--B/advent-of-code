@@ -140,19 +140,19 @@ pub fn part1(day: &Day12) -> i64 {
     // Use given start to find shortest path to the end
     let total_steps_map = find_path(day, day.start);
 
-    if cfg!(debug_assertions) {
-        for y in total_steps_map.range_y() {
-            for x in total_steps_map.range_x() {
-                let steps = total_steps_map[(x, y)];
-                if steps == i64::MAX {
-                    print!("{:>4}", 'X');
-                } else {
-                    print!("{:>4}", steps);
-                }
-            }
-            println!();
-        }
-    }
+    // if cfg!(debug_assertions) {
+    //     for y in total_steps_map.range_y() {
+    //         for x in total_steps_map.range_x() {
+    //             let steps = total_steps_map[(x, y)];
+    //             if steps == i64::MAX {
+    //                 print!("{:>4}", 'X');
+    //             } else {
+    //                 print!("{:>4}", steps);
+    //             }
+    //         }
+    //         println!();
+    //     }
+    // }
 
     total_steps_map[day.end]
 }
@@ -168,19 +168,19 @@ pub fn part1_reverse(day: &Day12) -> i64 {
     // Use given start to find shortest path to the end
     let total_steps_map = find_path_reverse(day, day.end);
 
-    if cfg!(debug_assertions) {
-        for y in total_steps_map.range_y() {
-            for x in total_steps_map.range_x() {
-                let steps = total_steps_map[(x, y)];
-                if steps == i64::MAX {
-                    print!("{:>4}", 'X');
-                } else {
-                    print!("{:>4}", steps);
-                }
-            }
-            println!();
-        }
-    }
+    // if cfg!(debug_assertions) {
+    //     for y in total_steps_map.range_y() {
+    //         for x in total_steps_map.range_x() {
+    //             let steps = total_steps_map[(x, y)];
+    //             if steps == i64::MAX {
+    //                 print!("{:>4}", 'X');
+    //             } else {
+    //                 print!("{:>4}", steps);
+    //             }
+    //         }
+    //         println!();
+    //     }
+    // }
 
     total_steps_map[day.start]
 }
@@ -197,19 +197,19 @@ pub fn part2(day: &Day12) -> i64 {
     // Find a new start with the shortest path to the end, but maintains minimum height for the start.
     let total_steps_map = find_path_reverse(day, day.end);
 
-    if cfg!(debug_assertions) {
-        for y in total_steps_map.range_y() {
-            for x in total_steps_map.range_x() {
-                let steps = total_steps_map[(x, y)];
-                if steps == i64::MAX {
-                    print!("{:>2} ", '.');
-                } else {
-                    print!("{:>2} ", steps);
-                }
-            }
-            println!();
-        }
-    }
+    // if cfg!(debug_assertions) {
+    //     for y in total_steps_map.range_y() {
+    //         for x in total_steps_map.range_x() {
+    //             let steps = total_steps_map[(x, y)];
+    //             if steps == i64::MAX {
+    //                 print!("{:>2} ", '.');
+    //             } else {
+    //                 print!("{:>2} ", steps);
+    //             }
+    //         }
+    //         println!();
+    //     }
+    // }
 
     // map now contains the minimum steps from the end to each point.
     total_steps_map

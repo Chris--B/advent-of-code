@@ -88,12 +88,12 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
-    let test_expecttd = [
-        /* ( 20, X=21) == */ 420, /* ( 60, X=19) == */ 1140,
-        /* (100, X=18) == */ 1800, /* (140, X=21) == */ 2940,
-        /* (180, X=16) == */ 2880, /* (220, X=18) == */ 3960,
-    ];
-    debug_assert_eq!(cpu.signals, test_expecttd);
+    //let test_expecttd = [
+    //    /* ( 20, X=21) == */ 420, /* ( 60, X=19) == */ 1140,
+    //    /* (100, X=18) == */ 1800, /* (140, X=21) == */ 2940,
+    //    /* (180, X=16) == */ 2880, /* (220, X=18) == */ 3960,
+    //];
+    //debug_assert_eq!(cpu.signals, test_expecttd);
 
     cpu.signals.iter().sum()
 }

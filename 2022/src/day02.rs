@@ -125,9 +125,9 @@ pub fn part1_as_u32(input: &str) -> i64 {
                 lut[word as usize] = val;
             }
 
-            for x in lut {
-                println!("    {x},");
-            }
+            // for x in lut {
+            //     println!("    {x},");
+            // }
 
             lut
         }
@@ -250,9 +250,9 @@ pub fn part1_as_simd(input: &str) -> i64 {
                 lut[word as usize] = val;
             }
 
-            for x in lut {
-                println!("    {x},");
-            }
+            // for x in lut {
+            //     println!("    {x},");
+            // }
 
             lut
         }
@@ -374,9 +374,9 @@ pub fn part2_as_u32(input: &str) -> i64 {
                 lut[word as usize] = val;
             }
 
-            for x in lut {
-                println!("    {x},");
-            }
+            // for x in lut {
+            //     println!("    {x},");
+            // }
 
             lut
         }

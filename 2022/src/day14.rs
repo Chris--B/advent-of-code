@@ -233,16 +233,16 @@ pub fn part2(input: &str) -> i64 {
         cave[sand] = BLOCK_SAND;
     }
 
-    if cfg!(debug_assertions) {
-        let img = cave.make_image(30, |block| match *block {
-            BLOCK_AIR => image::Luma([230_u8]),
-            BLOCK_SAND => image::Luma([85 + 128]),
-            BLOCK_ROCK => image::Luma([32]),
-            BLOCK_SPAWN => image::Luma([255]),
-            _ => image::Luma([0_u8]),
-        });
-        img.save("day14_out.png").unwrap();
-    }
+    // {
+    //     let img = cave.make_image(30, |block| match *block {
+    //         BLOCK_AIR => image::Luma([230_u8]),
+    //         BLOCK_SAND => image::Luma([85 + 128]),
+    //         BLOCK_ROCK => image::Luma([32]),
+    //         BLOCK_SPAWN => image::Luma([255]),
+    //         _ => image::Luma([0_u8]),
+    //     });
+    //     img.save("day14_out.png").unwrap();
+    // }
 
     spawned
 }

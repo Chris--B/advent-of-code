@@ -22,25 +22,25 @@ pub fn part1(input: &str) -> i64 {
     let mut head = IVec2::zero();
     let mut tail = IVec2::zero();
 
-    let mut seen = Framebuffer::new_with_ranges_square(-200..200);
+    let mut seen: Framebuffer<bool> = Framebuffer::new_with_ranges_square(-200..200);
 
     // Mark our starting point (our origin too) as seen
     let mut count = 1;
     seen[(0, 0)] = true;
 
-    if cfg!(debug_assertions) {
-        seen.print_range_with(
-            0..6,
-            0..5,
-            |x, y, _: &bool| {
-                if (x, y) == (0, 0) {
-                    'H'
-                } else {
-                    '.'
-                }
-            },
-        );
-    }
+    // if cfg!(debug_assertions) {
+    //     seen.print_range_with(
+    //         0..6,
+    //         0..5,
+    //         |x, y, _: &bool| {
+    //             if (x, y) == (0, 0) {
+    //                 'H'
+    //             } else {
+    //                 '.'
+    //             }
+    //         },
+    //     );
+    // }
 
     for dir in moves {
         // Move head
@@ -58,18 +58,18 @@ pub fn part1(input: &str) -> i64 {
             seen[tail] = true;
         }
 
-        if cfg!(debug_assertions) {
-            let rope = [('H', head), ('T', tail), ('s', IVec2::zero())];
-            seen.print_range_with(0..6, 0..5, |x, y, _s| {
-                if let Some((c, _)) = rope.iter().find(|(_c, pt)| *pt == (x, y).into()) {
-                    *c
-                } else if (x, y) == (0, 0) {
-                    's'
-                } else {
-                    '.'
-                }
-            });
-        }
+        // if cfg!(debug_assertions) {
+        //     let rope = [('H', head), ('T', tail), ('s', IVec2::zero())];
+        //     seen.print_range_with(0..6, 0..5, |x, y, _s| {
+        //         if let Some((c, _)) = rope.iter().find(|(_c, pt)| *pt == (x, y).into()) {
+        //             *c
+        //         } else if (x, y) == (0, 0) {
+        //             's'
+        //         } else {
+        //             '.'
+        //         }
+        //     });
+        // }
     }
 
     count
@@ -98,26 +98,26 @@ pub fn part2(input: &str) -> i64 {
 
     const ROPE_LEN: usize = 10;
     let mut rope = [IVec2::zero(); ROPE_LEN];
-    let mut seen = Framebuffer::new_with_ranges_square(-200..200);
+    let mut seen: Framebuffer<bool> = Framebuffer::new_with_ranges_square(-200..200);
 
     // Mark our starting point (our origin too) as seen
     let mut count = 1;
     seen[(0, 0)] = true;
 
-    if cfg!(debug_assertions) {
-        println!("== Initial State ==");
-        seen.print_range_with(
-            -11..15,
-            -5..16,
-            |x, y, _: &bool| {
-                if (x, y) == (0, 0) {
-                    'H'
-                } else {
-                    '.'
-                }
-            },
-        );
-    }
+    // if cfg!(debug_assertions) {
+    //     println!("== Initial State ==");
+    //     seen.print_range_with(
+    //         -11..15,
+    //         -5..16,
+    //         |x, y, _: &bool| {
+    //             if (x, y) == (0, 0) {
+    //                 'H'
+    //             } else {
+    //                 '.'
+    //             }
+    //         },
+    //     );
+    // }
 
     'moves: for dir in moves {
         // Move head
@@ -149,29 +149,29 @@ pub fn part2(input: &str) -> i64 {
         }
 
         // Pretty print the grid
-        if cfg!(debug_assertions) && dir == IVec2::zero() {
-            let labels = ['H', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        // if cfg!(debug_assertions) && dir == IVec2::zero() {
+        //     let labels = ['H', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-            seen.print_range_with(-11..15, -5..16, |x, y, _: &bool| {
-                if let Some(pos) = rope.iter().position(|pt| *pt == (x, y).into()) {
-                    return labels[pos];
-                }
+        //     seen.print_range_with(-11..15, -5..16, |x, y, _: &bool| {
+        //         if let Some(pos) = rope.iter().position(|pt| *pt == (x, y).into()) {
+        //             return labels[pos];
+        //         }
 
-                if (x, y) == (0, 0) {
-                    's'
-                } else {
-                    '.'
-                }
-            });
+        //         if (x, y) == (0, 0) {
+        //             's'
+        //         } else {
+        //             '.'
+        //         }
+        //     });
 
-            continue;
-        }
+        //     continue;
+        // }
     }
 
-    if cfg!(debug_assertions) {
-        let bounds = seen.content_bounds();
-        dbg!(bounds);
-    }
+    // if cfg!(debug_assertions) {
+    //     let bounds = seen.content_bounds();
+    //     dbg!(bounds);
+    // }
 
     count
 }

@@ -85,10 +85,10 @@ fn do_monkey_business<const N: u64>(rounds: u16, monkeys: &mut [Monkey]) {
     let m: u64 = monkeys.iter().map(|m| m.divisible_by).product();
 
     if cfg!(debug_assertions) {
-        print_state(0, monkeys);
+        // print_state(0, monkeys);
     }
 
-    for round in 1..=rounds {
+    for _round in 1..=rounds {
         // Each monkey inspects each item in order
         for id in 0..monkeys.len() {
             // Note: looping with indices here to satisfy the borrow checker.
@@ -122,24 +122,25 @@ fn do_monkey_business<const N: u64>(rounds: u16, monkeys: &mut [Monkey]) {
             monkeys[id].items.clear();
         }
 
-        if cfg!(debug_assertions) {
-            print_state(round, monkeys);
-        }
+        // print_state(_round, monkeys);
     }
 }
 
-fn print_state(round: u16, monkeys: &[Monkey]) {
-    if round == 0 {
-        println!("=== Starting");
-    } else {
-        println!("=== Round {round}");
-    }
+// fn print_state(round: u16, monkeys: &[Monkey]) {
+//     if cfg!(debug_assertions) {
+//         if round == 0 {
+//             println!("=== Starting");
+//         } else {
+//             println!("=== Round {round}");
+//         }
 
-    for (id, monkey) in monkeys.iter().enumerate() {
-        println!("Monkey {id}: {:?}", monkey.items);
-    }
-    println!();
-}
+//         for (id, monkey) in monkeys.iter().enumerate() {
+//             println!("Monkey {id}: {:?}", monkey.items);
+//         }
+
+//         println!();
+//     }
+// }
 
 // First Algo ==================================================================
 #[aoc(day11, part1, first)]
