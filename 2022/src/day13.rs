@@ -64,10 +64,32 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-// #[aoc(day13, part2)]
-// pub fn part2(_input: &str) -> i64 {
-//     0
-// }
+#[aoc(day13, part2)]
+pub fn part2(input: &str) -> i64 {
+    let packets = input
+        .lines()
+        .filter(|s| !s.is_empty())
+        .map(|l| json::parse(l).unwrap());
+
+    let a = json::parse("[[2]]").unwrap();
+    let a_idx = packets
+        .clone()
+        // Note: Doing compare "backwards"
+        .filter(|other| !compare(&a, other).unwrap())
+        .count()
+        // 1-indexed
+        + 1;
+
+    let b = json::parse("[[6]]").unwrap();
+    let b_idx = packets
+        // Note: Doing compare "backwards"
+        .filter(|other| !compare(&b, other).unwrap())
+        .count()
+        // This packet comes after the above (+1) and is also 1-indexed (+1)
+        + 2;
+
+    (a_idx * b_idx) as i64
+}
 
 #[cfg(test)]
 mod test {
@@ -116,17 +138,17 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(140, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(140, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
