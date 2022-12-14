@@ -3,35 +3,48 @@ use crate::prelude::*;
 const BLOCK_AIR: u8 = 0;
 const BLOCK_SAND: u8 = 1;
 const BLOCK_ROCK: u8 = 2;
-const BLOCK_SPAWN: u8 = 10;
+const BLOCK_SPAWN: u8 = 3;
+const BLOCK_FALLING_SAND: u8 = 4;
 
 const fn color(x: u32) -> image::Rgb<u8> {
     let [b, g, r, _a] = x.to_le_bytes();
     image::Rgb([r, g, b])
 }
 
+#[inline(always)]
 fn save_image(cave: &Framebuffer<u8>, name: &str) {
-    let scale_x = (1920 / 2) / cave.range_x().len() as u32;
-    let scale_y = (1080 / 2) / cave.range_y().len() as u32;
-    let scale = [scale_x, scale_y, 30].into_iter().min().unwrap();
+    const ENABLE: bool = false;
 
-    let w = scale as usize * cave.range_x().len();
-    let h = scale as usize * cave.range_y().len();
-    println!(
-        "Saving image to \"{name}\"... ({w}x{h}) ~{:.1}M pixels ...",
-        (w * h) as f32 / 1_000_000.0
-    );
-    use image::Rgb;
-    let img = cave.make_image(scale, |block| match *block {
-        BLOCK_AIR => Rgb([30, 30, 95]),
-        BLOCK_SAND => Rgb([235, 130, 61]),
-        BLOCK_ROCK => Rgb([92, 51, 51]),
-        BLOCK_SPAWN => color(0xff_ff_66),
-        _ => Rgb([0_u8; 3]),
-    });
-    img.save(name).unwrap();
+    if ENABLE {
+        use image::Rgb;
 
-    println!("... done");
+        let scale_x = 1920 / cave.range_x().len() as u32;
+        let scale_y = 1080 / cave.range_y().len() as u32;
+        let scale = [scale_x, scale_y, 30].into_iter().min().unwrap();
+
+        let w = scale as usize * cave.range_x().len();
+        let h = scale as usize * cave.range_y().len();
+        println!(
+            "Saving image to \"{name}\"... ({w}x{h}) ~{:.1}M pixels ...",
+            (w * h) as f32 / 1_000_000.0
+        );
+
+        // https://coolors.co/palette/264653-2a9d8f-e9c46a-f4a261-ad533d
+        const PALETTE: [u32; 5] = [0x26_46_53, 0x2A_9D_8F, 0xE9_C4_6A, 0xF4_A2_61, 0xAD_53_3D];
+        const AOC_GOLD: Rgb<u8> = color(0xFF_FF_66);
+
+        let img = cave.make_image(scale, |block| match *block {
+            BLOCK_AIR => color(PALETTE[0]),
+            BLOCK_SAND => color(PALETTE[2]),
+            BLOCK_FALLING_SAND => color(PALETTE[3]),
+            BLOCK_ROCK => color(PALETTE[4]),
+            BLOCK_SPAWN => AOC_GOLD,
+            _ => color(0xFF_00_FF),
+        });
+        img.save(name).unwrap();
+
+        println!("... done");
+    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -165,7 +178,86 @@ pub fn part1(input: &str) -> i64 {
     }
 
     cave[(500, 0)] = BLOCK_SPAWN;
-    save_image(&cave, "day14_out-pt1.png");
+    save_image(&cave, "day14-pt1.png");
+
+    spawned
+}
+
+#[aoc(day14, part1, tracking)]
+pub fn part1_tracking(input: &str) -> i64 {
+    let mut cave = parse_cave_to_fb(input, NoFloor);
+
+    const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
+    const DOWN_LEFT: IVec2 = IVec2::new(-1, 1);
+    const DOWN_RIGHT: IVec2 = IVec2::new(1, 1);
+
+    let mut path = vec![IVec2::new(500, 0)];
+    let mut spawned = 0;
+
+    // Spawning
+    // 'spawning: for _ in 0..5_000 {
+    // 'spawning: for _ in 0..25 {
+    'spawning: loop {
+        // Copy the last block and use it as a starting point
+        // We don't need to pop this until it ends up as sand
+        let mut sand: IVec2 = if let Some(sand) = path.last() {
+            *sand
+        } else {
+            break 'spawning;
+        };
+        debug_assert_eq!(cave[sand], BLOCK_AIR, "{sand:?} isn't air but should be");
+
+        // Falling
+        'falling: loop {
+            while cave.range_y().contains(&sand.y) && cave[sand + DOWN] == BLOCK_AIR {
+                sand += DOWN;
+                path.push(sand);
+            }
+
+            // We're falling into the void
+            if !cave.range_y().contains(&sand.y) {
+                break 'spawning;
+            }
+            debug_assert_eq!(cave[sand], BLOCK_AIR, "{sand:?} isn't air but should be");
+
+            // We're ontop of not-air. Figure out if we're done, or rolling
+            if cave[sand + DOWN_LEFT] == BLOCK_AIR {
+                sand += DOWN_LEFT;
+                if cave[sand] == BLOCK_AIR {
+                    path.push(sand);
+                }
+
+                continue 'falling;
+            } else if cave[sand + DOWN_RIGHT] == BLOCK_AIR {
+                sand += DOWN_RIGHT;
+                if cave[sand] == BLOCK_AIR {
+                    path.push(sand);
+                }
+
+                continue 'falling;
+            } else {
+                // We'll rest here just fine
+                spawned += 1;
+                break 'falling;
+            }
+        }
+
+        // Fell
+        cave[sand] = BLOCK_SAND;
+
+        // Remove this block from out path
+        path.pop();
+    }
+
+    // If we break early, there's a trail of sand to render!
+    while let Some(s) = path.pop() {
+        if let Some(x) = cave.get_mut(s.x as isize, s.y as isize) {
+            *x = BLOCK_FALLING_SAND;
+        }
+    }
+
+    cave[(500, 0)] = BLOCK_SPAWN;
+    save_image(&cave, "day14_tracking-pt1.png");
 
     spawned
 }
@@ -221,7 +313,84 @@ pub fn part2(input: &str) -> i64 {
     }
 
     cave[(500, 0)] = BLOCK_SPAWN;
-    save_image(&cave, "day14_out-pt2.png");
+    save_image(&cave, "day14-pt2.png");
+
+    spawned
+}
+
+#[aoc(day14, part2, tracking)]
+pub fn part2_tracking(input: &str) -> i64 {
+    let mut cave = parse_cave_to_fb(input, SolidFloor);
+
+    const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
+    const DOWN_LEFT: IVec2 = IVec2::new(-1, 1);
+    const DOWN_RIGHT: IVec2 = IVec2::new(1, 1);
+
+    let mut path = vec![IVec2::new(500, 0)];
+    let mut spawned = 0;
+
+    // Spawning
+    // 'spawning: for _ in 0..5_000 {
+    // 'spawning: for _ in 0..25 {
+    'spawning: loop {
+        // Copy the last block and use it as a starting point
+        // We don't need to pop this until it ends up as sand
+        let mut sand: IVec2 = if let Some(sand) = path.last() {
+            *sand
+        } else {
+            break 'spawning;
+        };
+        debug_assert_eq!(cave[sand], BLOCK_AIR, "{sand:?} isn't air but should be");
+
+        // Falling
+        'falling: loop {
+            while cave.range_y().contains(&sand.y) && cave[sand + DOWN] == BLOCK_AIR {
+                sand += DOWN;
+                path.push(sand);
+            }
+
+            // We're falling into the void
+            if !cave.range_y().contains(&sand.y) {
+                break 'spawning;
+            }
+            debug_assert_eq!(cave[sand], BLOCK_AIR, "{sand:?} isn't air but should be");
+
+            // We're ontop of not-air. Figure out if we're done, or rolling
+            if cave[sand + DOWN_LEFT] == BLOCK_AIR {
+                sand += DOWN_LEFT;
+                if cave[sand] == BLOCK_AIR {
+                    path.push(sand);
+                }
+
+                continue 'falling;
+            } else if cave[sand + DOWN_RIGHT] == BLOCK_AIR {
+                sand += DOWN_RIGHT;
+                if cave[sand] == BLOCK_AIR {
+                    path.push(sand);
+                }
+
+                continue 'falling;
+            } else {
+                // We'll rest here just fine
+                spawned += 1;
+                break 'falling;
+            }
+        }
+
+        // Fell
+        cave[sand] = BLOCK_SAND;
+
+        // Remove this block from out path
+        path.pop();
+    }
+
+    // If we break early, there's a trail of sand to render!
+    while let Some(s) = path.pop() {
+        cave[s] = BLOCK_FALLING_SAND;
+    }
+
+    cave[(500, 0)] = BLOCK_SPAWN;
+    save_image(&cave, "day14_tracking-pt2.png");
 
     spawned
 }
@@ -243,7 +412,7 @@ mod test {
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_tracking)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -257,7 +426,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_tracking)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
