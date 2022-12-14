@@ -3,14 +3,18 @@ use crate::prelude::*;
 const BLOCK_AIR: u8 = 0;
 const BLOCK_SAND: u8 = 1;
 const BLOCK_ROCK: u8 = 2;
+const fn color(x: u32) -> image::Rgb<u8> {
+    let [b, g, r, _a] = x.to_le_bytes();
+    image::Rgb([r, g, b])
+}
 
 fn save_image(cave: &Framebuffer<u8>, name: &str) {
     use image::Rgb;
     let img = cave.make_image(30, |block| match *block {
-        // https://www.schemecolor.com/latest-news.php
-        BLOCK_AIR => Rgb([65, 65, 125]),
+        BLOCK_AIR => Rgb([30, 30, 95]),
         BLOCK_SAND => Rgb([235, 130, 61]),
         BLOCK_ROCK => Rgb([92, 51, 51]),
+        BLOCK_SPAWN => color(0xff_ff_66),
         _ => Rgb([0_u8; 3]),
     });
     img.save(name).unwrap();
