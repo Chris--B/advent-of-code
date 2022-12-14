@@ -3,14 +3,26 @@ use crate::prelude::*;
 const BLOCK_AIR: u8 = 0;
 const BLOCK_SAND: u8 = 1;
 const BLOCK_ROCK: u8 = 2;
+const BLOCK_SPAWN: u8 = 10;
+
 const fn color(x: u32) -> image::Rgb<u8> {
     let [b, g, r, _a] = x.to_le_bytes();
     image::Rgb([r, g, b])
 }
 
 fn save_image(cave: &Framebuffer<u8>, name: &str) {
+    let scale_x = (1920 / 2) / cave.range_x().len() as u32;
+    let scale_y = (1080 / 2) / cave.range_y().len() as u32;
+    let scale = [scale_x, scale_y, 30].into_iter().min().unwrap();
+
+    let w = scale as usize * cave.range_x().len();
+    let h = scale as usize * cave.range_y().len();
+    println!(
+        "Saving image to \"{name}\"... ({w}x{h}) ~{:.1}M pixels ...",
+        (w * h) as f32 / 1_000_000.0
+    );
     use image::Rgb;
-    let img = cave.make_image(30, |block| match *block {
+    let img = cave.make_image(scale, |block| match *block {
         BLOCK_AIR => Rgb([30, 30, 95]),
         BLOCK_SAND => Rgb([235, 130, 61]),
         BLOCK_ROCK => Rgb([92, 51, 51]),
@@ -18,11 +30,18 @@ fn save_image(cave: &Framebuffer<u8>, name: &str) {
         _ => Rgb([0_u8; 3]),
     });
     img.save(name).unwrap();
+
+    println!("... done");
 }
 
-// Part1 ========================================================================
-#[aoc(day14, part1)]
-pub fn part1(input: &str) -> i64 {
+#[derive(PartialEq, Eq)]
+enum Floor {
+    NoFloor,
+    SolidFloor,
+}
+use Floor::*;
+
+fn parse_cave_to_fb(input: &str, floor: Floor) -> Framebuffer<u8> {
     let mut min_x = 500;
     let mut min_y = 0;
 
@@ -47,16 +66,19 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
-    // Pad out a layer to make indexing simpler
-    min_x += -1;
-    min_y += -1;
+    min_y -= 2;
+    max_y += 3;
 
-    // Pad out a layer *and* 1 more for the lack of ..= ranges on our part
-    max_x += 2;
-    max_y += 2;
+    if floor == SolidFloor {
+        let h = max_y - min_y;
+        min_x = 500 - h + 1;
+        max_x = 500 + h - 1;
+    } else {
+        min_x += -1;
+        max_x += 1;
+    }
 
-    let mut cave: Framebuffer<u8> =
-        Framebuffer::new_with_ranges(min_x..(max_x + 1), min_y..(max_y + 1));
+    let mut cave = Framebuffer::new_with_ranges(min_x..(max_x + 1), min_y..(max_y + 1));
     cave.set_border_color(Some(BLOCK_AIR));
 
     for wall in cave_walls {
@@ -84,6 +106,22 @@ pub fn part1(input: &str) -> i64 {
             }
         }
     }
+
+    if floor == SolidFloor {
+        let floor_y = cave.range_y().end - 2;
+        let std::ops::Range { start, end } = cave.range_x();
+        for x in start + 1..end - 1 {
+            cave[(x, floor_y)] = BLOCK_ROCK;
+        }
+    }
+
+    cave
+}
+
+// Part1 ========================================================================
+#[aoc(day14, part1)]
+pub fn part1(input: &str) -> i64 {
+    let mut cave = parse_cave_to_fb(input, NoFloor);
 
     const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
     const DOWN_LEFT: IVec2 = IVec2::new(-1, 1);
@@ -126,6 +164,7 @@ pub fn part1(input: &str) -> i64 {
         cave[sand] = BLOCK_SAND;
     }
 
+    cave[(500, 0)] = BLOCK_SPAWN;
     save_image(&cave, "day14_out-pt1.png");
 
     spawned
@@ -134,63 +173,7 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day14, part2)]
 pub fn part2(input: &str) -> i64 {
-    let mut min_y = 0;
-    let mut max_y = 0;
-
-    let mut cave_walls: Vec<Vec<IVec2>> = vec![];
-
-    for line in input.lines() {
-        cave_walls.push(vec![]);
-
-        let wall: &mut _ = cave_walls.last_mut().unwrap();
-        for s in line.split(" -> ") {
-            let [x, y]: [i32; 2] = iter_to_array(s.split(',').map(|ns| ns.parse().unwrap()));
-            wall.push((x, y).into());
-
-            min_y = min_y.min(y);
-            max_y = max_y.max(y);
-        }
-    }
-
-    min_y += -1;
-    max_y += 4;
-
-    let h = max_y - min_y;
-    let min_x = 500 - h;
-    let max_x = 500 + h;
-
-    let mut cave = Framebuffer::new_with_ranges(min_x..(max_x + 1), min_y..(max_y + 1));
-
-    for wall in cave_walls {
-        for pair in wall.windows(2) {
-            if pair[1].y == pair[0].y {
-                let y = pair[0].y;
-
-                let xa = [pair[1].x, pair[0].x].into_iter().min().unwrap();
-                let xb = [pair[1].x, pair[0].x].into_iter().max().unwrap();
-
-                for x in xa..=xb {
-                    cave[(x, y)] = BLOCK_ROCK;
-                }
-            } else if pair[1].x == pair[0].x {
-                let x = pair[0].x;
-
-                let ya = [pair[1].y, pair[0].y].into_iter().min().unwrap();
-                let yb = [pair[1].y, pair[0].y].into_iter().max().unwrap();
-
-                for y in ya..=yb {
-                    cave[(x, y)] = BLOCK_ROCK;
-                }
-            } else {
-                unreachable!();
-            }
-        }
-    }
-
-    let floor_y = max_y - 2;
-    for x in min_x..max_x {
-        cave[(x, floor_y)] = BLOCK_ROCK;
-    }
+    let mut cave = parse_cave_to_fb(input, SolidFloor);
 
     const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
     const DOWN_LEFT: IVec2 = IVec2::new(-1, 1);
@@ -237,6 +220,7 @@ pub fn part2(input: &str) -> i64 {
         cave[sand] = BLOCK_SAND;
     }
 
+    cave[(500, 0)] = BLOCK_SPAWN;
     save_image(&cave, "day14_out-pt2.png");
 
     spawned
