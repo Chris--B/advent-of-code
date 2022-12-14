@@ -26,6 +26,7 @@ clap = {version = "4", features =["derive"] }
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
 image = { version = "0.24", default-features = false, features = ["png"] }
 itertools = "0.10"
+json = "0.12"
 lazy_static = "1"
 pretty_assertions = "*"
 rand = "0.8"
