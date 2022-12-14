@@ -284,14 +284,18 @@ impl<T> Framebuffer<T> {
         [<P as image::Pixel>::Subpixel]: image::EncodableLayout,
         F: Fn(&T) -> P,
     {
-        let width = self.width as u32;
-        let height = self.height as u32;
-        let img = ImageBuffer::from_fn(width, height, |x, y| f(&self[(x, y)]));
+        let width = self.width;
+        let height = self.height;
+        let img = ImageBuffer::from_fn(width as u32, height as u32, |x, y| {
+            let x = x as i32;
+            let y = y as i32;
+            f(&self[(x - self.offsets.x, y - self.offsets.y)])
+        });
 
         image::imageops::resize(
             &img,
-            width * scale,
-            height * scale,
+            width as u32 * scale,
+            height as u32 * scale,
             image::imageops::FilterType::Nearest,
         )
     }
@@ -363,7 +367,7 @@ impl<T> Framebuffer<T> {
         self.idx_from_xy(x, y)
             .map(|idx| &buf[idx])
             .or(self.border_color.as_ref())
-            .expect("oob index but no border color set")
+            .unwrap_or_else(|| panic!("oob index ({x}, {y}) but no border color set"))
     }
 
     pub fn get(&self, x: isize, y: isize) -> Option<&T> {
@@ -383,13 +387,13 @@ impl<T> Index<(isize, isize)> for Framebuffer<T> {
     fn index(&self, idx: (isize, isize)) -> &Self::Output {
         self.get(idx.0, idx.1)
             .or(self.border_color.as_ref())
-            .expect("oob index but no border color set")
+            .unwrap_or_else(|| panic!("oob index ({}, {}) but no border color set", idx.0, idx.1))
     }
 }
 
 impl<T> IndexMut<(isize, isize)> for Framebuffer<T> {
     fn index_mut(&mut self, idx: (isize, isize)) -> &mut Self::Output {
         self.get_mut(idx.0, idx.1)
-            .expect("oob index but no border color set")
+            .unwrap_or_else(|| panic!("oob index ({}, {}) but no border color set", idx.0, idx.1))
     }
 }
