@@ -1,7 +1,8 @@
 #!/bin/bash
 
+export RUST_BACKTRACE=1
 cargo watch -c               \
     -x "clippy --tests"      \
     -x fmt                   \
-    -x "test --lib"       \
+    -x "test --lib day14"       \
     -x "aoc $*"
