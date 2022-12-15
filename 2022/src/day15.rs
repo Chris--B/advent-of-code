@@ -7,6 +7,25 @@ struct SensorDesc {
     dist: i32,
 }
 
+impl SensorDesc {
+    /// An iterator that yields coordinates just outside of this sensor's area
+    fn iter_area_edge(&self) -> impl Iterator<Item = IVec2> + '_ {
+        let at: IVec2 = self.at;
+        (0..=self.dist)
+            .map(move |dx| IVec2::new(dx, self.dist - dx))
+            .flat_map(|dv| {
+                [
+                    IVec2::new(dv.x, dv.y),
+                    IVec2::new(-dv.x, dv.y),
+                    IVec2::new(dv.x, -dv.y),
+                    IVec2::new(-dv.x, -dv.y),
+                ]
+                .into_iter()
+            })
+            .map(move |dv| dv + at)
+    }
+}
+
 fn parse_sensor_desc(input: &str) -> SensorDesc {
     let mut bytes: &[u8] = input.as_bytes();
     let mut desc = SensorDesc::default();
@@ -85,6 +104,54 @@ pub fn part1(input: &str) -> i64 {
     counter
 }
 
+#[aoc(day15, part1, edge_walker)]
+pub fn part1_edge_walker(input: &str) -> i64 {
+    const Y: i32 = if cfg!(test) { 10 } else { 2_000_000 };
+
+    let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
+
+    // Find points on the periferie of sensor ranges - this will keep our search area small
+    let points: HashSet<IVec2> = sensors
+        .iter()
+        .flat_map(|s| s.iter_area_edge().filter(|here| here.y == Y))
+        .collect();
+
+    // Find the range of points we care about
+    let (min_x, max_x) = points
+        .iter()
+        .map(|here| here.x)
+        .minmax()
+        .into_option()
+        .unwrap();
+
+    // This the worst-case count of places to find a beacon
+    let maybe_count = (max_x - min_x) as i64;
+
+    // This will actually cull them out
+    let viable = points
+        .iter()
+        .copied()
+        .filter(|here| {
+            for sensor in &sensors {
+                if *here == sensor.closest {
+                    // skip all beacons
+                    return false;
+                }
+
+                if manhattan(*here, sensor.at) <= sensor.dist {
+                    // skip any points in range of a sensor
+                    return false;
+                }
+            }
+
+            true
+        })
+        .count() as i64;
+
+    // The difference is where we can NOT find a beacon
+    maybe_count - viable
+}
+
 // Part2 ========================================================================
 // #[aoc(day15, part2)]
 // pub fn part2(input: &str) -> i64 {
@@ -120,7 +187,7 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_edge_walker)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
