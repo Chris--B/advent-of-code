@@ -4,5 +4,5 @@ export RUST_BACKTRACE=1
 cargo watch -c               \
     -x "clippy --tests"      \
     -x fmt                   \
-    -x "test --lib day14"       \
+    -x "test --lib"       \
     -x "aoc $*"
