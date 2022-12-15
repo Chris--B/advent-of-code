@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 struct SensorDesc {
     at: IVec2,
     closest: IVec2,
@@ -11,8 +11,9 @@ impl SensorDesc {
     /// An iterator that yields coordinates just outside of this sensor's area
     fn iter_area_edge(&self) -> impl Iterator<Item = IVec2> + '_ {
         let at: IVec2 = self.at;
-        (0..=self.dist)
-            .map(move |dx| IVec2::new(dx, self.dist - dx))
+        let dist = self.dist + 1;
+        (0..=dist)
+            .map(move |dx| IVec2::new(dx, dist - dx))
             .flat_map(|dv| {
                 [
                     IVec2::new(dv.x, dv.y),
@@ -23,6 +24,10 @@ impl SensorDesc {
                 .into_iter()
             })
             .map(move |dv| dv + at)
+    }
+
+    fn in_range(&self, pt: IVec2) -> bool {
+        manhattan(self.at, pt) <= self.dist
     }
 }
 
@@ -76,7 +81,7 @@ fn manhattan(a: IVec2, b: IVec2) -> i32 {
 
 // Part1 ========================================================================
 #[aoc(day15, part1)]
-pub fn part1(input: &str) -> i64 {
+pub fn part1(input: &str) -> i32 {
     let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
     let (min_x, max_x) = sensors
         .iter()
@@ -94,7 +99,8 @@ pub fn part1(input: &str) -> i64 {
         for sensor in sensors.iter() {
             // If we're closer (or tied) in distance to its closest beacon,
             // no other beacon can be here
-            if manhattan(here, sensor.at) <= sensor.dist && here != sensor.closest {
+            if sensor.in_range(here) && here != sensor.closest {
+                // if manhattan(here, sensor.at) <= sensor.dist && here != sensor.closest {
                 counter += 1;
                 continue 'xs;
             }
@@ -105,7 +111,7 @@ pub fn part1(input: &str) -> i64 {
 }
 
 #[aoc(day15, part1, edge_walker)]
-pub fn part1_edge_walker(input: &str) -> i64 {
+pub fn part1_edge_walker(input: &str) -> i32 {
     const Y: i32 = if cfg!(test) { 10 } else { 2_000_000 };
 
     let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
@@ -125,7 +131,7 @@ pub fn part1_edge_walker(input: &str) -> i64 {
         .unwrap();
 
     // This the worst-case count of places to find a beacon
-    let maybe_count = (max_x - min_x) as i64;
+    let maybe_count = max_x - min_x;
 
     // This will actually cull them out
     let viable = points
@@ -138,7 +144,8 @@ pub fn part1_edge_walker(input: &str) -> i64 {
                     return false;
                 }
 
-                if manhattan(*here, sensor.at) <= sensor.dist {
+                if sensor.in_range(*here) {
+                    // if manhattan(*here, sensor.at) <= sensor.dist {
                     // skip any points in range of a sensor
                     return false;
                 }
@@ -146,17 +153,60 @@ pub fn part1_edge_walker(input: &str) -> i64 {
 
             true
         })
-        .count() as i64;
+        .count() as i32;
 
     // The difference is where we can NOT find a beacon
     maybe_count - viable
 }
 
 // Part2 ========================================================================
-// #[aoc(day15, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     unimplemented!();
-// }
+#[aoc(day15, part2)]
+pub fn part2(input: &str) -> i64 {
+    let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
+
+    fn in_bounds(pt: &IVec2) -> bool {
+        for n in pt.as_array() {
+            if n < 0 {
+                return false;
+            }
+
+            #[cfg(test)]
+            if n > 20 {
+                return false;
+            }
+
+            if n > 4_000_000 {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    let mut located = IVec2::zero();
+
+    for pt in sensors
+        .iter()
+        .flat_map(SensorDesc::iter_area_edge)
+        .filter(in_bounds)
+    {
+        let mut valid = true;
+
+        for sensor in &sensors {
+            if sensor.in_range(pt) {
+                valid = false;
+                break;
+            }
+        }
+
+        if valid {
+            located = pt;
+            break;
+        }
+    }
+
+    located.x as i64 * 4_000_000 + located.y as i64
+}
 
 #[cfg(test)]
 mod test {
@@ -188,6 +238,20 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
     fn check_ex_part_1(
         #[notrace]
         #[values(part1, part1_edge_walker)]
+        p: impl FnOnce(&str) -> i32,
+        #[case] expected: i32,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
+
+    #[rstest]
+    #[case::given(56000011, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -195,18 +259,4 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
         let input = input.trim();
         assert_eq!(p(input), expected);
     }
-
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
 }
