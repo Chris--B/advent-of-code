@@ -17,6 +17,7 @@ pub mod day11;
 pub mod day12;
 pub mod day13;
 pub mod day14;
+pub mod day15;
 
 pub mod framebuffer;
 
@@ -123,7 +124,14 @@ mod prelude {
     }
 
     pub fn fast_parse_u32(input: &[u8]) -> u32 {
-        let mut digits = [0_u32; 5];
+        let mut digits = [0_u32; 7];
+        debug_assert!(
+            input.len() <= digits.len(),
+            "Expected {} digits but now need to support {}",
+            digits.len(),
+            input.len(),
+        );
+
         let mut x = 1;
         for (i, b) in input.iter().rev().enumerate() {
             digits[i] = x * (*b - b'0') as u32;
