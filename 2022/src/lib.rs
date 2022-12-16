@@ -31,7 +31,7 @@ mod prelude {
     pub use itertools::Itertools;
     pub use smallstr::SmallString;
     pub use smallvec::{smallvec, SmallVec};
-    pub use ultraviolet::IVec2;
+    pub use ultraviolet::{IVec2, Vec3};
 
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;

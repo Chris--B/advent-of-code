@@ -82,7 +82,7 @@ fn manhattan(a: IVec2, b: IVec2) -> i32 {
 // Part1 ========================================================================
 #[aoc(day15, part1)]
 pub fn part1(input: &str) -> i32 {
-    let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
+    let sensors: SmallVec<[SensorDesc; 32]> = input.lines().map(parse_sensor_desc).collect();
     let (min_x, max_x) = sensors
         .iter()
         .flat_map(|desc| [desc.at.x + desc.dist, desc.at.x - desc.dist].into_iter())
@@ -114,7 +114,7 @@ pub fn part1(input: &str) -> i32 {
 pub fn part1_edge_walker(input: &str) -> i32 {
     const Y: i32 = if cfg!(test) { 10 } else { 2_000_000 };
 
-    let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
+    let sensors: SmallVec<[SensorDesc; 32]> = input.lines().map(parse_sensor_desc).collect();
 
     // Find points on the periferie of sensor ranges - this will keep our search area small
     let points: HashSet<IVec2> = sensors
@@ -160,28 +160,28 @@ pub fn part1_edge_walker(input: &str) -> i32 {
 }
 
 // Part2 ========================================================================
-#[aoc(day15, part2)]
-pub fn part2(input: &str) -> i64 {
-    let sensors: SmallVec<[SensorDesc; 16]> = input.lines().map(parse_sensor_desc).collect();
-
-    fn in_bounds(pt: &IVec2) -> bool {
-        for n in pt.as_array() {
-            if n < 0 {
-                return false;
-            }
-
-            #[cfg(test)]
-            if n > 20 {
-                return false;
-            }
-
-            if n > 4_000_000 {
-                return false;
-            }
+fn in_bounds(pt: &IVec2) -> bool {
+    for n in pt.as_array() {
+        if n < 0 {
+            return false;
         }
 
-        true
+        #[cfg(test)]
+        if n > 20 {
+            return false;
+        }
+
+        if n > 4_000_000 {
+            return false;
+        }
     }
+
+    true
+}
+
+#[aoc(day15, part2)]
+pub fn part2(input: &str) -> i64 {
+    let sensors: SmallVec<[SensorDesc; 32]> = input.lines().map(parse_sensor_desc).collect();
 
     let mut located = IVec2::zero();
 
@@ -206,6 +206,112 @@ pub fn part2(input: &str) -> i64 {
     }
 
     located.x as i64 * 4_000_000 + located.y as i64
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Line {
+    o: IVec2,
+    r: IVec2,
+    dist: i32,
+}
+
+impl Line {
+    fn intersects_with(&self, other: &Line) -> Option<IVec2> {
+        let p: Vec3 = self.o.xyz().into();
+        let q: Vec3 = other.o.xyz().into();
+
+        let r: Vec3 = self.r.xyz().into();
+        let s: Vec3 = other.r.xyz().into();
+
+        let rxs = r.cross(s);
+        let q_p = q - p;
+
+        // Lines are not parallel, so they intersect *somewhere*
+        if rxs.z != 0. {
+            let t = q_p.cross(s).z / rxs.z;
+            let u = q_p.cross(r).z / rxs.z;
+
+            if (0. <= t && t <= self.dist as f32) && // .
+               (0. <= u && u <= other.dist as f32)
+            {
+                // In range!
+                // dbg!(self, other, t, u);
+                let pp = p + t * r;
+                let qq = q + u * s;
+                debug_assert_eq!(pp, qq);
+
+                Some([pp.x as i32, pp.y as i32].into())
+            } else {
+                // Not in range, but would intersect if the line were longer
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+// Uncomment when it works
+// #[aoc(day15, part2, math)]
+pub fn part2_math(input: &str) -> i64 {
+    let sensors: SmallVec<[SensorDesc; 32]> = input.lines().map(parse_sensor_desc).collect();
+
+    let mut lines = vec![];
+
+    for s in &sensors {
+        let dist = s.dist + 1;
+        let ends = [
+            s.at + (-1, 0).into(),
+            s.at + (0, -1).into(),
+            s.at + (1, 0).into(),
+            s.at + (0, 1).into(),
+        ];
+
+        for (mut a, mut b) in [
+            (ends[0], ends[1]),
+            (ends[1], ends[2]),
+            (ends[2], ends[3]),
+            (ends[3], ends[0]),
+        ]
+        .into_iter()
+        {
+            // Encode as point closet to origin + length vector
+            if manhattan(a, IVec2::zero()) > manhattan(b, IVec2::zero()) {
+                std::mem::swap(&mut a, &mut b);
+            }
+
+            lines.push(Line {
+                o: a,
+                r: b - a,
+                dist,
+            });
+        }
+    }
+
+    let mut shared = vec![];
+
+    let len = lines.len();
+    for i in 0..len {
+        for j in (i + 1)..len {
+            if let Some(pt) = lines[i].intersects_with(&lines[j]) {
+                shared.push(pt);
+            }
+        }
+    }
+
+    dbg!(shared.len());
+
+    if cfg!(test) {
+        debug_assert!(shared.contains(&(14, 11).into()));
+    }
+
+    let elf = shared
+        .into_iter()
+        .filter(in_bounds)
+        .find(|here| !sensors.iter().any(|s| s.in_range(*here)))
+        .unwrap();
+
+    elf.x as i64 * 4_000_000 + elf.y as i64
 }
 
 #[cfg(test)]
@@ -251,7 +357,7 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_math)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
