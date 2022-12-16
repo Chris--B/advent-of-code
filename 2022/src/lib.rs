@@ -18,6 +18,7 @@ pub mod day12;
 pub mod day13;
 pub mod day14;
 pub mod day15;
+pub mod day16;
 
 pub mod framebuffer;
 
@@ -29,6 +30,7 @@ mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use itertools::Itertools;
+    pub use scan_fmt::scan_fmt;
     pub use smallstr::SmallString;
     pub use smallvec::{smallvec, SmallVec};
     pub use ultraviolet::{IVec2, Vec3};
