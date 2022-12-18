@@ -7,7 +7,7 @@ type Row = u8;
 
 #[inline(always)]
 fn print_board(rows: &[Row]) {
-    if !cfg!(test) || rows.len() > 25 {
+    if !cfg!(feature = "not_quiet") || rows.len() > 25 {
         return;
     }
 
@@ -82,13 +82,17 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
 
     let mut jets = input.iter().copied().cycle();
 
-    for ((sx, sy), shape) in SHAPES
-        .iter()
-        .copied()
-        .cycle()
-        // 🎉
-        .take(times)
-    {
+    let mut seen_runs = HashMap::<Vec<_>, (usize, usize)>::new();
+
+    let mut times_left = times;
+    let mut sum = 0;
+
+    for (time, ((sx, sy), shape)) in SHAPES.iter().copied().cycle().enumerate() {
+        if times_left == 0 {
+            break;
+        }
+        times_left -= 1;
+
         let sx = sx as i8;
 
         // Each rock appears so that:
@@ -103,7 +107,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
             rows.push(0);
         }
 
-        if cfg!(test) {
+        if cfg!(feature = "not_quiet") {
             println!("A rock begins falling:");
             let mut rows = rows.clone();
             add_shape(&mut rows, x, y, &shape);
@@ -128,7 +132,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                     x = (x - 1).clamp(0, 7 - sx);
                 }
 
-                if cfg!(test) {
+                if cfg!(feature = "not_quiet") {
                     print!("({x}, {y}) Jet of gas pushes rock ");
                     if jet == b'<' {
                         print!("left");
@@ -158,7 +162,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                     x = old_x;
                 }
 
-                if cfg!(test) {
+                if cfg!(feature = "not_quiet") {
                     if x == old_x {
                         print!(", but nothing happens");
                     } else {
@@ -167,7 +171,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                     println!();
                 }
 
-                if cfg!(test) {
+                if cfg!(feature = "not_quiet") {
                     let mut rows = rows.clone();
                     add_shape(&mut rows, x, y, &shape);
                     print_board(&rows);
@@ -197,7 +201,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                 // Rock falls 1 unit
                 y -= 1;
 
-                if cfg!(test) {
+                if cfg!(feature = "not_quiet") {
                     println!("Rock falls 1 unit:");
                     let mut rows = rows.clone();
                     add_shape(&mut rows, x, y, &shape[..sy]);
@@ -215,6 +219,44 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
         // Place the falling rock
         add_shape(&mut rows, x, y, &shape[..sy]);
 
+        // Check if the last 100 runs have been seen before
+        if rows.len() > 100 && sum == 0 {
+            use std::collections::hash_map::Entry::Occupied;
+
+            let len = rows.len() - 1;
+            let t = rows.len() - 100;
+            let run = rows[t..].to_owned();
+            let e = seen_runs.entry(run);
+
+            if let Occupied(oe) = e {
+                let (start_time, start_len) = *oe.get();
+                let (end_time, end_len) = (time, len);
+                let (times_per_cycle, len_per_cycle) = (end_time - start_time, end_len - start_len);
+
+                let n_cycles = (times - start_time) / (times_per_cycle);
+
+                let times_from_cycles = n_cycles * times_per_cycle; // integer rounding makes this != times
+                let times_after_cycles = times - times_from_cycles - start_time - 1;
+
+                // dbg!(
+                //     start_time,
+                //     end_time,
+                //     start_len,
+                //     end_len,
+                //     times_per_cycle,
+                //     n_cycles,
+                //     len_from_cycles,
+                //     times_from_cycles,
+                //     times_after_cycles,
+                // );
+
+                sum = (len_per_cycle * (n_cycles - 1)) as i64;
+                times_left = times_after_cycles;
+            } else {
+                e.or_insert((time, len));
+            }
+        }
+
         // Clear any empty rows on top, our placement logic depends on it
         while rows.last() == Some(&0) {
             rows.pop();
@@ -222,7 +264,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
     }
 
     // We pad our length with a fake floor, so adjust here
-    rows.len() as i64 - 1
+    sum + rows.len() as i64 - 1
 }
 
 // Part1 ========================================================================
