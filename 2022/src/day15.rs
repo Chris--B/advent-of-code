@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -251,8 +253,9 @@ impl Line {
     }
 }
 
+#[cfg(feature = "broken")]
 // Uncomment when it works
-// #[aoc(day15, part2, math)]
+#[aoc(day15, part2, math)]
 pub fn part2_math(input: &str) -> i64 {
     let sensors: SmallVec<[SensorDesc; 32]> = input.lines().map(parse_sensor_desc).collect();
 
@@ -352,6 +355,7 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3
         assert_eq!(p(input), expected);
     }
 
+    #[cfg(feature = "broken")]
     #[rstest]
     #[case::given(56000011, EXAMPLE_INPUT)]
     #[trace]

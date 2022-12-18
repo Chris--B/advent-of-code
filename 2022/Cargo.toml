@@ -49,3 +49,4 @@ overflow-checks = true
 default = []
 nightly = []
 simd = ["core_simd", "nightly"]
+broken =[]
