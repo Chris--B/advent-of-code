@@ -21,6 +21,7 @@ pub mod day15;
 #[cfg(feature = "broken")]
 pub mod day16;
 pub mod day17;
+pub mod day18;
 
 pub mod framebuffer;
 
@@ -35,7 +36,7 @@ mod prelude {
     pub use scan_fmt::scan_fmt;
     pub use smallstr::SmallString;
     pub use smallvec::{smallvec, SmallVec};
-    pub use ultraviolet::{IVec2, Vec3};
+    pub use ultraviolet::{IVec2, IVec3, Vec3};
 
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
