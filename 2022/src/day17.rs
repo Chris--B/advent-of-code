@@ -52,11 +52,7 @@ fn add_shape(rows: &mut [Row], x: i8, y: usize, shape: &[Row]) {
     }
 }
 
-// Part1 ========================================================================
-#[aoc(day17, part1)]
-pub fn part1(input: &str) -> i64 {
-    let input = input.as_bytes();
-
+fn run_sim(input: &[u8], times: usize) -> i64 {
     let mut rows: Vec<Row> = Vec::with_capacity(1_024);
 
     // Init the rows with a solid floor
@@ -86,14 +82,12 @@ pub fn part1(input: &str) -> i64 {
 
     let mut jets = input.iter().copied().cycle();
 
-    let mut sum = 0;
-
     for ((sx, sy), shape) in SHAPES
         .iter()
         .copied()
         .cycle()
         // 🎉
-        .take(2022)
+        .take(times)
     {
         let sx = sx as i8;
 
@@ -225,33 +219,23 @@ pub fn part1(input: &str) -> i64 {
         while rows.last() == Some(&0) {
             rows.pop();
         }
-
-        // If we cover a full line, clear the vector below it
-        if let Some((i, _)) = rows
-            .iter()
-            .copied()
-            .enumerate()
-            .rev()
-            .find(|(_i, r)| *r == 0b0111_1111)
-        {
-            if i != 0 {
-                sum += i as i64 + 1;
-                for _ in rows.drain(..i) {}
-            }
-        }
     }
 
     // We pad our length with a fake floor, so adjust here
-    sum += rows.len() as i64 - 1;
+    rows.len() as i64 - 1
+}
 
-    sum
+// Part1 ========================================================================
+#[aoc(day17, part1)]
+pub fn part1(input: &str) -> i64 {
+    run_sim(input.as_bytes(), 2022)
 }
 
 // Part2 ========================================================================
-// #[aoc(day17, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     unimplemented!();
-// }
+#[aoc(day17, part2)]
+pub fn part2(input: &str) -> i64 {
+    run_sim(input.as_bytes(), 1_000_000_000_000)
+}
 
 #[cfg(test)]
 mod test {
@@ -276,17 +260,17 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(1_514_285_714_288, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
