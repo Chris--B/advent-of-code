@@ -103,7 +103,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
         let mut y = rows.len() + 3; // steps from the floor
 
         // Pad out empty rows so we can index freely
-        while rows.len() < (y + sy as usize) {
+        while rows.len() < (y + sy) {
             rows.push(0);
         }
 
@@ -143,21 +143,24 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
 
                 // The shift is in bounds, but we need to check this row for new collisions too.
 
-                let can_be_placed = shape.iter().enumerate().take(sy as usize).all(
-                    |(yy, line_without_any_shifts)| {
-                        let y = y + yy;
-                        let l = line_without_any_shifts << x;
-                        debug_assert_eq!(
-                            l.count_ones(),
-                            line_without_any_shifts.count_ones(),
-                            "Shifting moved it off the edge of the board!"
-                        );
+                let can_be_placed =
+                    shape
+                        .iter()
+                        .enumerate()
+                        .take(sy)
+                        .all(|(yy, line_without_any_shifts)| {
+                            let y = y + yy;
+                            let l = line_without_any_shifts << x;
+                            debug_assert_eq!(
+                                l.count_ones(),
+                                line_without_any_shifts.count_ones(),
+                                "Shifting moved it off the edge of the board!"
+                            );
 
-                        // If we placed this line of the shape, would it overlap with anything?
-                        // If no, this is 0 and we report this line as "can fall".
-                        (rows[y] & l) == 0
-                    },
-                );
+                            // If we placed this line of the shape, would it overlap with anything?
+                            // If no, this is 0 and we report this line as "can fall".
+                            (rows[y] & l) == 0
+                        });
                 if !can_be_placed {
                     x = old_x;
                 }
@@ -182,7 +185,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                 shape
                     .iter()
                     .enumerate()
-                    .take(sy as usize)
+                    .take(sy)
                     .all(|(yy, line_without_any_shifts)| {
                         let y = y + yy - 1;
                         let l = line_without_any_shifts << x;

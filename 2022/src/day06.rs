@@ -38,7 +38,11 @@ fn check_for_runs<const N: usize>(input: &[u8]) -> usize {
         debug_assert!(N <= 32);
 
         for x in input {
-            debug_assert!((b'a'..=b'z').contains(x));
+            debug_assert!(
+                x.is_ascii_lowercase(),
+                "\"{}\" ({x}) isn't lowercase ascii but should be",
+                *x as char
+            );
         }
     }
 

@@ -18,7 +18,7 @@ pub fn parse(input: &str) -> Day12 {
     let mut end = None;
 
     let heightmap = Framebuffer::new_with_ranges_and(0..width, 0..height, |x, y| {
-        let c = lines[y as usize].as_bytes()[x as usize] as u8;
+        let c = lines[y as usize].as_bytes()[x as usize];
         if c == b'S' {
             start = Some((x, y));
             0
@@ -61,7 +61,7 @@ pub fn find_path(day: &Day12, start: (i32, i32)) -> Framebuffer<i64> {
                 // Don't need climbing gear, and we can proceed
                 if day.heightmap[(x, y)] <= day.heightmap[(prev_x, prev_y)] + 1 {
                     let old_dist = total_steps_map[(x, y)];
-                    let new_dist = total_steps_map[(prev_x, prev_y)] as i64 + 1;
+                    let new_dist = total_steps_map[(prev_x, prev_y)] + 1;
 
                     // If the path we're on is less risky than whatever found this point before, take it
                     // (Note: first-explored points have a maximum distance of i64::MAX, so they always get overwritten)
@@ -100,7 +100,7 @@ fn find_path_reverse(day: &Day12, end: (i32, i32)) -> Framebuffer<i64> {
                 // Don't need climbing gear, and we can proceed
                 if day.heightmap[(x, y)] + 1 >= day.heightmap[(prev_x, prev_y)] {
                     let old_steps = total_steps_map[(x, y)];
-                    let new_steps = total_steps_map[(prev_x, prev_y)] as i64 + 1;
+                    let new_steps = total_steps_map[(prev_x, prev_y)] + 1;
 
                     // If the path we're on is less risky than whatever found this point before, take it
                     // (Note: first-explored points have a maximum distance of i64::MAX, so they always get overwritten)
