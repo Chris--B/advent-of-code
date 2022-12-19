@@ -20,15 +20,7 @@ pub fn part1(input: &str) -> i64 {
     let mut faces = 0;
 
     for a in &cubes {
-        for (dx, dy, dz) in [
-            (1, 0, 0),
-            (0, 1, 0),
-            (0, 0, 1),
-            (-1, 0, 0),
-            (0, -1, 0),
-            (0, 0, -1),
-        ] {
-            let xyz = *a + IVec3::new(dx, dy, dz);
+        for xyz in a.neighbors() {
             if !cubes.contains(&xyz) {
                 faces += 1;
             }
@@ -74,15 +66,7 @@ pub fn part2(input: &str) -> i64 {
 
         explored.insert(a);
 
-        for (dx, dy, dz) in [
-            (1, 0, 0),
-            (0, 1, 0),
-            (0, 0, 1),
-            (-1, 0, 0),
-            (0, -1, 0),
-            (0, 0, -1),
-        ] {
-            let xyz = a + IVec3::new(dx, dy, dz);
+        for xyz in a.neighbors() {
             if !explored.contains(&xyz) && in_bounds(xyz, min_bounds, max_bounds) {
                 to_explore.push_back(xyz);
             }

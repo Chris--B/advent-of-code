@@ -53,15 +53,9 @@ pub fn find_path(day: &Day12, start: (i32, i32)) -> Framebuffer<i64> {
         // );
 
         // Check in all directions for low distance paths
-        for (dx, dy) in [
-            (1_i32, 0_i32),
-            (0, 1),
-            (-1, 0),
-            (0, -1),
-            // No diagonals
-        ] {
-            let x = prev_x + dx;
-            let y = prev_y + dy;
+        let prev: IVec2 = (prev_x, prev_y).into();
+        for xy in prev.neighbors() {
+            let (x, y) = xy.into();
 
             if total_steps_map.range_x().contains(&x) && total_steps_map.range_y().contains(&y) {
                 // Don't need climbing gear, and we can proceed
@@ -98,15 +92,9 @@ fn find_path_reverse(day: &Day12, end: (i32, i32)) -> Framebuffer<i64> {
         // );
 
         // Check in all directions for low distance paths
-        for (dx, dy) in [
-            (1_i32, 0_i32),
-            (0, 1),
-            (-1, 0),
-            (0, -1),
-            // No diagonals
-        ] {
-            let x = prev_x + dx;
-            let y = prev_y + dy;
+        let prev: IVec2 = (prev_x, prev_y).into();
+        for xy in prev.neighbors() {
+            let (x, y) = xy.into();
 
             if total_steps_map.range_x().contains(&x) && total_steps_map.range_y().contains(&y) {
                 // Don't need climbing gear, and we can proceed

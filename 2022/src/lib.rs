@@ -24,11 +24,13 @@ pub mod day17;
 pub mod day18;
 
 pub mod framebuffer;
+pub mod vec;
 
 aoc_lib! { year = 2022 }
 
 mod prelude {
     pub use crate::framebuffer::Framebuffer;
+    pub use crate::vec::VecExt;
 
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
