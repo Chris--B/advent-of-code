@@ -11,3 +11,6 @@ _*
 # Visualizations
 *.png
 *.gif
+
+# Perf/Debug trace files
+*.trace
