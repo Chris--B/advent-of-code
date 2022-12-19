@@ -6,27 +6,35 @@ const BLOCK_ROCK: u8 = 2;
 const BLOCK_SPAWN: u8 = 3;
 const BLOCK_FALLING_SAND: u8 = 4;
 
-struct Interval(());
+#[swift_bridge::bridge]
+mod aoc_interval {
+    extern "Swift" {
+        type Interval;
 
-fn begin_internval(name: &'static str) -> Interval {
-    let state = ();
+        #[swift_bridge(init)]
+        fn new(name: &str) -> Interval;
 
-    extern "C" {
-        fn platform_begin_interval(x: i32);
-    }
-
-    unsafe {
-        platform_begin_interval(5);
-    }
-
-    Interval(state)
-}
-
-impl Drop for Interval {
-    fn drop(&mut self) {
-        let state = self.0;
+        fn begin(&self);
+        fn end(&self);
     }
 }
+use aoc_interval::Interval;
+
+// struct Interval(&'static str);
+
+// impl Interval {
+//     fn begin(name: &'static str) -> Self {
+//         println!("+ start {name}");
+//         Self(name)
+//     }
+// }
+
+// impl Drop for Interval {
+//     fn drop(&mut self) {
+//         println!("+ end {}", self.0);
+//         self.end();
+//     }
+// }
 
 const fn color(x: u32) -> image::Rgb<u8> {
     let [b, g, r, _a] = x.to_le_bytes();
@@ -156,7 +164,9 @@ fn parse_cave_to_fb(input: &str, floor: Floor) -> Framebuffer<u8> {
 // Part1 ========================================================================
 #[aoc(day14, part1)]
 pub fn part1(input: &str) -> i64 {
-    let _interval = begin_internval("part1");
+    let interval = Interval::new("part1");
+    interval.begin();
+
     let mut cave = parse_cave_to_fb(input, NoFloor);
 
     const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
@@ -208,7 +218,9 @@ pub fn part1(input: &str) -> i64 {
 
 #[aoc(day14, part1, tracking)]
 pub fn part1_tracking(input: &str) -> i64 {
-    let _interval = begin_internval("part1_tracking");
+    let interval = Interval::new("part1_tracking");
+    interval.begin();
+
     let mut cave = parse_cave_to_fb(input, NoFloor);
 
     const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
@@ -289,7 +301,9 @@ pub fn part1_tracking(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day14, part2)]
 pub fn part2(input: &str) -> i64 {
-    let _interval = begin_internval("part2");
+    let interval = Interval::new("part2");
+    interval.begin();
+
     let mut cave = parse_cave_to_fb(input, SolidFloor);
 
     const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
@@ -345,7 +359,9 @@ pub fn part2(input: &str) -> i64 {
 
 #[aoc(day14, part2, tracking)]
 pub fn part2_tracking(input: &str) -> i64 {
-    let _interval = begin_internval("part2_tracking");
+    let interval = Interval::new("part2_tracking");
+    interval.begin();
+
     let mut cave = parse_cave_to_fb(input, SolidFloor);
 
     const DOWN: IVec2 = IVec2::new(0, 1); // I don't know...
@@ -423,7 +439,9 @@ pub fn part2_tracking(input: &str) -> i64 {
 
 #[aoc(day14, part2, smol_tracking)]
 pub fn part2_smol_tracking(input: &str) -> i64 {
-    let _interval = begin_internval("part2_smol_tracking");
+    let interval = Interval::new("part2_smol_tracking");
+    interval.begin();
+
     let mut cave = parse_cave_to_fb(input, NoFloor);
     cave.set_border_color(Some(BLOCK_ROCK));
 

@@ -50,10 +50,12 @@ smallvec = { version = "1", features = ["const_generics"] }
 ultraviolet = { version = "0.9", features = ["int"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-swift-rs = "0.3.0"
+swift-bridge = "0.1"
 
 [target.'cfg(target_os = "macos")'.build-dependencies]
-swift-rs = { version = "0.3.0", features = ["build"] }
+# swift-rs = { version = "0.3.0", features = ["build"] }
+swift-bridge-build = "0.1"
+
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]
