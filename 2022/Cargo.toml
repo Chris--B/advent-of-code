@@ -36,14 +36,16 @@ rstest = { version= "0.16", default-features = false }
 scan_fmt = "0.2"
 smallstr = { version = "0.3", features = ["std"] }
 smallvec = { version = "1", features = ["const_generics"] }
-ultraviolet = { version = "0.9", features =["int"] }
+ultraviolet = { version = "0.9", features = ["int"] }
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]
 opt-level = 2
 
 [profile.release]
+debug = true
 overflow-checks = true
+panic="abort"
 
 [features]
 default = []
