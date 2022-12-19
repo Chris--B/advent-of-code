@@ -17,3 +17,6 @@ out.*
 
 # Perf/Debug trace files
 *.trace
+
+# Swift
+.build
