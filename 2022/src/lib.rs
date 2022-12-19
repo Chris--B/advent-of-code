@@ -22,6 +22,7 @@ pub mod day15;
 pub mod day16;
 pub mod day17;
 pub mod day18;
+#[cfg(feature = "broken")]
 pub mod day19;
 
 pub mod framebuffer;
@@ -41,8 +42,7 @@ mod prelude {
     pub use smallvec::{smallvec, SmallVec};
     pub use ultraviolet::{IVec2, IVec3, Vec3};
 
-    pub use std::collections::HashMap;
-    pub use std::collections::HashSet;
+    pub use std::collections::{HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
 
     pub fn sign(x: i32) -> i32 {

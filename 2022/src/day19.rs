@@ -13,7 +13,7 @@ pub struct Blueprint {
 
 // const R_NAMES: [&str; 4] = ["ore", "clay", "obsidian", "geode"];
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum Resource {
     Ore,
     Clay,
@@ -21,6 +21,17 @@ enum Resource {
     Geode,
 }
 use Resource::*;
+
+impl Resource {
+    fn index(&self) -> usize {
+        match *self {
+            Ore => 0,
+            Clay => 1,
+            Obsidian => 2,
+            Geode => 3,
+        }
+    }
+}
 
 fn parse_blueprint(line: &str) -> Blueprint {
     let line = line.split(':').nth(1).unwrap();
@@ -105,13 +116,7 @@ fn compute_quality_level(bp: &Blueprint, mut build_order: &[Resource]) -> usize 
 
             // println!("** Trying to build {:?}", next);
             if try_spend(&mut bank, cost) {
-                let idx = match next {
-                    Ore => 0,
-                    Clay => 1,
-                    Obsidian => 2,
-                    Geode => 3,
-                };
-                pending_robot = Some(idx);
+                pending_robot = Some(next.index());
                 build_order = &build_order[1..];
             }
         }
@@ -145,14 +150,72 @@ fn compute_quality_level(bp: &Blueprint, mut build_order: &[Resource]) -> usize 
     bank[3] as usize
 }
 
+type Build = SmallVec<[Resource; 24]>;
+
+fn append_and_clone(build: &Build, r: Resource) -> Build {
+    let mut build = build.clone();
+    build.push(r);
+    build
+}
+
 // Part1 ========================================================================
 #[aoc(day19, part1)]
 pub fn part1(blueprints: &[Blueprint]) -> usize {
-    let known_good_build = [Clay, Clay, Clay, Obsidian, Clay, Obsidian, Geode, Geode];
-
     blueprints
         .iter()
-        .map(|bp| compute_quality_level(bp, &known_good_build))
+        .map(|bp| {
+            println!("{bp:?}");
+
+            let mut best = 0;
+
+            let mut builds = VecDeque::new();
+            builds.push_back(smallvec![Ore]);
+            builds.push_back(smallvec![Clay]);
+
+            let mut i = 0;
+            while let Some(build) = builds.pop_front() {
+                i += 1;
+
+                if build.len() >= 8 {
+                    let score = compute_quality_level(bp, &build);
+                    if score >= best {
+                        println!("[{i}] {best} -> {score}: {build:?}");
+                    }
+                    best = best.max(score);
+                }
+
+                // Build new builds
+                if build.len() < 10 {
+                    let income = build
+                        .iter()
+                        .map(|r| match r {
+                            Ore => bp.ore,
+                            Clay => bp.clay,
+                            Obsidian => bp.obsidian,
+                            Geode => bp.geode,
+                        })
+                        .fold([0; 4], |mut acc, x| {
+                            for i in 0..4 {
+                                acc[i] += x[i];
+                            }
+                            acc
+                        });
+
+                    if !try_spend(&mut income.clone(), &bp.ore) {
+                        builds.push_back(append_and_clone(&build, Ore));
+                    }
+
+                    builds.push_back(append_and_clone(&build, Clay));
+
+                    builds.push_back(append_and_clone(&build, Obsidian));
+
+                    builds.push_back(append_and_clone(&build, Geode));
+                }
+            }
+            println!();
+
+            best
+        })
         .enumerate()
         .map(|(id, ql)| (id + 1) * ql)
         .sum()
