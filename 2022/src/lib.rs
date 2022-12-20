@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "simd", feature(portable_simd))]
 #![cfg_attr(feature = "simd", feature(stdsimd))]
+#![allow(clippy::comparison_chain)]
 
 use aoc_runner_derive::aoc_lib;
 
@@ -23,6 +24,7 @@ pub mod day16;
 pub mod day17;
 pub mod day18;
 pub mod day19;
+pub mod day20;
 
 pub mod framebuffer;
 pub mod vec;
