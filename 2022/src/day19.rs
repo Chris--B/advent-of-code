@@ -85,6 +85,7 @@ fn parse(input: &str) -> Vec<Blueprint> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 struct SimState {
+    max_minute: u8,
     minute: u8,
     bank: [u8; 4],
     bots: [u8; 4],
@@ -92,8 +93,9 @@ struct SimState {
 }
 
 impl SimState {
-    fn new(bp: &Blueprint) -> Self {
+    fn new(bp: &Blueprint, max_minute: u8) -> Self {
         SimState {
+            max_minute,
             minute: 1,
             bank: [0; 4],
             bots: [1, 0, 0, 0],
@@ -136,7 +138,7 @@ impl SimState {
         }
 
         // Simulate until we can buy the resource
-        while self.minute <= 24 {
+        while self.minute <= self.max_minute {
             if self.step(resource) {
                 return true;
             }
@@ -149,7 +151,7 @@ impl SimState {
 
     /// Returns true if a bot was built. If it cannot afford one, it still steps but waits instead.
     fn step(&mut self, resource: Resource) -> bool {
-        assert!(self.minute <= 24);
+        debug_assert!(self.minute <= self.max_minute);
 
         let mut built_bot = false;
         let mut pending_robot = None;
@@ -190,7 +192,7 @@ impl SimState {
     }
 }
 
-fn find_best_build(bp: &Blueprint) -> usize {
+fn find_best_build(bp: &Blueprint, max_minute: u8) -> usize {
     // Never build more bots than we can spend in a single minute
     let max_ore_bots = [
         bp.clay[Ore.index()],
@@ -206,10 +208,10 @@ fn find_best_build(bp: &Blueprint) -> usize {
     let mut best_ql = 0;
 
     let mut queue: VecDeque<SimState> = VecDeque::new();
-    queue.push_back(SimState::new(bp));
+    queue.push_back(SimState::new(bp, max_minute));
 
     while let Some(sim) = queue.pop_front() {
-        if sim.minute > 24 {
+        if sim.minute > max_minute {
             best_ql = best_ql.max(sim.bank[Geode.index()]);
             continue;
         }
@@ -257,17 +259,21 @@ fn find_best_build(bp: &Blueprint) -> usize {
 pub fn part1(blueprints: &[Blueprint]) -> usize {
     blueprints
         .iter()
-        .map(find_best_build)
+        .map(|bp| find_best_build(bp, 24))
         .enumerate()
         .map(|(i, ql)| (i + 1) * ql)
         .sum()
 }
 
 // Part2 ========================================================================
-// #[aoc(day19, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     unimplemented!();
-// }
+#[aoc(day19, part2)]
+pub fn part2(blueprints: &[Blueprint]) -> usize {
+    blueprints
+        .iter()
+        .take(3)
+        .map(|bp| find_best_build(bp, 32))
+        .product()
+}
 
 #[cfg(test)]
 mod test {
@@ -310,17 +316,18 @@ Blueprint 28: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsi
         assert_eq!(p(&parse(input)), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::blueprint_1(56, EXAMPLE_INPUT_BP1)]
+    #[case::blueprint_2(62, EXAMPLE_INPUT_BP2)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&[Blueprint]) -> usize,
+        #[case] expected: usize,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(&parse(input)), expected);
+    }
 }
