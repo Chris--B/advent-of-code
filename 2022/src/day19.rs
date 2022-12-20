@@ -137,13 +137,16 @@ impl SimState {
             }
         }
 
+        // Simulate until we can buy the resource
         while self.minute <= 24 {
             if self.step(resource) {
                 return true;
             }
         }
 
-        false
+        // Or if we can't, let this path terminate.
+        // There's at least one Blueprint where this is the right answer!
+        true
     }
 
     /// Returns true if a bot was built. If it cannot afford one, it still steps but waits instead.
