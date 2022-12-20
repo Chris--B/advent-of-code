@@ -275,7 +275,7 @@ pub fn part2(blueprints: &[Blueprint]) -> usize {
         .product()
 }
 
-#[cfg(test)]
+#[cfg(test_nope_too_slow)]
 mod test {
     use super::*;
     #[allow(unused_imports)]
