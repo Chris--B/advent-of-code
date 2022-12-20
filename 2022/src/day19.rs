@@ -83,12 +83,13 @@ fn parse(input: &str) -> Vec<Blueprint> {
     input.lines().map(parse_blueprint).collect()
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct SimState {
     minute: u8,
     bank: [u8; 4],
     bots: [u8; 4],
     bp: Blueprint,
+    order: Vec<Resource>,
 }
 
 impl SimState {
@@ -98,6 +99,7 @@ impl SimState {
             bank: [0; 4],
             bots: [1, 0, 0, 0],
             bp: *bp,
+            order: vec![],
         }
     }
 
@@ -169,6 +171,7 @@ impl SimState {
             // And finally, the construction
             pending_robot = Some(resource.index());
             built_bot = true;
+            self.order.push(resource);
         }
 
         // Mine the resources
@@ -200,6 +203,7 @@ fn find_best_build(bp: &Blueprint) -> usize {
     let max_clay_bots = bp.obsidian[Clay.index()];
     let max_obsidian_bots = bp.geode[Obsidian.index()];
 
+    let mut best_sim = SimState::new(bp);
     let mut best_ql = 0;
 
     let mut queue: VecDeque<SimState> = VecDeque::new();
@@ -207,14 +211,19 @@ fn find_best_build(bp: &Blueprint) -> usize {
 
     while let Some(sim) = queue.pop_front() {
         if sim.minute > 24 {
-            best_ql = best_ql.max(sim.bank[Geode.index()]);
+            let ql = sim.bank[Geode.index()];
+            if ql > best_ql {
+                best_sim = sim;
+            }
+
+            best_ql = best_ql.max(ql);
             continue;
         }
 
         // Continue searching...
 
         if sim.bots[Ore.index()] < max_ore_bots {
-            let mut sim = sim;
+            let mut sim = sim.clone();
             if sim.step_until(Ore) {
                 // We were able to buy it, so continue this path
                 queue.push_back(sim);
@@ -222,7 +231,7 @@ fn find_best_build(bp: &Blueprint) -> usize {
         }
 
         if sim.bots[Clay.index()] < max_clay_bots {
-            let mut sim = sim;
+            let mut sim = sim.clone();
             if sim.step_until(Clay) {
                 // We were able to buy it, so continue this path
                 queue.push_back(sim);
@@ -230,7 +239,7 @@ fn find_best_build(bp: &Blueprint) -> usize {
         }
 
         if sim.bots[Obsidian.index()] < max_obsidian_bots {
-            let mut sim = sim;
+            let mut sim = sim.clone();
             if sim.step_until(Obsidian) {
                 // We were able to buy it, so continue this path
                 queue.push_back(sim);
@@ -239,13 +248,15 @@ fn find_best_build(bp: &Blueprint) -> usize {
 
         // Always try to make a Geode! 🤑
         {
-            let mut sim = sim;
+            let mut sim = sim.clone();
             if sim.step_until(Geode) {
                 // We were able to buy it, so continue this path
                 queue.push_back(sim);
             }
         }
     }
+
+    dbg!(best_ql, best_sim);
 
     best_ql as usize
 }
