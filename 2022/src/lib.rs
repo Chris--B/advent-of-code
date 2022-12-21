@@ -25,6 +25,7 @@ pub mod day17;
 pub mod day18;
 pub mod day19;
 pub mod day20;
+pub mod day21;
 
 pub mod framebuffer;
 pub mod vec;
@@ -38,6 +39,7 @@ mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use itertools::Itertools;
+    pub use num::Complex;
     pub use scan_fmt::scan_fmt;
     pub use smallstr::SmallString;
     pub use smallvec::{smallvec, SmallVec};
