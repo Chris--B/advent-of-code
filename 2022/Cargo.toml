@@ -24,6 +24,7 @@ aoc-runner-derive = "*"
 
 clap = {version = "4", features =["derive"] }
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
+either = "1.8.0"
 image = { version = "0.24", default-features = false, features = ["png"] }
 itertools = "0.10"
 json = "0.12"

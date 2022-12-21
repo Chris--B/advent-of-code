@@ -38,6 +38,7 @@ mod prelude {
 
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
+    pub use either::*;
     pub use itertools::Itertools;
     pub use num::Complex;
     pub use scan_fmt::scan_fmt;

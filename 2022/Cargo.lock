@@ -54,6 +54,7 @@ dependencies = [
  "aoc-runner-derive",
  "clap",
  "core_simd",
+ "either",
  "image",
  "itertools",
  "json",
