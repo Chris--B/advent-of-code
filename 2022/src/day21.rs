@@ -2,20 +2,7 @@ use crate::prelude::*;
 
 use std::fmt;
 
-fn _str_to_idx(bs: &[u8]) -> u32 {
-    debug_assert!(bs.len() == 4, "Expected 4 bytes but found {}", bs.len());
-    let mut idx = 0;
-
-    for b in bs.iter().copied() {
-        debug_assert!(b - b'a' < 26);
-        idx *= 26;
-        idx += (b - b'a') as u32;
-    }
-
-    idx
-}
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum Op {
     Add,
     Sub,
@@ -23,14 +10,42 @@ enum Op {
     Div,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct MonkeyInfo {
     name: Monkey,
     value: Either<i64, (Op, Monkey, Monkey)>,
 }
 
+impl MonkeyInfo {
+    fn new() -> Self {
+        Self {
+            name: Monkey::NULL,
+            value: Left(0),
+        }
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq)]
 struct Monkey([u8; 4]);
+
+impl Monkey {
+    const NULL: Self = Self([0, 0, 0, 0]);
+
+    const fn idx(&self) -> usize {
+        let mut idx = 0;
+        let mut i = 0;
+
+        while i < 4 {
+            let b = self.0[i];
+            debug_assert!(b - b'a' < 26);
+            idx *= 26;
+            idx += (b - b'a') as usize;
+            i += 1;
+        }
+
+        idx
+    }
+}
 
 impl fmt::Debug for Monkey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -66,19 +81,12 @@ fn resolve_monkey(monkeys: &mut [MonkeyInfo], idx: usize) -> i64 {
 #[aoc(day21, part1)]
 pub fn part1(input: &str) -> i64 {
     let lines: Vec<_> = input.lines().map(|s| s.as_bytes()).collect();
-    let mut monkeys = vec![];
+    let mut monkeys: Vec<MonkeyInfo> = vec![];
 
     // Parse monkeys
-    let mut root = 0;
     for line in &lines {
         let mut parts = line.split(|b| *b == b':');
         let name = Monkey(parts.next().unwrap().try_into().unwrap());
-
-        // Root is special so we'll save it
-        if name == Monkey(*b"root") {
-            root = monkeys.len();
-        }
-
         let expr = parts.next().unwrap();
         let value = if expr[1].is_ascii_digit() {
             // ex: " 5"
@@ -99,14 +107,21 @@ pub fn part1(input: &str) -> i64 {
             Right((op, left, right))
         };
 
-        let info = MonkeyInfo { name, value };
-        monkeys.push(info);
+        let idx = name.idx();
+
+        if monkeys.len() <= idx {
+            monkeys.resize_with(idx + 1, MonkeyInfo::new);
+        }
+        debug_assert_eq!(monkeys[idx].name, Monkey::NULL);
+        monkeys[idx] = MonkeyInfo { name, value };
     }
 
-    // Recursively resolve
-    resolve_monkey(&mut monkeys, root);
+    const ROOT_IDX: usize = Monkey(*b"root").idx();
 
-    monkeys[root].value.left().unwrap()
+    // Recursively resolve
+    resolve_monkey(&mut monkeys, ROOT_IDX);
+
+    monkeys[ROOT_IDX].value.left().unwrap()
 }
 
 // Part2 ========================================================================
