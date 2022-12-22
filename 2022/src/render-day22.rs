@@ -1,8 +1,6 @@
-use aoc22::framebuffer::Framebuffer;
-
 use clap::Parser;
-use image::Rgba;
-use ultraviolet::IVec2;
+use image::*;
+use ultraviolet::UVec2;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -17,22 +15,22 @@ struct Args {
     #[arg(long, default_value = "tileset.png")]
     tileset: String,
 
-    #[arg(short, long, default_value = "10", value_name = "pixel scale factor")]
+    #[arg(short, long, default_value = "2", value_name = "pixel scale factor")]
     scale: u32,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let input = std::fs::read_to_string(&args.input).unwrap();
 
-    let mut ground: Vec<IVec2> = vec![];
-    let mut walls: Vec<IVec2> = vec![];
+    let mut ground: Vec<UVec2> = vec![];
+    let mut walls: Vec<UVec2> = vec![];
 
     // Start offset from the origin so we have a cute border
-    const BORDER: i32 = 2;
+    const BORDER: u32 = 0;
 
-    let mut coord = IVec2::new(BORDER, BORDER);
-    let mut dims = IVec2::zero();
+    let mut coord = UVec2::new(BORDER, BORDER);
+    let mut dims = UVec2::zero();
 
     for line in input.lines() {
         dims.x = dims.x.max(coord.x + BORDER);
@@ -52,24 +50,43 @@ fn main() {
         // We have two lines at the end of the input with no map data, so we get a +2 for free here
         dims.y = dims.y.max(coord.y);
     }
+    dims.y -= 2;
 
-    dbg!(dims);
+    let tile_size = 8;
+    dims *= 2 * tile_size;
 
-    let mut colored: Framebuffer<Rgba<u8>> =
-        Framebuffer::new_with_ranges_and(0..dims.x, 0..dims.y, |x, y| Rgba([0; 4]));
+    let tileset: RgbaImage = image::open(&args.tileset).unwrap().to_rgba8();
+    let ground_tile: RgbaImage = tileset.view(132, 176, tile_size, tile_size).to_image();
+    let wall_tile: RgbaImage = tileset
+        .view(339, 176, 2 * tile_size, 2 * tile_size)
+        .to_image();
+
+    let mut map = RgbaImage::new(dims.x, dims.y);
 
     for xy in ground {
-        colored[xy] = Rgba(0xA3_85_60_FF_u32.to_be_bytes());
+        let (x, y) = (2 * tile_size * xy).into();
+        map.copy_from(&ground_tile, x, y).unwrap();
+        map.copy_from(&ground_tile, x + tile_size, y).unwrap();
+        map.copy_from(&ground_tile, x, y + tile_size).unwrap();
+        map.copy_from(&ground_tile, x + tile_size, y + tile_size)
+            .unwrap();
     }
 
     for xy in walls {
-        colored[xy] = Rgba(0xF2_E8_6D_FF_u32.to_be_bytes());
+        let (x, y) = (2 * tile_size * xy).into();
+        map.copy_from(&wall_tile, x, y).unwrap();
     }
 
-    let image = colored.make_image(args.scale, |rgba| *rgba);
     let output = args
         .output
-        .unwrap_or_else(|| format!("day22-{}x{}.png", colored.width(), colored.height()));
+        .unwrap_or_else(|| format!("day22-{}x{}.png", map.width(), map.height()));
 
-    image.save(&output).unwrap();
+    if args.scale != 0 {
+        let w = map.width() * args.scale;
+        let h = map.height() * args.scale;
+        map = imageops::resize(&map, w, h, imageops::FilterType::Nearest);
+    }
+    map.save(&output).unwrap();
+
+    Ok(())
 }
