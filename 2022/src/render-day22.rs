@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ground_tile: RgbaImage = tileset.view(132, 176, tile_size, tile_size).to_image();
     let grass_tile: RgbaImage = tileset.view(148, 216, tile_size, tile_size).to_image();
     let wall_tile: RgbaImage = tileset
-        .view(339, 176, 2 * tile_size, 2 * tile_size)
+        .view(340, 176, 2 * tile_size, 2 * tile_size)
         .to_image();
 
     let mut map = RgbaImage::new(dims.x, dims.y);
