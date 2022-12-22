@@ -34,6 +34,7 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 itertools = "0.10"
 json = "0.12"
 lazy_static = "1"
+noise = "0.8.2"
 num = "0.4.0"
 pretty_assertions = "*"
 rand = "0.8"

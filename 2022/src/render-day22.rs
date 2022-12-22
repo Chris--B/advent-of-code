@@ -1,5 +1,7 @@
 use clap::Parser;
 use image::*;
+use noise::{NoiseFn, Perlin};
+use rand::prelude::*;
 use ultraviolet::UVec2;
 
 #[derive(Parser, Debug)]
@@ -17,6 +19,14 @@ struct Args {
 
     #[arg(short, long, default_value = "2", value_name = "pixel scale factor")]
     scale: u32,
+}
+
+fn pick_terrain(perlin: &Perlin, x: u32, y: u32) -> f64 {
+    let x = x as f64 / (2. * 23.);
+    let y = y as f64 / (2. * 23.);
+    let n = perlin.get([x, y]);
+
+    0.5 * (n + 1.)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -57,19 +67,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tileset: RgbaImage = image::open(&args.tileset).unwrap().to_rgba8();
     let ground_tile: RgbaImage = tileset.view(132, 176, tile_size, tile_size).to_image();
+    let grass_tile: RgbaImage = tileset.view(148, 216, tile_size, tile_size).to_image();
     let wall_tile: RgbaImage = tileset
         .view(339, 176, 2 * tile_size, 2 * tile_size)
         .to_image();
 
     let mut map = RgbaImage::new(dims.x, dims.y);
 
+    let perlin = Perlin::new(thread_rng().gen());
+
     for xy in ground {
         let (x, y) = (2 * tile_size * xy).into();
-        map.copy_from(&ground_tile, x, y).unwrap();
-        map.copy_from(&ground_tile, x + tile_size, y).unwrap();
-        map.copy_from(&ground_tile, x, y + tile_size).unwrap();
-        map.copy_from(&ground_tile, x + tile_size, y + tile_size)
-            .unwrap();
+
+        for (x, y) in [
+            (x, y),
+            (x + tile_size, y),
+            (x, y + tile_size),
+            (x + tile_size, y + tile_size),
+        ] {
+            let n = pick_terrain(&perlin, x, y);
+
+            let tile = if n < 0.5 { &grass_tile } else { &ground_tile };
+            map.copy_from(tile, x, y).unwrap();
+        }
     }
 
     for xy in walls {
