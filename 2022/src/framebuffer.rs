@@ -343,6 +343,20 @@ impl<T> IndexMut<IVec2> for Framebuffer<T> {
     }
 }
 
+impl<T> Index<&IVec2> for Framebuffer<T> {
+    type Output = T;
+
+    fn index(&self, idx: &IVec2) -> &Self::Output {
+        &self[(idx.x as isize, idx.y as isize)]
+    }
+}
+
+impl<T> IndexMut<&IVec2> for Framebuffer<T> {
+    fn index_mut(&mut self, idx: &IVec2) -> &mut Self::Output {
+        &mut self[(idx.x as isize, idx.y as isize)]
+    }
+}
+
 // The real index logic, using isize
 
 impl<T> Framebuffer<T> {
