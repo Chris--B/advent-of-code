@@ -189,11 +189,11 @@ pub fn part2(input: &str) -> i32 {
         [DIR_E, DIR_NE, DIR_SE],
     ];
 
-    let (min_x, max_x) = (-3, 10);
-    let (min_y, max_y) = (-3, 8);
-
     for round in 0.. {
         if cfg!(test) {
+            let (min_x, max_x) = (-3, 10);
+            let (min_y, max_y) = (-3, 8);
+
             println!();
             println!("=== Round {round} ====");
 
@@ -285,6 +285,27 @@ pub fn part2(input: &str) -> i32 {
         grid = next_grid;
 
         if n_moves == 0 {
+            if cfg!(debug_assertions) {
+                let (min_x, max_x) = grid
+                    .iter()
+                    .copied()
+                    .map(|v| v.x)
+                    .minmax()
+                    .into_option()
+                    .unwrap();
+
+                let (min_y, max_y) = grid
+                    .iter()
+                    .copied()
+                    .map(|v| v.y)
+                    .minmax()
+                    .into_option()
+                    .unwrap();
+
+                println!("x: {min_x}..{max_x} ({})", max_x - min_x);
+                println!("y: {min_y}..{max_y} ({})", max_y - min_y);
+            }
+
             return round + 1;
         }
     }
