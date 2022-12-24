@@ -328,21 +328,52 @@ fn parse_nohash(input: &str) -> Vec<IVec2> {
 }
 
 #[derive(Copy, Clone, Debug, Default)]
-struct PerElf {
-    round: u16,
-    moves: u8,
-    has_elf: bool,
-}
+struct PerElf(u16);
+
+const MASK_ROUND: u16 = 0b1111_1111_1111_0000;
+const MASK_HAS_ELF: u16 = 0b_1000;
+const MASK_MOVES: u16 = 0b_0111;
 
 impl PerElf {
+    fn new(round: u16) -> Self {
+        let mut s = Self(0);
+        s.set_round(round);
+
+        s
+    }
+
+    fn round(&self) -> u16 {
+        self.0 >> MASK_ROUND.trailing_zeros()
+    }
+
+    fn moves(&self) -> u16 {
+        self.0 & MASK_MOVES
+    }
+
     fn has_elf(&self, round: u16) -> bool {
-        if self.round != round {
-            // If the data is stale, there's no elf
+        if self.round() != round {
             false
         } else {
-            // Otherwise, it's up to date
-            self.has_elf
+            (self.0 & MASK_HAS_ELF) != 0
         }
+    }
+
+    fn set_round(&mut self, round: u16) {
+        self.0 |= round << MASK_ROUND.trailing_zeros();
+        debug_assert_eq!(self.round(), round);
+    }
+
+    fn inc_moves(&mut self) {
+        debug_assert!(self.moves() + 1 < (1 << MASK_MOVES.count_ones()));
+        self.0 += 1;
+    }
+
+    fn set_has_elf(&mut self) {
+        self.0 |= MASK_HAS_ELF;
+    }
+
+    fn clear_has_elf(&mut self) {
+        self.0 &= !MASK_HAS_ELF;
     }
 }
 
@@ -406,11 +437,8 @@ fn run_sim_nohash(elves: &mut Vec<IVec2>, stop_round: Option<u16>) -> i32 {
 
         // Reset our per elf state
         for elf in elves.iter() {
-            grid[*elf] = PerElf {
-                moves: 0,
-                round,
-                has_elf: true,
-            };
+            grid[*elf] = PerElf::new(round);
+            grid[*elf].set_has_elf();
         }
 
         // Each elf proposes a move to make
@@ -429,16 +457,12 @@ fn run_sim_nohash(elves: &mut Vec<IVec2>, stop_round: Option<u16>) -> i32 {
                     && !grid[elf + b].has_elf(round)
                     && !grid[elf + c].has_elf(round)
                 {
-                    if grid[elf + a].round != round {
+                    if grid[elf + a].round() != round {
                         // This data is stale! Reset it real quick
-                        grid[elf + a] = PerElf {
-                            moves: 0,
-                            round,
-                            has_elf: false,
-                        };
+                        grid[elf + a] = PerElf::new(round);
                     }
 
-                    if grid[elf + a].moves == 0 {
+                    if grid[elf + a].moves() == 0 {
                         // If we're the first here, we MIGHT move
                         // Note: We'll still have to check the move count before
                         // we can resolve this as a move.
@@ -446,7 +470,7 @@ fn run_sim_nohash(elves: &mut Vec<IVec2>, stop_round: Option<u16>) -> i32 {
                     }
 
                     // Propose this move.
-                    grid[elf + a].moves += 1;
+                    grid[elf + a].inc_moves();
 
                     // Because this move was valid, this elf won't look any further
                     continue 'elves;
@@ -464,14 +488,14 @@ fn run_sim_nohash(elves: &mut Vec<IVec2>, stop_round: Option<u16>) -> i32 {
 
             // Check that we're the only one moving to this spot. If we are, we'll execute the move.
             // Otherwise nothing happens here (and the elf stays put)
-            if grid[*elf + a].moves == 1 {
+            if grid[*elf + a].moves() == 1 {
                 // We were the only ones to propose here, so we get it!
                 elves_that_moved += 1;
 
-                debug_assert_eq!(grid[*elf].round, round);
-                grid[*elf].has_elf = false;
+                debug_assert_eq!(grid[*elf].round(), round);
+                grid[*elf].clear_has_elf();
                 *elf += a;
-                grid[*elf].has_elf = true;
+                grid[*elf].set_has_elf();
             }
         }
 
