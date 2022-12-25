@@ -1,9 +1,11 @@
 use crate::prelude::*;
 
-fn parse_snafu(s: &str) -> u64 {
+type Text = SmallString<[u8; 32]>;
+
+fn parse_snafu(bs: &[u8]) -> u64 {
     let mut n = 0;
 
-    for b in s.as_bytes() {
+    for b in bs {
         n *= 5;
 
         match *b {
@@ -19,8 +21,8 @@ fn parse_snafu(s: &str) -> u64 {
     n
 }
 
-fn to_snafu(mut n: u64) -> String {
-    let mut s = vec![];
+fn to_snafu(mut n: u64) -> Text {
+    let mut s: SmallVec<[u8; 32]> = smallvec![];
 
     // Parse like a normal base 5 number
     while n > 0 {
@@ -58,13 +60,17 @@ fn to_snafu(mut n: u64) -> String {
         s.remove(0);
     }
 
-    String::from_utf8(s).unwrap()
+    Text::from_str(std::str::from_utf8(&s).unwrap())
 }
 
 // Part1 ========================================================================
 #[aoc(day25, part1)]
-pub fn part1(input: &str) -> String {
-    let sum: u64 = input.lines().map(parse_snafu).sum();
+pub fn part1(input: &str) -> Text {
+    let sum: u64 = input
+        .as_bytes()
+        .split(|b| *b == b'\n')
+        .map(parse_snafu)
+        .sum();
 
     to_snafu(sum)
 }
@@ -123,6 +129,7 @@ mod test {
     #[case::check_314159265(314159265, "1121-1110-1=0")]
     #[trace]
     fn check_snafu_parse(#[case] num: u64, #[case] snafu: &str) {
+        let snafu = snafu.as_bytes();
         assert_eq!(parse_snafu(snafu), num);
     }
 
@@ -166,8 +173,8 @@ mod test {
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&str) -> String,
-        #[case] expected: String,
+        p: impl FnOnce(&str) -> Text,
+        #[case] expected: &str,
         #[case] input: &str,
     ) {
         let input = input.trim();
