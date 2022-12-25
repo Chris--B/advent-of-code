@@ -22,45 +22,24 @@ fn parse_snafu(bs: &[u8]) -> u64 {
 }
 
 fn to_snafu(mut n: u64) -> Text {
-    let mut s: SmallVec<[u8; 32]> = smallvec![];
+    let mut buf = [0; 32];
+    let mut i = buf.len() - 1;
 
-    // Parse like a normal base 5 number
     while n > 0 {
-        let rem = n % 5;
-        n /= 5;
-        s.push(rem as u8 + b'0');
+        buf[i] = b"012=-"[n as usize % 5];
+        i -= 1;
+        n = (n + 2) / 5;
     }
 
-    // Pad with a leading 0 so we can index blindly
-    s.push(b'0');
-    s.reverse();
-
-    // Snafu numbers don't have digits 3, 4, or 5 so map those to = and -, and increment one digit higher
-    for i in (1..s.len()).rev() {
-        match s[i] {
-            b'3' => {
-                s[i] = b'=';
-                s[i - 1] += 1;
-            }
-            b'4' => {
-                s[i] = b'-';
-                s[i - 1] += 1;
-            }
-            b'5' => {
-                s[i] = b'0';
-                s[i - 1] += 1;
-            }
-            b'=' | b'-' | b'0'..=b'2' => {}
-            _ => unreachable!("Unexpected digit: {}", s[i]),
-        }
+    if cfg!(debug_assertions) {
+        let s = std::str::from_utf8(&buf[i + 1..]).unwrap();
+        debug_assert!(
+            !s.contains('\0'),
+            "snafu string has '\0' but shouldn't:\n\ts =   {s:?}\n\tbuf = {buf:?}\n"
+        );
     }
 
-    // If that leading 0 is still there, cut it
-    if s[0] == b'0' {
-        s.remove(0);
-    }
-
-    Text::from_str(std::str::from_utf8(&s).unwrap())
+    unsafe { std::str::from_utf8_unchecked(&buf[i + 1..]).into() }
 }
 
 // Part1 ========================================================================
