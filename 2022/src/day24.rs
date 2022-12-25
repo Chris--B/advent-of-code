@@ -132,19 +132,23 @@ fn step(day: &mut Day24) {
 
 pub fn find_path(
     day: &Day24,
-    start: impl Into<IVec3>,
+    start: impl Into<IVec2>,
     end: impl Into<IVec2>,
-) -> HashMap<IVec3, i64> {
+    z_offset: i32,
+) -> HashMap<IVec3, i32> {
     let start = start.into();
     let end = end.into();
-    let mut dist_map = HashMap::new();
-    dist_map.insert(start, 0);
+
+    let mut dist_map: HashMap<IVec3, i32> = HashMap::new();
+    dist_map.insert(IVec3::new(start.x, start.y, 0), 0);
 
     let mut points_to_explore_from: Vec<IVec3> = Vec::new();
-    points_to_explore_from.push(start);
+    points_to_explore_from.push(IVec3::new(start.x, start.y, 0));
 
     while let Some(prev) = points_to_explore_from.pop() {
-        // println!("Exploring {prev:?} dist={}", dist_map[&prev]);
+        if cfg!(test) {
+            println!("Exploring {prev:?} dist={}", dist_map[&prev]);
+        }
 
         // Check in all directions for low distance paths
         for (i, dir) in [
@@ -165,7 +169,7 @@ pub fn find_path(
             let here = prev + dir;
 
             // If this direction puts us out of bounds, skip it
-            if (here != start)
+            if (here.xy() != start)
                 && (here.xy() != end)
                 && (here.x <= 0 || here.x >= day.max.x || here.y <= 0 || here.y >= day.max.y)
             {
@@ -177,7 +181,7 @@ pub fn find_path(
 
             // If we would land in a storm, we can't explore here
             if day
-                .storm_at(here.z)
+                .storm_at(here.z + z_offset)
                 .iter()
                 .map(|s| s.pos)
                 .contains(&here.xy())
@@ -201,7 +205,7 @@ pub fn find_path(
             // our new distance (which exists!) will win out.
             let new_dist = dist_map[&prev] + 1;
 
-            let here_dist = dist_map.entry(here).or_insert(i64::MAX);
+            let here_dist = dist_map.entry(here).or_insert(i32::MAX);
             let old_dist = *here_dist;
 
             // If we found a better way to get here, continue exploring!
@@ -217,7 +221,7 @@ pub fn find_path(
 
 // Part1 ========================================================================
 #[aoc(day24, part1)]
-pub fn part1(input: &str) -> i64 {
+pub fn part1(input: &str) -> i32 {
     let mut day = parse(input);
     println!("Tracking {} storms", day.storms.len());
 
@@ -230,7 +234,10 @@ pub fn part1(input: &str) -> i64 {
     }
     println!("[Note] Storms cycle every {} steps", day.all_storms.len());
 
-    let dist_map = find_path(&day, (1, 0, 0), (day.max.x - 1, day.max.y));
+    let start: IVec2 = (1, 0).into();
+    let end: IVec2 = (day.max.x - 1, day.max.y).into();
+
+    let dist_map = find_path(&day, start, end, 0);
 
     if cfg!(test) {
         for y in 0..=day.max.y {
@@ -265,14 +272,63 @@ pub fn part1(input: &str) -> i64 {
         })
         .min_by_key(|k| k.z)
         .unwrap()
-        .z as i64
+        .z
 }
 
 // Part2 ========================================================================
-// #[aoc(day24, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     unimplemented!();
-// }
+#[aoc(day24, part2)]
+pub fn part2(input: &str) -> i32 {
+    let mut day = parse(input);
+
+    while day.all_storms.is_empty() || day.all_storms[0] != day.storms {
+        day.all_storms.push(day.storms.clone());
+        step(&mut day);
+    }
+
+    let start: IVec2 = (1, 0).into();
+    let end: IVec2 = (day.max.x - 1, day.max.y).into();
+
+    // Map all the points from the start to the end once
+    let dist_map_1 = find_path(&day, start, end, 0);
+    let z_offset_1 = dist_map_1
+        .iter()
+        .filter_map(|(k, _v)| {
+            if k.x == day.max.x - 1 && k.y == day.max.y {
+                Some(k)
+            } else {
+                None
+            }
+        })
+        .min_by_key(|k| k.z)
+        .unwrap()
+        .z;
+
+    let dist_map_2 = find_path(&day, end, start, z_offset_1);
+    let z_offset_2 = dist_map_2
+        .iter()
+        .filter_map(|(k, _v)| if k.x == 1 && k.y == 0 { Some(k) } else { None })
+        .min_by_key(|k| k.z)
+        .unwrap()
+        .z;
+
+    let dist_map_3 = find_path(&day, start, end, z_offset_1 + z_offset_2);
+    let z_offset_3 = dist_map_3
+        .iter()
+        .filter_map(|(k, _v)| {
+            if k.x == day.max.x - 1 && k.y == day.max.y {
+                Some(k)
+            } else {
+                None
+            }
+        })
+        .min_by_key(|k| k.z)
+        .unwrap()
+        .z;
+
+    dbg!(z_offset_1, z_offset_2, z_offset_3);
+
+    z_offset_1 + z_offset_2 + z_offset_3
+}
 
 #[cfg(test)]
 mod test {
@@ -298,7 +354,6 @@ mod test {
 #>v.><>#
 #<^v^^>#
 ######.#
-
 ";
 
     #[rstest]
@@ -308,25 +363,25 @@ mod test {
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&str) -> i64,
-        #[case] expected: i64,
+        p: impl FnOnce(&str) -> i32,
+        #[case] expected: i32,
         #[case] input: &str,
     ) {
         let input = input.trim();
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(54, EXAMPLE_INPUT_COMPLEX)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i32,
+        #[case] expected: i32,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
