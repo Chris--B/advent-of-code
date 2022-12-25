@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug)]
 struct Storm {
     pos: IVec2,
     dir: IVec2,
@@ -15,19 +15,20 @@ impl Storm {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug)]
 pub struct Day24 {
+    #[allow(dead_code)]
     storms: Vec<Storm>,
-    all_storms: Vec<Vec<Storm>>,
+    all_storms: Vec<HashSet<IVec2>>,
 
     max: IVec2,
 }
 
 impl Day24 {
-    fn storm_at(&self, z: i32) -> &[Storm] {
+    fn is_storm_at(&self, pt: IVec2, z: i32) -> bool {
         debug_assert!(z >= 0);
         let z = z as usize % self.all_storms.len();
-        &self.all_storms[z]
+        self.all_storms[z].contains(&pt)
     }
 }
 
@@ -59,9 +60,29 @@ fn parse(s: &str) -> Day24 {
         y += 1;
     }
 
+    let mut all_storms = vec![];
+
+    // Storms are predictable so the dimensions dictate the cycle length
+    let cycle_len = num::integer::lcm(max.y - 1, max.x - 1);
+
+    for _ in 0..cycle_len {
+        let mut this_storm = HashSet::new();
+        for storm in &storms {
+            this_storm.insert(storm.pos);
+        }
+        all_storms.push(this_storm);
+
+        step(&mut storms, max);
+    }
+
+    if cfg!(test) {
+        println!("Tracking {} storms", storms.len());
+        println!("[Note] Storms cycle every {} steps", all_storms.len());
+    }
+
     Day24 {
         storms,
-        all_storms: vec![],
+        all_storms,
         max,
     }
 }
@@ -113,18 +134,18 @@ fn _print_storms(day: &Day24) {
     println!();
 }
 
-fn step(day: &mut Day24) {
-    for storm in &mut day.storms {
+fn step(storms: &mut [Storm], max: IVec2) {
+    for storm in storms {
         storm.pos += storm.dir;
 
         // Storms only move NSEW, so only one of these can ever happen per step
         if storm.pos.x == 0 {
-            storm.pos.x = day.max.x - 1;
-        } else if storm.pos.x == day.max.x {
+            storm.pos.x = max.x - 1;
+        } else if storm.pos.x == max.x {
             storm.pos.x = 1;
         } else if storm.pos.y == 0 {
-            storm.pos.y = day.max.y - 1;
-        } else if storm.pos.y == day.max.y {
+            storm.pos.y = max.y - 1;
+        } else if storm.pos.y == max.y {
             storm.pos.y = 1;
         }
     }
@@ -142,10 +163,10 @@ pub fn find_path(
     let mut dist_map: HashMap<IVec3, i32> = HashMap::new();
     dist_map.insert(IVec3::new(start.x, start.y, 0), 0);
 
-    let mut points_to_explore_from: Vec<IVec3> = Vec::new();
-    points_to_explore_from.push(IVec3::new(start.x, start.y, 0));
+    let mut points_to_explore_from = VecDeque::new();
+    points_to_explore_from.push_back(IVec3::new(start.x, start.y, 0));
 
-    while let Some(prev) = points_to_explore_from.pop() {
+    while let Some(prev) = points_to_explore_from.pop_front() {
         if cfg!(test) {
             println!("Exploring {prev:?} dist={}", dist_map[&prev]);
         }
@@ -180,12 +201,7 @@ pub fn find_path(
             }
 
             // If we would land in a storm, we can't explore here
-            if day
-                .storm_at(here.z + z_offset)
-                .iter()
-                .map(|s| s.pos)
-                .contains(&here.xy())
-            {
+            if day.is_storm_at(here.xy(), here.z + z_offset) {
                 if cfg!(test) {
                     println!("    [{i}/5] Can't explore {here:?} due to storms");
                 }
@@ -211,7 +227,7 @@ pub fn find_path(
             // If we found a better way to get here, continue exploring!
             if new_dist < old_dist {
                 *here_dist = new_dist;
-                points_to_explore_from.push(here);
+                points_to_explore_from.push_back(here);
             }
         }
     }
@@ -222,17 +238,7 @@ pub fn find_path(
 // Part1 ========================================================================
 #[aoc(day24, part1)]
 pub fn part1(input: &str) -> i32 {
-    let mut day = parse(input);
-    println!("Tracking {} storms", day.storms.len());
-
-    while day.all_storms.is_empty() || day.all_storms[0] != day.storms {
-        day.all_storms.push(day.storms.clone());
-        if cfg!(test) {
-            // _print_storms(&day);
-        }
-        step(&mut day);
-    }
-    println!("[Note] Storms cycle every {} steps", day.all_storms.len());
+    let day = parse(input);
 
     let start: IVec2 = (1, 0).into();
     let end: IVec2 = (day.max.x - 1, day.max.y).into();
@@ -278,12 +284,7 @@ pub fn part1(input: &str) -> i32 {
 // Part2 ========================================================================
 #[aoc(day24, part2)]
 pub fn part2(input: &str) -> i32 {
-    let mut day = parse(input);
-
-    while day.all_storms.is_empty() || day.all_storms[0] != day.storms {
-        day.all_storms.push(day.storms.clone());
-        step(&mut day);
-    }
+    let day = parse(input);
 
     let start: IVec2 = (1, 0).into();
     let end: IVec2 = (day.max.x - 1, day.max.y).into();
@@ -324,8 +325,6 @@ pub fn part2(input: &str) -> i32 {
         .min_by_key(|k| k.z)
         .unwrap()
         .z;
-
-    dbg!(z_offset_1, z_offset_2, z_offset_3);
 
     z_offset_1 + z_offset_2 + z_offset_3
 }
