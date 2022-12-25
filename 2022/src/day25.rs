@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 type Text = SmallString<[u8; 32]>;
 
-fn parse_snafu(bs: &[u8]) -> u64 {
+fn parse_snafu(bs: &[u8]) -> i64 {
     let mut n = 0;
 
     for b in bs {
@@ -21,7 +21,31 @@ fn parse_snafu(bs: &[u8]) -> u64 {
     n
 }
 
-fn to_snafu(mut n: u64) -> Text {
+const fn make_snafu_lut() -> [i8; 256] {
+    let mut lut = [0; 256];
+
+    lut[b'2' as usize] = 2;
+    lut[b'1' as usize] = 1;
+    lut[b'0' as usize] = 0;
+    lut[b'-' as usize] = -1;
+    lut[b'=' as usize] = -2;
+
+    lut
+}
+
+fn parse_snafu_lut(bs: &[u8]) -> i64 {
+    const LUT: [i8; 256] = make_snafu_lut();
+    let mut n: i64 = 0;
+
+    for b in bs.iter().copied() {
+        n *= 5;
+        n += LUT[b as usize] as i64;
+    }
+
+    n
+}
+
+fn to_snafu(mut n: i64) -> Text {
     let mut buf = [0; 32];
     let mut i = buf.len() - 1;
 
@@ -45,10 +69,21 @@ fn to_snafu(mut n: u64) -> Text {
 // Part1 ========================================================================
 #[aoc(day25, part1)]
 pub fn part1(input: &str) -> Text {
-    let sum: u64 = input
+    let sum: i64 = input
         .as_bytes()
         .split(|b| *b == b'\n')
         .map(parse_snafu)
+        .sum();
+
+    to_snafu(sum)
+}
+
+#[aoc(day25, part1, parsing_lut)]
+pub fn part1_parsing_lut(input: &str) -> Text {
+    let sum: i64 = input
+        .as_bytes()
+        .split(|b| *b == b'\n')
+        .map(parse_snafu_lut)
         .sum();
 
     to_snafu(sum)
@@ -107,7 +142,7 @@ mod test {
     #[case::check_12345(12345, "1-0---0")]
     #[case::check_314159265(314159265, "1121-1110-1=0")]
     #[trace]
-    fn check_snafu_parse(#[case] num: u64, #[case] snafu: &str) {
+    fn check_snafu_parse(#[case] num: i64, #[case] snafu: &str) {
         let snafu = snafu.as_bytes();
         assert_eq!(parse_snafu(snafu), num);
     }
@@ -142,7 +177,7 @@ mod test {
     #[case::check_12345(12345, "1-0---0")]
     #[case::check_314159265(314159265, "1121-1110-1=0")]
     #[trace]
-    fn check_to_snafu(#[case] num: u64, #[case] snafu: &str) {
+    fn check_to_snafu(#[case] num: i64, #[case] snafu: &str) {
         assert_eq!(to_snafu(num), snafu);
     }
 
@@ -151,7 +186,7 @@ mod test {
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_parsing_lut)]
         p: impl FnOnce(&str) -> Text,
         #[case] expected: &str,
         #[case] input: &str,
