@@ -16,10 +16,19 @@ impl Storm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct Day24 {
+pub struct Day24 {
     storms: Vec<Storm>,
+    all_storms: Vec<Vec<Storm>>,
 
     max: IVec2,
+}
+
+impl Day24 {
+    fn storm_at(&self, z: i32) -> &[Storm] {
+        debug_assert!(z >= 0);
+        let z = z as usize % self.all_storms.len();
+        &self.all_storms[z]
+    }
 }
 
 fn parse(s: &str) -> Day24 {
@@ -50,10 +59,14 @@ fn parse(s: &str) -> Day24 {
         y += 1;
     }
 
-    Day24 { storms, max }
+    Day24 {
+        storms,
+        all_storms: vec![],
+        max,
+    }
 }
 
-fn print_storms(day: &Day24) {
+fn _print_storms(day: &Day24) {
     for x in 0..=day.max.x {
         if x != 1 {
             print!("#");
@@ -117,25 +130,142 @@ fn step(day: &mut Day24) {
     }
 }
 
+pub fn find_path(
+    day: &Day24,
+    start: impl Into<IVec3>,
+    end: impl Into<IVec2>,
+) -> HashMap<IVec3, i64> {
+    let start = start.into();
+    let end = end.into();
+    let mut dist_map = HashMap::new();
+    dist_map.insert(start, 0);
+
+    let mut points_to_explore_from: Vec<IVec3> = Vec::new();
+    points_to_explore_from.push(start);
+
+    while let Some(prev) = points_to_explore_from.pop() {
+        // println!("Exploring {prev:?} dist={}", dist_map[&prev]);
+
+        // Check in all directions for low distance paths
+        for (i, dir) in [
+            // East or West
+            (1, 0, 1),
+            (-1, 0, 1),
+            // North or South
+            (0, -1, 1),
+            (0, 1, 1),
+            // Wait in place
+            (0, 0, 1),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let i = i + 1;
+            let dir: IVec3 = dir.into();
+            let here = prev + dir;
+
+            // If this direction puts us out of bounds, skip it
+            if (here != start)
+                && (here.xy() != end)
+                && (here.x <= 0 || here.x >= day.max.x || here.y <= 0 || here.y >= day.max.y)
+            {
+                if cfg!(test) {
+                    println!("    [{i}/5] Can't explore {here:?} due to walls");
+                }
+                continue;
+            }
+
+            // If we would land in a storm, we can't explore here
+            if day
+                .storm_at(here.z)
+                .iter()
+                .map(|s| s.pos)
+                .contains(&here.xy())
+            {
+                if cfg!(test) {
+                    println!("    [{i}/5] Can't explore {here:?} due to storms");
+                }
+                continue;
+            }
+
+            // TODO: Improve this
+            if here.z as usize > (5 * day.all_storms.len()) {
+                if cfg!(test) {
+                    println!("    [{i}/5] Giving up waiting at {here:?} since it's been too long");
+                }
+                continue;
+            }
+
+            // Distance the last path took to get here.
+            // If no one has been here, we'll use a huge distance value and
+            // our new distance (which exists!) will win out.
+            let new_dist = dist_map[&prev] + 1;
+
+            let here_dist = dist_map.entry(here).or_insert(i64::MAX);
+            let old_dist = *here_dist;
+
+            // If we found a better way to get here, continue exploring!
+            if new_dist < old_dist {
+                *here_dist = new_dist;
+                points_to_explore_from.push(here);
+            }
+        }
+    }
+
+    dist_map
+}
+
 // Part1 ========================================================================
 #[aoc(day24, part1)]
 pub fn part1(input: &str) -> i64 {
     let mut day = parse(input);
     println!("Tracking {} storms", day.storms.len());
 
-    let mut states = vec![];
-    while states.is_empty() || states[0] != day.storms {
-        states.push(day.storms.clone());
+    while day.all_storms.is_empty() || day.all_storms[0] != day.storms {
+        day.all_storms.push(day.storms.clone());
         if cfg!(test) {
-            print_storms(&day);
+            // _print_storms(&day);
         }
         step(&mut day);
     }
-    println!("[Note] Storms cycle every {} steps", states.len());
+    println!("[Note] Storms cycle every {} steps", day.all_storms.len());
 
-    // TODO: 3d search over x, y, and states
+    let dist_map = find_path(&day, (1, 0, 0), (day.max.x - 1, day.max.y));
 
-    0
+    if cfg!(test) {
+        for y in 0..=day.max.y {
+            print!("#");
+            for x in 1..day.max.x {
+                let here = IVec2::new(x, y);
+
+                if dist_map.keys().filter(|xyz| xyz.xy() == here).count() > 1 {
+                    print!("@");
+                } else {
+                    print!(".");
+                }
+            }
+            println!("#");
+        }
+        println!();
+    }
+
+    dist_map
+        .iter()
+        .filter_map(|(k, _v)| {
+            if k.x == day.max.x - 1 && k.y == day.max.y {
+                Some(k)
+            } else {
+                None
+            }
+        })
+        .inspect(|k| {
+            if cfg!(test) {
+                println!("{k:?}");
+            }
+        })
+        .min_by_key(|k| k.z)
+        .unwrap()
+        .z as i64
 }
 
 // Part2 ========================================================================
@@ -151,7 +281,7 @@ mod test {
     use pretty_assertions::{assert_eq, assert_ne};
     use rstest::*;
 
-    const EXAMPLE_INPUT_TINY: &str = r"
+    const _EXAMPLE_INPUT_TINY: &str = r"
 #.#####
 #.....#
 #>....#
@@ -173,7 +303,7 @@ mod test {
 
     #[rstest]
     #[case::given(18, EXAMPLE_INPUT_COMPLEX)]
-    #[case::given_tiny(-1, EXAMPLE_INPUT_TINY)] // No answer given, using for testing
+    #[case::given_tiny(10, _EXAMPLE_INPUT_TINY)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
