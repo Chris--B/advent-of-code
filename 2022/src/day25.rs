@@ -33,8 +33,9 @@ const fn make_snafu_lut() -> [i8; 256] {
     lut
 }
 
+const LUT: [i8; 256] = make_snafu_lut();
+
 fn parse_snafu_lut(bs: &[u8]) -> i64 {
-    const LUT: [i8; 256] = make_snafu_lut();
     let mut n: i64 = 0;
 
     for b in bs.iter().copied() {
@@ -78,13 +79,32 @@ pub fn part1(input: &str) -> Text {
     to_snafu(sum)
 }
 
-#[aoc(day25, part1, parsing_lut)]
-pub fn part1_parsing_lut(input: &str) -> Text {
+#[aoc(day25, part1, parse_lut)]
+pub fn part1_parse_lut(input: &str) -> Text {
     let sum: i64 = input
         .as_bytes()
         .split(|b| *b == b'\n')
         .map(parse_snafu_lut)
         .sum();
+
+    to_snafu(sum)
+}
+
+#[aoc(day25, part1, no_parse)]
+pub fn part1_no_parse(input: &str) -> Text {
+    let mut digits = [0; 20];
+    for line in input.as_bytes().split(|b| *b == b'\n') {
+        for (i, b) in line.iter().copied().rev().enumerate() {
+            digits[i] += LUT[b as usize] as i64;
+        }
+    }
+
+    let mut sum = 0;
+    let mut n: i64 = 1;
+    for d in digits.iter().copied() {
+        sum += d * n;
+        n *= 5;
+    }
 
     to_snafu(sum)
 }
@@ -183,10 +203,11 @@ mod test {
 
     #[rstest]
     #[case::given("2=-1=0", EXAMPLE_INPUT)]
+    #[case::check_longest_snafu("10=0==00=1==0--=1000", "10=0==00=1==0--=1000")]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_parsing_lut)]
+        #[values(part1, part1_parse_lut, part1_no_parse)]
         p: impl FnOnce(&str) -> Text,
         #[case] expected: &str,
         #[case] input: &str,
