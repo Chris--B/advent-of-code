@@ -90,18 +90,27 @@ pub fn part1_parse_lut(input: &str) -> Text {
     to_snafu(sum)
 }
 
-#[aoc(day25, part1, no_parse)]
-pub fn part1_no_parse(input: &str) -> Text {
+#[aoc(day25, part1, by_digits)]
+pub fn part1_by_digits(input: &str) -> Text {
     let mut digits = [0; 20];
-    for line in input.as_bytes().split(|b| *b == b'\n') {
-        for (i, b) in line.iter().copied().rev().enumerate() {
-            digits[i] += LUT[b as usize] as i64;
+
+    // Walk backwards so we can read each line as a Little Endian number.
+    // This lets us avoid jumping forward and back in the input to figure out
+    // line lengths.
+    let mut i = 0;
+    for &b in input.as_bytes().iter().rev() {
+        if b == b'\n' {
+            i = 0;
+            continue;
         }
+
+        digits[i] += LUT[b as usize] as i64;
+        i += 1;
     }
 
     let mut sum = 0;
     let mut n: i64 = 1;
-    for d in digits.iter().copied() {
+    for d in digits {
         sum += d * n;
         n *= 5;
     }
@@ -207,7 +216,7 @@ mod test {
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_parse_lut, part1_no_parse)]
+        #[values(part1, part1_parse_lut, part1_by_digits)]
         p: impl FnOnce(&str) -> Text,
         #[case] expected: &str,
         #[case] input: &str,
