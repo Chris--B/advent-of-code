@@ -15,20 +15,24 @@ impl Default for Tile {
     }
 }
 
-fn do_steps(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps: u32) {
+const CUBE_SIDE: i32 = if cfg!(test) { 4 } else { 50 };
+const START_X: i32 = if cfg!(test) { 2 * CUBE_SIDE } else { 50 };
+
+// Part1 ========================================================================
+fn do_steps_p1(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps: u32) {
     for _ in 0..steps {
         let mut next = *here + dir;
-        match resolve_step(grid, &mut next, dir) {
+        match resolve_step_p1(grid, &mut next, dir) {
             Wall => {}
             Ground => *here = next,
 
-            Void => unreachable!("resolve_step() resolved to Void, which shouldn't happen"),
+            Void => unreachable!("resolve_step_p1() resolved to Void, which shouldn't happen"),
         }
         debug_assert_eq!(grid[*here], Ground);
     }
 
     // Step once and figure out what kind of tile is there
-    fn resolve_step(grid: &Framebuffer<Tile>, point: &mut IVec2, dir: IVec2) -> Tile {
+    fn resolve_step_p1(grid: &Framebuffer<Tile>, point: &mut IVec2, dir: IVec2) -> Tile {
         // println!("Resolving {point:?} moving {dir:?}");
         match grid[*point] {
             Wall => Wall,
@@ -41,7 +45,7 @@ fn do_steps(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps: u
                 // And walk backwards until we find Void again
                 while grid[*point] != Void {
                     // and then use 1 step forward from there.
-                    *point -= dir;
+                    *point -= CUBE_SIDE * dir;
                 }
                 *point += dir;
 
@@ -52,7 +56,6 @@ fn do_steps(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps: u
     }
 }
 
-// Part1 ========================================================================
 #[aoc(day22, part1)]
 pub fn part1(input: &str) -> i64 {
     let moves: &[u8] = input.lines().last().unwrap().as_bytes();
@@ -78,7 +81,7 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
-    let mut here = IVec2::new(if cfg!(test) { 8 } else { 50 }, 1);
+    let mut here = IVec2::new(START_X, 1);
     let mut dir = IVec2::new(1, 0);
 
     for (is_digit, mut group) in &moves.iter().group_by(|b| b.is_ascii_digit()) {
@@ -86,7 +89,7 @@ pub fn part1(input: &str) -> i64 {
             let steps = group
                 .copied()
                 .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
-            do_steps(&mut grid, &mut here, dir, steps);
+            do_steps_p1(&mut grid, &mut here, dir, steps);
         } else {
             let rot = *group.next().unwrap() as char;
 
@@ -122,10 +125,110 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-// #[aoc(day22, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     unimplemented!();
-// }
+fn do_steps_p2(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps: u32) {
+    for _ in 0..steps {
+        let mut next = *here + dir;
+        match resolve_step_p2(grid, &mut next, dir) {
+            Wall => {}
+            Ground => *here = next,
+
+            Void => unreachable!("resolve_step_p2() resolved to Void, which shouldn't happen"),
+        }
+        debug_assert_eq!(grid[*here], Ground);
+    }
+
+    // Step once and figure out what kind of tile is there
+    fn resolve_step_p2(grid: &Framebuffer<Tile>, point: &mut IVec2, dir: IVec2) -> Tile {
+        // println!("Resolving {point:?} moving {dir:?}");
+        match grid[*point] {
+            Wall => Wall,
+            Ground => Ground,
+            Void => {
+                // println!("Found Void at {point:?}");
+                // We're currently already on Void, so step backwards once
+                *point -= dir;
+
+                // And walk backwards until we find Void again
+                while grid[*point] != Void {
+                    // and then use 1 step forward from there.
+                    *point -= CUBE_SIDE * dir;
+                }
+                *point += dir;
+
+                debug_assert_ne!(grid[*point], Void);
+                grid[*point]
+            }
+        }
+    }
+}
+
+#[aoc(day22, part2)]
+pub fn part2(input: &str) -> i64 {
+    let moves: &[u8] = input.lines().last().unwrap().as_bytes();
+    let map_lines = input.lines().take_while(|l| !l.is_empty());
+
+    // Rows & columns start from 1
+    let max_x = 1 + map_lines.clone().map(|l| l.len()).max().unwrap_or_default() as i32;
+    let max_y = 1 + map_lines.clone().count() as i32;
+
+    let mut grid: Framebuffer<Tile> = Framebuffer::new_with_ranges(1..max_x, 1..max_y);
+    grid.set_border_color(Some(Void));
+
+    for (y, line) in map_lines.enumerate() {
+        let y = y + 1;
+        for (x, &b) in line.as_bytes().iter().enumerate() {
+            let x = x + 1;
+
+            if b == b'#' {
+                grid[(x, y)] = Wall;
+            } else if b == b'.' {
+                grid[(x, y)] = Ground;
+            }
+        }
+    }
+
+    let mut here = IVec2::new(START_X, 1);
+    let mut dir = IVec2::new(1, 0);
+
+    for (is_digit, mut group) in &moves.iter().group_by(|b| b.is_ascii_digit()) {
+        if is_digit {
+            let steps = group
+                .copied()
+                .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
+            do_steps_p2(&mut grid, &mut here, dir, steps);
+        } else {
+            let rot = *group.next().unwrap() as char;
+
+            if rot == 'R' {
+                dir.y = -dir.y;
+                std::mem::swap(&mut dir.x, &mut dir.y);
+            } else {
+                dir.x = -dir.x;
+                std::mem::swap(&mut dir.x, &mut dir.y);
+            }
+
+            debug_assert_ne!(dir, IVec2::zero());
+            debug_assert_eq!(group.next(), None);
+        }
+    }
+
+    let row = here.y as i64;
+    let col = here.x as i64;
+    let facing = match dir.as_array() {
+        [1, 0] => 0,
+        [0, 1] => 1,
+        [-1, 0] => 2,
+        [0, -1] => 3,
+        _ => unreachable!("??? {dir:?}"),
+    };
+    let password = 1_000 * row + 4 * col + facing;
+
+    if cfg!(test) {
+        println!("row={row}, col={col}, facing={facing}, password={password}");
+    }
+
+    password
+}
 
 #[cfg(test)]
 mod test {
@@ -162,17 +265,16 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(5031, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        assert_eq!(p(input), expected);
+    }
 }
