@@ -9,8 +9,7 @@
 _*
 
 # Visualizations
-*.png
-*.gif
+**/viz/
 
 # Perf/Debug trace files
 *.trace

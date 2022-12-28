@@ -21,14 +21,6 @@ struct Args {
     scale: u32,
 }
 
-fn pick_terrain(perlin: &Perlin, x: u32, y: u32) -> f64 {
-    let x = x as f64 / (2. * 23.);
-    let y = y as f64 / (2. * 23.);
-    let n = perlin.get([x, y]);
-
-    0.5 * (n + 1.)
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let input = std::fs::read_to_string(&args.input).unwrap();
@@ -97,16 +89,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         map.copy_from(&wall_tile, x, y).unwrap();
     }
 
-    let output = args
+    let output_dir = args
         .output
-        .unwrap_or_else(|| format!("day22-{}x{}.png", map.width(), map.height()));
+        .unwrap_or_else(|| format!("viz/day22-{}x{}", map.width(), map.height()));
+
+    create_dir(&output_dir).unwrap();
 
     if args.scale != 0 {
         let w = map.width() * args.scale;
         let h = map.height() * args.scale;
         map = imageops::resize(&map, w, h, imageops::FilterType::Nearest);
     }
-    map.save(&output).unwrap();
+    map.save(format!("{output_dir}/map.png")).unwrap();
+
+    let is_example_input = {
+        const EXAMPLE_INPUT_LINE_COUNT: usize = 14;
+        input.lines().count() == EXAMPLE_INPUT_LINE_COUNT
+    };
+
+    let obj = if is_example_input {
+        include_str!("../models/cube-example.obj")
+    } else {
+        // include_str!("../models/cube.obj")
+        todo!()
+    };
+    let mtl = include_str!("../models/cube.mtl");
+
+    std::fs::write(format!("{output_dir}/map.obj"), obj).unwrap();
+    std::fs::write(format!("{output_dir}/map.mtl"), mtl).unwrap();
 
     Ok(())
+}
+
+fn pick_terrain(perlin: &Perlin, x: u32, y: u32) -> f64 {
+    let x = x as f64 / (2. * 23.);
+    let y = y as f64 / (2. * 23.);
+    let n = perlin.get([x, y]);
+
+    0.5 * (n + 1.)
+}
+
+/// Creates a directory, but returns Ok(()) if it already exists
+fn create_dir<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<()> {
+    use std::io::ErrorKind;
+
+    match std::fs::create_dir(path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == ErrorKind::AlreadyExists => Ok(()),
+        Err(e) => Err(e),
+    }
 }
