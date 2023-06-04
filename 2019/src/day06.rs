@@ -1,6 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
-use smallvec;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -23,7 +22,6 @@ impl OrbitPair {
 #[aoc_generator(day6)]
 pub fn parse(input: &str) -> Vec<OrbitPair> {
     input
-        .trim()
         .split_whitespace()
         .map(|line| {
             let mut iter = line.trim().split(')');

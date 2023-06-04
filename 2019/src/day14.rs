@@ -45,7 +45,7 @@ impl PartialEq for Reactant {
 // Extract a material's name, for debugging
 #[allow(dead_code)]
 fn material_name(mat: &Material) -> &str {
-    std::str::from_utf8(&mat).expect("bad string")
+    std::str::from_utf8(mat).expect("bad string")
 }
 
 // Create a new material from a string literal

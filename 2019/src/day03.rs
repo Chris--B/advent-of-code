@@ -44,7 +44,7 @@ impl Wire {
         assert!(self.set.contains(&p));
         for (i, q) in self.list.iter().enumerate() {
             if p == *q {
-                return i as usize + 1; // 1-indexed result
+                return i + 1; // 1-indexed result
             }
         }
 
@@ -86,7 +86,7 @@ fn parse_line(line: &str) -> Wire {
     let mut p = Point::xy(0, 0);
 
     for turn in line.split(',') {
-        let dir = turn.chars().nth(0).unwrap();
+        let dir = turn.chars().next().unwrap();
         let dist: i64 = turn[1..].parse().unwrap();
         assert!(dist != 0);
 

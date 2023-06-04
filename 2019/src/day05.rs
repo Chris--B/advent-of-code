@@ -96,16 +96,16 @@ pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
 
         match op.code {
             OP_ADD => {
-                let ra = load_param(&mem, op.pm_arg0, mem[ip + 1]);
-                let rb = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+                let ra = load_param(mem, op.pm_arg0, mem[ip + 1]);
+                let rb = load_param(mem, op.pm_arg1, mem[ip + 2]);
 
                 write_param(mem, PM_POS, mem[ip + 3], ra + rb);
 
                 ip += 4;
             }
             OP_MUL => {
-                let ra = load_param(&mem, op.pm_arg0, mem[ip + 1]);
-                let rb = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+                let ra = load_param(mem, op.pm_arg0, mem[ip + 1]);
+                let rb = load_param(mem, op.pm_arg1, mem[ip + 2]);
 
                 write_param(mem, PM_POS, mem[ip + 3], ra * rb);
 
@@ -123,7 +123,7 @@ pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
             }
             OP_OUT => {
                 // Read from memoery
-                let value = load_param(&mem, op.pm_arg0, mem[ip + 1]);
+                let value = load_param(mem, op.pm_arg0, mem[ip + 1]);
 
                 // Write to output
                 output.push(value);
@@ -131,8 +131,8 @@ pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
                 ip += 2;
             }
             OP_JN => {
-                let pred = load_param(&mem, op.pm_arg0, mem[ip + 1]);
-                let addr = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+                let pred = load_param(mem, op.pm_arg0, mem[ip + 1]);
+                let addr = load_param(mem, op.pm_arg1, mem[ip + 2]);
 
                 if pred != 0 {
                     assert!(addr > 0);
@@ -142,8 +142,8 @@ pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
                 }
             }
             OP_JZ => {
-                let pred = load_param(&mem, op.pm_arg0, mem[ip + 1]);
-                let addr = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+                let pred = load_param(mem, op.pm_arg0, mem[ip + 1]);
+                let addr = load_param(mem, op.pm_arg1, mem[ip + 2]);
 
                 if pred == 0 {
                     assert!(addr > 0);
@@ -153,8 +153,8 @@ pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
                 }
             }
             OP_LT => {
-                let ra = load_param(&mem, op.pm_arg0, mem[ip + 1]);
-                let rb = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+                let ra = load_param(mem, op.pm_arg0, mem[ip + 1]);
+                let rb = load_param(mem, op.pm_arg1, mem[ip + 2]);
 
                 let value = if ra < rb { 1 } else { 0 };
                 write_param(mem, PM_POS, mem[ip + 3], value);
@@ -162,8 +162,8 @@ pub fn run_intcode(mem: &mut [i64], input: &[i64], output: &mut Vec<i64>) {
                 ip += 4;
             }
             OP_EQ => {
-                let ra = load_param(&mem, op.pm_arg0, mem[ip + 1]);
-                let rb = load_param(&mem, op.pm_arg1, mem[ip + 2]);
+                let ra = load_param(mem, op.pm_arg0, mem[ip + 1]);
+                let rb = load_param(mem, op.pm_arg1, mem[ip + 2]);
 
                 let value = if ra == rb { 1 } else { 0 };
                 write_param(mem, PM_POS, mem[ip + 3], value);
@@ -203,7 +203,7 @@ pub fn p1_simple(intcode: &Vec<i64>) -> i64 {
 #[aoc(day5, part1, new_vm)]
 #[allow(clippy::ptr_arg)]
 pub fn p1_newvm(intcode: &Vec<i64>) -> i64 {
-    let mut vm = Vm::with_memory_from_slice(&intcode);
+    let mut vm = Vm::with_memory_from_slice(intcode);
     vm.add_input(INPUT_CODE_AC);
 
     let why = vm.run();
@@ -247,7 +247,7 @@ pub fn p2_simple(intcode: &Vec<i64>) -> i64 {
 #[aoc(day5, part2, new_vm)]
 #[allow(clippy::ptr_arg)]
 pub fn p2_newvm(intcode: &Vec<i64>) -> i64 {
-    let mut vm = Vm::with_memory_from_slice(&intcode);
+    let mut vm = Vm::with_memory_from_slice(intcode);
     vm.add_input(INPUT_CODE_TRC);
 
     let why = vm.run();

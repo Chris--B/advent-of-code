@@ -3,7 +3,7 @@ use aoc_runner_derive::{aoc, aoc_generator};
 use smallvec::SmallVec;
 use std::cmp::{Ord, Ordering};
 
-#[derive(Clone, Debug, Eq, Ord)]
+#[derive(Clone, Debug, Eq)]
 struct WipPassword {
     pwd: SmallVec<[u8; 6]>,
     has_double: bool,
@@ -70,6 +70,15 @@ impl PartialOrd for WipPassword {
         // This way, a password of "2" >= "234567", which is how the puzzle works.
         let len = usize::min(self.pwd.len(), other.pwd.len());
         self.pwd[..len].partial_cmp(&other.pwd[..len])
+    }
+}
+
+impl Ord for WipPassword {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // When the two passwords are not equal length, we want to do a prefix compare
+        // This way, a password of "2" >= "234567", which is how the puzzle works.
+        let len = usize::min(self.pwd.len(), other.pwd.len());
+        self.pwd[..len].cmp(&other.pwd[..len])
     }
 }
 
@@ -167,19 +176,22 @@ fn has_double_run(bytes: &[u8]) -> bool {
 #[cfg(test)]
 #[test]
 fn check_double_runs_0() {
-    assert_eq!(has_double_run(&[1, 1, 2, 2, 3, 3]), true);
+    // has double run
+    assert!(has_double_run(&[1, 1, 2, 2, 3, 3]));
 }
 
 #[cfg(test)]
 #[test]
 fn check_double_runs_1() {
-    assert_eq!(has_double_run(&[1, 2, 3, 4, 4, 4]), false);
+    // does NOT have double run
+    assert!(!has_double_run(&[1, 2, 3, 4, 4, 4]));
 }
 
 #[cfg(test)]
 #[test]
 fn check_double_runs_2() {
-    assert_eq!(has_double_run(&[1, 1, 1, 1, 2, 2]), true);
+    // has double run
+    assert!(has_double_run(&[1, 1, 1, 1, 2, 2]));
 }
 
 #[aoc(day4, part2)]

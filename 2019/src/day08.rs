@@ -42,7 +42,7 @@ pub fn part1(input: &[u32]) -> u32 {
 
     let counts = input
         .chunks_exact(IMAGE_HEIGHT * IMAGE_WIDTH)
-        .map(|layer| count_digits(layer))
+        .map(count_digits)
         .min_by_key(|counts| counts[0])
         .unwrap();
 
