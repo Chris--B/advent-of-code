@@ -112,16 +112,14 @@ impl Vm {
     ///
     /// The vm will begin executing int code at index 0
     pub fn with_memory_from_slice(mem: &[Atom]) -> Vm {
-        let mem: Vec<Atom> = mem.iter().copied().collect();
-        Vm::with_memory(mem)
+        Vm::with_memory(mem.to_vec())
     }
 
     /// Construct a new Vm with initial memory
     ///
     /// The vm will begin executing int code at index 0
     pub fn from_code(intcode: &[Atom]) -> Vm {
-        let mem: Vec<Atom> = intcode.iter().copied().collect();
-        Vm::with_memory(mem)
+        Vm::with_memory(intcode.to_vec())
     }
 
     /// Construct a new Vm with initial memory
@@ -157,29 +155,14 @@ impl Vm {
     ///
     /// Prefer this over creating and dropping instances in a loop
     pub fn reset(&mut self, new_mem: &[Atom]) {
-        // Re-initialize internal states
         self.ip = 0;
         self.ticks = 0;
-        self.mem.clear();
+
         self.input_buffer.clear();
         self.output_buffer.clear();
 
-        if self.mem.len() < new_mem.len() {
-            // We need to resize `self.mem` so that it exactly matches the size of `new_mem`,
-            // but `Vec::resize()` wastes cycles by inserting some value.
-            // We immediately overwrite that value, and benchmarks show the compiler doesn't catch that.
-            // Therefore, we reserve any additional space we need and and force the length to match
-            // This is generally `unsafe`, but we know that it's safe in this intance.
-            unsafe {
-                // TODO: Overflow guards!
-                let additional =
-                    Atom::saturating_sub(new_mem.len() as Atom, self.mem.capacity() as Atom);
-                self.mem.reserve(additional as usize);
-                self.mem.set_len(new_mem.len());
-            }
-        }
-
-        self.mem[..new_mem.len()].copy_from_slice(new_mem);
+        self.mem.clear();
+        self.mem.extend_from_slice(new_mem);
     }
 
     /// Retrieve the current instruction pointer
@@ -568,6 +551,22 @@ impl fmt::Debug for Vm {
 }
 
 #[cfg(test)]
+mod t {
+    use super::*;
+
+    #[test]
+    fn check_vm_reset() {
+        let mem = vec![1, 0, 0, 0, 99];
+        let mut vm = Vm::with_memory_from_slice(&mem);
+        assert_eq!(vm.mem(), [1, 0, 0, 0, 99]);
+
+        let new_mem = vec![1, 1, 1, 4, 99, 5, 6, 0, 99];
+        vm.reset(&new_mem);
+        assert_eq!(vm.mem(), [1, 1, 1, 4, 99, 5, 6, 0, 99]);
+    }
+}
+
+#[cfg(test)]
 mod day_02 {
     use super::*;
 
@@ -618,7 +617,7 @@ mod day_02 {
         );
 
         intcode[1] = 12;
-        intcode[2] = 02;
+        intcode[2] = 2;
 
         let mut vm = Vm::with_memory(intcode);
         assert_eq!(
