@@ -18,7 +18,7 @@ impl GroupYesCounts {
     fn add_persons_answers(&mut self, s: &str) {
         self.1 += 1;
         for c in s.chars() {
-            assert!(('a'..='z').contains(&c));
+            debug_assert!(c.is_ascii_lowercase());
             let i = (c as u8 - b'a') as usize;
             self.0[i] += 1;
         }

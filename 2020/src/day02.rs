@@ -57,9 +57,9 @@ fn password_is_valid(c: u8, min: u8, max: u8, password: &[u8]) -> bool {
 
 #[test]
 fn part1_check_ex() {
-    assert_eq!(true, password_is_valid(b'a', 1, 3, b"abcde"));
-    assert_eq!(false, password_is_valid(b'b', 1, 3, b"cdefg"));
-    assert_eq!(true, password_is_valid(b'c', 2, 9, b"ccccccccc"));
+    assert!(password_is_valid(b'a', 1, 3, b"abcde"));
+    assert!(!password_is_valid(b'b', 1, 3, b"cdefg"));
+    assert!(password_is_valid(b'c', 2, 9, b"ccccccccc"));
 }
 
 #[aoc(day2, part2)]
@@ -80,7 +80,7 @@ fn password_is_valid_p2(c: u8, min: u8, max: u8, password: &[u8]) -> bool {
 
 #[test]
 fn part2_check_ex() {
-    assert_eq!(true, password_is_valid_p2(b'a', 1, 3, b"abcde"));
-    assert_eq!(false, password_is_valid_p2(b'b', 1, 3, b"cdefg"));
-    assert_eq!(false, password_is_valid_p2(b'c', 2, 9, b"ccccccccc"));
+    assert!(password_is_valid_p2(b'a', 1, 3, b"abcde"));
+    assert!(!password_is_valid_p2(b'b', 1, 3, b"cdefg"));
+    assert!(!password_is_valid_p2(b'c', 2, 9, b"ccccccccc"));
 }
