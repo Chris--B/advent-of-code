@@ -48,7 +48,7 @@ pub fn part1(graph: &HashMap<String, Vec<String>>) -> usize {
 
                 // Only visit this cave if
                 // (1) it's big (and can be visited whenever we want)
-                let is_big = (b'A'..=b'Z').contains(&next.as_bytes()[0]);
+                let is_big = next.as_bytes()[0].is_ascii_uppercase();
                 // OR
 
                 // (2) it's small and has not appeared yet
@@ -77,7 +77,7 @@ pub fn part1(graph: &HashMap<String, Vec<String>>) -> usize {
 pub fn part2(graph: &HashMap<String, Vec<String>>) -> usize {
     fn can_visit_cave(path_so_far: &[&str], next: &str) -> bool {
         // Big caves can be revisited any number of times
-        if (b'A'..=b'Z').contains(&next.as_bytes()[0]) {
+        if next.as_bytes()[0].is_ascii_uppercase() {
             return true;
         }
 
@@ -97,7 +97,7 @@ pub fn part2(graph: &HashMap<String, Vec<String>>) -> usize {
         // All others must only be visited once
         let mut just_smalls: Vec<_> = path_so_far
             .iter()
-            .filter(|p| !(b'A'..=b'Z').contains(&p.as_bytes()[0]))
+            .filter(|p| !p.as_bytes()[0].is_ascii_uppercase())
             .collect();
         just_smalls.sort();
         let mut has_doubled_small = false;

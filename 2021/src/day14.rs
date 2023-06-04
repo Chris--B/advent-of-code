@@ -64,8 +64,8 @@ pub fn part1(input: &str) -> usize {
     for c in template.chars() {
         *counts.entry(c).or_insert(0) += 1;
     }
-    let most = counts.iter().map(|(_c, count)| *count).max().unwrap();
-    let least = counts.iter().map(|(_c, count)| *count).min().unwrap();
+    let most = counts.values().max().unwrap();
+    let least = counts.values().min().unwrap();
 
     most - least
 }
