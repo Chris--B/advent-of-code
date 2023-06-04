@@ -36,7 +36,7 @@ impl Cpu {
         if self.reg_cc >= 20 {
             let cc = self.reg_cc - 20;
             if cc % 40 == 0 {
-                self.signals[(cc as usize / 40)] = self.signal_strength();
+                self.signals[cc as usize / 40] = self.signal_strength();
             }
         }
     }
