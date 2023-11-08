@@ -79,7 +79,7 @@ fn parse_blueprint(line: &str) -> Blueprint {
 }
 
 #[aoc_generator(day19)]
-fn parse(input: &str) -> Vec<Blueprint> {
+pub fn parse(input: &str) -> Vec<Blueprint> {
     input.lines().map(parse_blueprint).collect()
 }
 

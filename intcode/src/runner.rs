@@ -5,7 +5,9 @@ use std::io::Read;
 use intcode::vm;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let filename = env::args().nth(1).unwrap();
+    let filename = env::args().nth(1).unwrap_or_else(|| "example.intcode".into());
+    println!("Reading {filename}");
+
     let intcode_mem: Vec<vm::Atom> = {
         let mut buffer = Vec::<u8>::new();
 
