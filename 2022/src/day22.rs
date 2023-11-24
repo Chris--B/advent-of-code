@@ -10,7 +10,13 @@ enum Tile {
 }
 use Tile::*;
 
+// Test and given problems are different enough
 const CUBE_SIDE: i32 = if cfg!(test) { 4 } else { 50 };
+
+/// # Starting position
+/// From the problem description:
+/// > You begin the path in the leftmost open tile of the top row of tiles.
+/// Note that this is differnet between example and problem!
 const START_X: i32 = if cfg!(test) { 2 * CUBE_SIDE } else { 50 };
 
 // Part1 ========================================================================
@@ -27,25 +33,25 @@ fn do_steps_p1(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps
     }
 
     // Step once and figure out what kind of tile is there
-    fn resolve_step_p1(grid: &Framebuffer<Tile>, point: &mut IVec2, dir: IVec2) -> Tile {
+    fn resolve_step_p1(grid: &Framebuffer<Tile>, next_point: &mut IVec2, dir: IVec2) -> Tile {
         // println!("Resolving {point:?} moving {dir:?}");
-        match grid[*point] {
+        match grid[*next_point] {
             Wall => Wall,
             Ground => Ground,
             Void => {
                 // println!("Found Void at {point:?}");
                 // We're currently already on Void, so step backwards once
-                *point -= dir;
+                *next_point -= dir;
 
                 // And walk backwards until we find Void again
-                while grid[*point] != Void {
+                while grid[*next_point] != Void {
                     // and then use 1 step forward from there.
-                    *point -= CUBE_SIDE * dir;
+                    *next_point -= CUBE_SIDE * dir;
                 }
-                *point += dir;
+                *next_point += dir;
 
-                debug_assert_ne!(grid[*point], Void);
-                grid[*point]
+                debug_assert_ne!(grid[*next_point], Void);
+                grid[*next_point]
             }
         }
     }
@@ -124,8 +130,14 @@ fn do_steps_p2(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps
     for _ in 0..steps {
         let mut next = *here + dir;
         match resolve_step_p2(grid, &mut next, dir) {
-            Wall => {}
-            Ground => *here = next,
+            Wall => {
+                // Cannot walk into wall, do nothing
+            }
+
+            Ground => {
+                // Can walk onto ground, take the step
+                *here = next;
+            }
 
             Void => unreachable!("resolve_step_p2() resolved to Void, which shouldn't happen"),
         }
@@ -133,25 +145,25 @@ fn do_steps_p2(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps
     }
 
     // Step once and figure out what kind of tile is there
-    fn resolve_step_p2(grid: &Framebuffer<Tile>, point: &mut IVec2, dir: IVec2) -> Tile {
+    fn resolve_step_p2(grid: &Framebuffer<Tile>, next_point: &mut IVec2, dir: IVec2) -> Tile {
         // println!("Resolving {point:?} moving {dir:?}");
-        match grid[*point] {
+        match grid[*next_point] {
             Wall => Wall,
             Ground => Ground,
             Void => {
-                // println!("Found Void at {point:?}");
+                println!("Found Void at {next_point:?}");
                 // We're currently already on Void, so step backwards once
-                *point -= dir;
+                *next_point -= dir;
 
                 // And walk backwards until we find Void again
-                while grid[*point] != Void {
+                while grid[*next_point] != Void {
                     // and then use 1 step forward from there.
-                    *point -= CUBE_SIDE * dir;
+                    *next_point -= CUBE_SIDE * dir;
                 }
-                *point += dir;
+                *next_point += dir;
 
-                debug_assert_ne!(grid[*point], Void);
-                grid[*point]
+                debug_assert_ne!(grid[*next_point], Void);
+                grid[*next_point]
             }
         }
     }
@@ -261,8 +273,6 @@ mod test {
     }
 
     #[rstest]
-    // Test fails, so ignore
-    #[ignore]
     #[case::given(5031, EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_2(
