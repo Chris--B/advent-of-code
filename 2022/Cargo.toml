@@ -29,18 +29,18 @@ aoc-runner-derive = "*"
 clap = {version = "4", features =["derive"] }
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
 derive_more = "0.99"
-either = "1.8.0"
+either = "1.8"
 image = { version = "0.24", default-features = false, features = ["png"] }
-itertools = "0.10"
+itertools = "0.12"
 json = "0.12"
 lazy_static = "1"
-noise = "0.8.2"
-num = "0.4.0"
+noise = "0.8"
+num = "0.4"
 pretty_assertions = "*"
 rand = "0.8"
 rayon = "1"
 regex = "1"
-rstest = { version= "0.16", default-features = false }
+rstest = { version= "0.18", default-features = false }
 scan_fmt = "0.2"
 smallstr = { version = "0.3", features = ["std"] }
 smallvec = { version = "1", features = ["const_generics"] }
