@@ -399,15 +399,30 @@ impl<T> Index<(isize, isize)> for Framebuffer<T> {
     type Output = T;
 
     fn index(&self, idx: (isize, isize)) -> &Self::Output {
+        let w = self.width();
+        let h = self.height();
         self.get(idx.0, idx.1)
             .or(self.border_color.as_ref())
-            .unwrap_or_else(|| panic!("oob index ({}, {}) but no border color set", idx.0, idx.1))
+            .unwrap_or_else(|| {
+                panic!(
+                    "oob index ({x}, {y}) dims=({w}, {h}), but no border color set",
+                    x = idx.0,
+                    y = idx.1
+                )
+            })
     }
 }
 
 impl<T> IndexMut<(isize, isize)> for Framebuffer<T> {
     fn index_mut(&mut self, idx: (isize, isize)) -> &mut Self::Output {
-        self.get_mut(idx.0, idx.1)
-            .unwrap_or_else(|| panic!("oob index ({}, {}) but no border color set", idx.0, idx.1))
+        let w = self.width();
+        let h = self.height();
+        self.get_mut(idx.0, idx.1).unwrap_or_else(|| {
+            panic!(
+                "oob index ({x}, {y}) dims=({w}, {h}), but no border color set",
+                x = idx.0,
+                y = idx.1
+            )
+        })
     }
 }
