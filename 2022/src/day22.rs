@@ -140,16 +140,23 @@ use Dir::*;
 struct Map {
     grid: Framebuffer<Tile>,
     wrapping: Framebuffer<Option<IVec2>>,
+    history: Framebuffer<Option<IVec2>>,
 }
 
 impl Map {
     fn new(grid: Framebuffer<Tile>) -> Self {
         let mut wrapping = Framebuffer::new_matching_size(&grid);
+        let history = Framebuffer::new_matching_size(&grid);
 
         generate_wrapping_map(&grid, &mut wrapping);
 
-        Self { wrapping, grid }
+        Self {
+            wrapping,
+            grid,
+            history,
+        }
     }
+
     fn wrap_point(&self, pt: IVec2) -> IVec2 {
         let wpt = self.wrapping[pt];
         println!("{pt:?} -> {wpt:?}");
@@ -159,6 +166,42 @@ impl Map {
         debug_assert_ne!(self.grid[wpt], Void);
 
         wpt
+    }
+
+    fn print(&self) {
+        for y in self.wrapping.range_y() {
+            print!("{y:2} |");
+            for x in self.wrapping.range_x().clone() {
+                let mut c;
+
+                c = match self.grid[(x, y)] {
+                    Ground => '.',
+                    Wall => '#',
+                    Void => ' ',
+                };
+
+                if let Some(dir) = self.history[(x, y)] {
+                    let dir: (i32, i32) = dir.into();
+                    let dir = match dir {
+                        (0, -1) => North,
+                        (0, 1) => South,
+                        (1, 0) => East,
+                        (-1, 0) => West,
+                        _ => unreachable!("Unexpected dir: {dir:#?}"),
+                    };
+                    c = match dir {
+                        North => '^',
+                        South => 'V',
+                        East => '>',
+                        West => '<',
+                    };
+                }
+
+                print!("{c}");
+            }
+            println!();
+        }
+        println!();
     }
 }
 
@@ -425,6 +468,7 @@ fn do_steps_p2(map: &mut Map, here: &mut IVec2, dir: IVec2, steps: u32) {
 
             Ground => {
                 // Can walk onto ground, take the step
+                map.history[*here] = Some(dir);
                 *here = next;
             }
 
@@ -486,6 +530,7 @@ pub fn part2(input: &str) -> i64 {
                 .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
 
             do_steps_p2(&mut map, &mut here, dir, steps);
+            map.print();
         } else {
             let rot = *group.next().unwrap() as char;
 
