@@ -59,4 +59,4 @@ panic="abort"
 default = []
 nightly = []
 simd = ["core_simd", "nightly"]
-broken =[]
+broken = []

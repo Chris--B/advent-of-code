@@ -167,7 +167,7 @@ impl Map {
         wpt
     }
 
-    fn print(&self) {
+    fn print(&self, here: IVec2) {
         for y in self.wrapping.range_y() {
             print!("{y:2} |");
             for x in self.wrapping.range_x().clone() {
@@ -190,10 +190,15 @@ impl Map {
                     };
                     c = match dir {
                         North => '^',
-                        South => 'V',
+                        South => 'v',
                         East => '>',
                         West => '<',
                     };
+                }
+
+                // "You Are Here" marker
+                if (x, y) == here.into() {
+                    c = 'O';
                 }
 
                 print!("{c}");
@@ -529,7 +534,7 @@ pub fn part2(input: &str) -> i64 {
                 .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
 
             do_steps_p2(&mut map, &mut here, dir, steps);
-            map.print();
+            map.print(here);
         } else {
             let rot = *group.next().unwrap() as char;
 
