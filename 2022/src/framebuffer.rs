@@ -393,6 +393,18 @@ impl<T> Framebuffer<T> {
         let idx = self.idx_from_xy(x, y)?;
         self.buf.get_mut(idx)
     }
+
+    pub fn get_v(&self, xy: IVec2) -> Option<&T> {
+        let (x, y) = (xy.x as isize, xy.y as isize);
+        let idx = self.idx_from_xy(x, y)?;
+        self.buf.get(idx)
+    }
+
+    pub fn get_mut_v(&mut self, xy: IVec2) -> Option<&mut T> {
+        let (x, y) = (xy.x as isize, xy.y as isize);
+        let idx = self.idx_from_xy(x, y)?;
+        self.buf.get_mut(idx)
+    }
 }
 
 impl<T> Index<(isize, isize)> for Framebuffer<T> {

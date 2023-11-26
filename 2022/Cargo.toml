@@ -53,7 +53,7 @@ opt-level = 2
 [profile.release]
 debug = true
 overflow-checks = true
-panic="abort"
+panic = "abort"
 
 [features]
 default = []

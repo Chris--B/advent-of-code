@@ -29,7 +29,7 @@ fn do_steps_p1(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps
 
             Void => unreachable!("resolve_step_p1() resolved to Void, which shouldn't happen"),
         }
-        debug_assert_eq!(grid[*here], Ground);
+        assert_eq!(grid[*here], Ground);
     }
 
     // Step once and figure out what kind of tile is there
@@ -48,7 +48,7 @@ fn do_steps_p1(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps
                 }
                 *next_point += dir;
 
-                debug_assert_ne!(grid[*next_point], Void);
+                assert_ne!(grid[*next_point], Void);
                 grid[*next_point]
             }
         }
@@ -100,8 +100,8 @@ pub fn part1(input: &str) -> i64 {
                 std::mem::swap(&mut dir.x, &mut dir.y);
             }
 
-            debug_assert_ne!(dir, IVec2::zero());
-            debug_assert_eq!(group.next(), None);
+            assert_ne!(dir, IVec2::zero());
+            assert_eq!(group.next(), None);
         }
     }
 
@@ -147,6 +147,47 @@ impl Map {
 
         generate_wrapping_map(&grid, &mut wrapping);
 
+        // Control printing a debug map like this:
+        //
+        //  0 |         @@@@
+        //  1 |        @...#@
+        //  2 |        @.#..@
+        //  3 |        @#...@
+        //  4 | @@@@@@@@....@
+        //  5 |@...#.......#@
+        //  6 |@........#...@
+        //  7 |@..#....#....@
+        //  8 |@..........#.@@@@
+        //  9 | @@@@@@@@...#....@
+        // 10 |        @.....#..@
+        // 11 |        @.#......@
+        // 12 |        @......#.@
+        // 13 |         @@@@@@@@
+        //
+        const DEBUG_MAP_WITH_WARPS: bool = cfg!(test) || cfg!(debug_assertions);
+        if DEBUG_MAP_WITH_WARPS {
+            for y in wrapping.range_y() {
+                print!("{y:3} |");
+                for x in wrapping.range_x().clone() {
+                    let mut c;
+
+                    c = match grid[(x, y)] {
+                        Ground => '.',
+                        Wall => '#',
+                        Void => ' ',
+                    };
+
+                    if wrapping[(x, y)].is_some() {
+                        c = '@';
+                    };
+
+                    print!("{c}");
+                }
+                println!();
+            }
+            println!();
+        }
+
         Self {
             wrapping,
             grid,
@@ -161,7 +202,10 @@ impl Map {
         let (wpt, wdir) = maybe.expect("Wrapping an invalid point?");
 
         assert_ne!(*pt, wpt, "These are not supposed to match.");
-        debug_assert_ne!(self.grid[wpt], Void);
+        assert_ne!(
+            self.grid[wpt], Void,
+            "Wrapping {pt:?}->{wpt:?}, but found Void instead of Ground or Wall"
+        );
 
         *pt = wpt;
         *dir = wdir;
@@ -233,9 +277,9 @@ fn generate_wrapping_map(
     }
     // Example and Given inputs are different and need to be handled differently. :(
     // Note: However, both have exactly 7 pairs.
-    let line_pairs = if cfg!(test) {
+    let line_pairs: [LinePair; 7] = if cfg!(test) {
         // Hard-code the lines that match. We'll walk along each and fill in `wrapping` using the 'other' line.
-        vec![
+        [
             // NOTE: The ordering of the cordinates in lines matters. We're treating these lines like finite rays, that is DIRECTIONAL.
             // And we use the order they're listed to determine that direction!
             // This means, if they share a coordiante, they should all END with that coordiante.
@@ -379,8 +423,172 @@ fn generate_wrapping_map(
             },
         ]
     } else {
-        eprintln!("NonExample input is not handled, wrapping logic WILL fail.");
-        vec![]
+        [
+            //     ........
+            //     ........
+            //     ........
+            //     ........
+            //    !....
+            //    @....
+            //    @....
+            // !@@@....
+            // ........
+            // ........
+            // ........
+            // ........
+            // ....
+            // ....
+            // ....
+            // ....
+            LinePair {
+                a: ((51, 51), (51, 101)),
+                a_dir: West,
+
+                b: ((1, 101), (51, 101)),
+                b_dir: North,
+            },
+            //     ........
+            //     ........
+            //     ........
+            //     ........
+            //     ....
+            //     ....
+            //     ....
+            //     ....
+            // ........
+            // ........
+            // ........
+            // ........
+            // ....@@@!
+            // ....@
+            // ....@
+            // ....!
+            LinePair {
+                a: ((100, 150), (50, 150)),
+                a_dir: South,
+
+                b: ((50, 200), (50, 150)),
+                b_dir: East,
+            },
+            //     ........
+            //     ........
+            //     ........
+            //     ........
+            //     ....!@@@
+            //     ....@
+            //     ....@
+            //     ....@
+            // ........
+            // ........
+            // ........
+            // ........
+            // ....
+            // ....
+            // ....
+            // ....
+            LinePair {
+                a: ((101, 50), (151, 50)),
+                a_dir: South,
+
+                b: ((100, 51), (100, 101)),
+                b_dir: East,
+            },
+            //     ........@
+            //     ........@
+            //     ........@
+            //     ........!
+            //     ....
+            //     ....
+            //     ....
+            //     ....
+            // ........!
+            // ........@
+            // ........@
+            // ........@
+            // ....
+            // ....
+            // ....
+            // ....
+            LinePair {
+                a: ((150, 50), (150, 0)),
+                a_dir: East,
+
+                b: ((100, 101), (100, 151)),
+                b_dir: East,
+            },
+            //         @@@!
+            //     ........
+            //     ........
+            //     ........
+            //     ........
+            //     ....
+            //     ....
+            //     ....
+            //     ....
+            // ........
+            // ........
+            // ........
+            // ........
+            // ....
+            // ....
+            // ....
+            // ....
+            // @@@!
+            LinePair {
+                a: ((150, 1), (100, 1)),
+                a_dir: North,
+
+                b: ((50, 200), (0, 200)),
+                b_dir: South,
+            },
+            //      @@@!
+            //      ........
+            //      ........
+            //      ........
+            //      ........
+            //      ....
+            //      ....
+            //      ....
+            //      ....
+            //  ........
+            //  ........
+            //  ........
+            //  ........
+            // @....
+            // @....
+            // @....
+            // !....
+            LinePair {
+                a: ((1, 200), (1, 150)),
+                a_dir: West,
+
+                b: ((100, 1), (50, 1)),
+                b_dir: North,
+            },
+            //     !........
+            //     @........
+            //     @........
+            //     @........
+            //      ....
+            //      ....
+            //      ....
+            //      ....
+            // @........
+            // @........
+            // @........
+            // !........
+            //  ....
+            //  ....
+            //  ....
+            //  ....
+            LinePair {
+                a: ((51, 1), (51, 51)),
+                a_dir: West,
+
+                b: ((1, 150), (1, 100)),
+                b_dir: West,
+            },
+        ]
     };
 
     for LinePair { a, a_dir, b, b_dir } in line_pairs {
@@ -393,23 +601,23 @@ fn generate_wrapping_map(
             let db = b.1 - b.0;
 
             // Make sure exactly one axis is 0
-            debug_assert!(
+            assert!(
                 (da.x == 0) ^ (da.y == 0),
                 "da doesn't have exactly 1 zero-axis. da={da:?}"
             );
-            debug_assert!(
+            assert!(
                 (db.x == 0) ^ (db.y == 0),
                 "db doesn't have exactly 1 zero-axis. db={db:?}"
             );
 
             // Should be exactly one cube-side in length
-            debug_assert_eq!(
+            assert_eq!(
                 da.x.abs() + da.y.abs(),
                 CUBE_SIDE,
                 "da has a magnitude of {} instead of {CUBE_SIDE}",
                 da.x.abs() + da.y.abs()
             );
-            debug_assert_eq!(
+            assert_eq!(
                 db.x.abs() + db.y.abs(),
                 CUBE_SIDE,
                 "db has a magnitude of {} instead of {CUBE_SIDE}",
@@ -481,7 +689,7 @@ fn do_steps_p2(map: &mut Map, here: &mut IVec2, dir: &mut IVec2, steps: u32) {
         }
 
         // map.print(*here);
-        debug_assert_eq!(map.grid[*here], Ground);
+        assert_eq!(map.grid[*here], Ground);
     }
 
     // Step once and figure out what kind of tile is there
@@ -507,7 +715,7 @@ pub fn part2(input: &str) -> i64 {
     let map_lines = input.lines().take_while(|l| !l.is_empty());
 
     // +1: Rows & columns start from 1
-    // +1: Add padding around our loaded cells
+    // +1: Add padding around our loaded cells, for our wrapping spaces
     let max_x = 1 + 1 + map_lines.clone().map(|l| l.len()).max().unwrap_or_default() as i32;
     let max_y = 1 + 1 + map_lines.clone().count() as i32;
 
@@ -550,8 +758,8 @@ pub fn part2(input: &str) -> i64 {
                 std::mem::swap(&mut dir.x, &mut dir.y);
             }
 
-            debug_assert_ne!(dir, IVec2::zero());
-            debug_assert_eq!(group.next(), None);
+            assert_ne!(dir, IVec2::zero());
+            assert_eq!(group.next(), None);
         }
     }
 
@@ -566,7 +774,7 @@ pub fn part2(input: &str) -> i64 {
     };
     let password = 1_000 * row + 4 * col + facing;
 
-    if cfg!(debug) || cfg!(test) {
+    if cfg!(debug_assertions) || cfg!(test) {
         map.print(here);
         println!("row={row}, col={col}, facing={facing}, password={password}");
     }
