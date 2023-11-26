@@ -168,9 +168,15 @@ impl Map {
     }
 
     fn print(&self, here: IVec2) {
+        println!("{}", self.print_to(Some(here)));
+    }
+    fn print_to(&self, here: Option<IVec2>) -> String {
+        let mut s = String::new();
+
         for y in self.wrapping.range_y() {
-            print!("{y:2} |");
+            // s += &format!("{y:2} |");
             for x in self.wrapping.range_x().clone() {
+                let xy = IVec2::new(x, y);
                 let mut c;
 
                 c = match self.grid[(x, y)] {
@@ -197,15 +203,17 @@ impl Map {
                 }
 
                 // "You Are Here" marker
-                if (x, y) == here.into() {
+                if here.map(|v| v == xy).unwrap_or(false) {
                     c = 'O';
                 }
 
-                print!("{c}");
+                s.push(c);
             }
-            println!();
+            s.push('\n');
         }
-        println!();
+        s.push('\n');
+
+        s
     }
 }
 
@@ -602,6 +610,81 @@ mod test {
         #[case] input: &str,
     ) {
         assert_eq!(p(input), expected);
+    }
+
+    #[test]
+    fn check_warp_points_pt2() {
+        let input = EXAMPLE_INPUT;
+
+        let moves: &[u8] = input.lines().last().unwrap().as_bytes();
+        let map_lines = input.lines().take_while(|l| !l.is_empty());
+
+        // +1: Rows & columns start from 1
+        // +1: Add padding around our loaded cells
+        let max_x = 1 + 1 + map_lines.clone().map(|l| l.len()).max().unwrap_or_default() as i32;
+        let max_y = 1 + 1 + map_lines.clone().count() as i32;
+
+        let mut grid: Framebuffer<Tile> = Framebuffer::new_with_ranges(0..max_x, 0..max_y);
+        grid.set_border_color(Some(Void));
+
+        for (y, line) in map_lines.enumerate() {
+            let y = y + 1;
+            for (x, &b) in line.as_bytes().iter().enumerate() {
+                let x = x + 1;
+
+                if b == b'#' {
+                    grid[(x, y)] = Wall;
+                } else if b == b'.' {
+                    grid[(x, y)] = Ground;
+                }
+            }
+        }
+
+        let mut here = IVec2::new(START_X, 1);
+        let mut dir = IVec2::new(1, 0);
+
+        let mut map = Map::new(grid);
+
+        for (is_digit, mut group) in &moves.iter().group_by(|b| b.is_ascii_digit()) {
+            if is_digit {
+                let steps = group
+                    .copied()
+                    .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
+
+                do_steps_p2(&mut map, &mut here, dir, steps);
+                map.print(here);
+            } else {
+                let rot = *group.next().unwrap() as char;
+
+                if rot == 'R' {
+                    dir.y = -dir.y;
+                    std::mem::swap(&mut dir.x, &mut dir.y);
+                } else {
+                    dir.x = -dir.x;
+                    std::mem::swap(&mut dir.x, &mut dir.y);
+                }
+
+                debug_assert_ne!(dir, IVec2::zero());
+                debug_assert_eq!(group.next(), None);
+            }
+        }
+
+        let final_map = map.print_to(None);
+        let expected_final_map = r#"
+        >>v#
+        .#v.
+        #.v.
+        ..v.
+...#..^...v#
+.>>>>>^.#.>>
+.^#....#....
+.^........#.
+        ...#..v.
+        .....#v.
+        .#v<<<<.
+        ..v...#.
+        "#;
+        assert_eq!(final_map, expected_final_map);
     }
 
     #[rstest]
