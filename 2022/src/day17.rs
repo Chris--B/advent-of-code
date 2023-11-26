@@ -1,5 +1,3 @@
-#![allow(clippy::unusual_byte_groupings)]
-
 use crate::prelude::*;
 
 // The chamber is 7 units wide, so we'll use u8 as a bit set with bits 0..=6

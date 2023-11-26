@@ -1,7 +1,6 @@
 #![cfg_attr(feature = "simd", feature(portable_simd))]
 #![cfg_attr(feature = "simd", feature(stdsimd))]
 #![allow(clippy::comparison_chain)]
-#![warn(clippy::never_loop)]
 
 use aoc_runner_derive::aoc_lib;
 

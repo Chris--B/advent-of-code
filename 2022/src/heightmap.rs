@@ -1,5 +1,3 @@
-#![allow(unused_variables)]
-
 use aoc22::day12::{find_path, parse};
 use aoc22::framebuffer::Framebuffer;
 
@@ -53,7 +51,6 @@ fn main() {
 
             let h = norm(day.heightmap[(x, y)], 25, 96);
             let s = norm(total_steps_map[(x, y)], max_steps, 0);
-            let x = h / 2 + s / 2;
 
             let a = h / 2 + 32;
             let b = s / 2 + 16;
@@ -62,6 +59,7 @@ fn main() {
             // Rgb([a, b, 0])
             // Rgb([s, s, s])
             // Rgb([h, h, h])
+            // let x = h / 2 + s / 2;
             // Rgb([x, x, x])
         },
     );

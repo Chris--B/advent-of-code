@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 use crate::prelude::*;
 
 fn parse(input: &str) -> HashSet<IVec2> {

@@ -128,7 +128,6 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 
 #[derive(Copy, Clone, Debug)]
-#[allow(unused)]
 enum Dir {
     North,
     South,

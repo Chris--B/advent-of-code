@@ -1,4 +1,4 @@
-#![allow(clippy::collapsible_if)]
+#![allow(clippy::needless_range_loop)]
 
 use crate::prelude::*;
 
@@ -111,7 +111,6 @@ impl SimState {
             Geode => &self.bp.geode,
         };
 
-        #[allow(clippy::needless_range_loop)]
         for i in 0..4 {
             if self.bank[i] < cost[i] {
                 return false;
@@ -130,7 +129,6 @@ impl SimState {
             Geode => &self.bp.geode,
         };
 
-        #[allow(clippy::needless_range_loop)]
         for i in 0..4 {
             if (self.bots[i] == 0) && (cost[i] != 0) {
                 return false;
@@ -166,7 +164,7 @@ impl SimState {
             };
 
             // Pay for the bot
-            #[allow(clippy::needless_range_loop)]
+
             for i in 0..4 {
                 self.bank[i] -= cost[i];
             }

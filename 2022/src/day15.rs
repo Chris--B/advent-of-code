@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -210,6 +208,7 @@ pub fn part2(input: &str) -> i64 {
     located.x as i64 * 4_000_000 + located.y as i64
 }
 
+#[cfg(feature = "broken")]
 #[derive(Copy, Clone, Debug)]
 struct Line {
     o: IVec2,
@@ -217,6 +216,7 @@ struct Line {
     dist: i32,
 }
 
+#[cfg(feature = "broken")]
 impl Line {
     fn intersects_with(&self, other: &Line) -> Option<IVec2> {
         let p: Vec3 = self.o.xyz().into();
