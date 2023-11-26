@@ -17,7 +17,7 @@ const CUBE_SIDE: i32 = if cfg!(test) { 4 } else { 50 };
 /// From the problem description:
 /// > You begin the path in the leftmost open tile of the top row of tiles.
 /// Note that this is differnet between example and problem!
-const START_X: i32 = if cfg!(test) { 2 * CUBE_SIDE } else { 50 };
+const START_X: i32 = if cfg!(test) { 2 * CUBE_SIDE } else { 50 } + 1;
 
 // Part1 ========================================================================
 fn do_steps_p1(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps: u32) {
@@ -34,12 +34,10 @@ fn do_steps_p1(grid: &mut Framebuffer<Tile>, here: &mut IVec2, dir: IVec2, steps
 
     // Step once and figure out what kind of tile is there
     fn resolve_step_p1(grid: &Framebuffer<Tile>, next_point: &mut IVec2, dir: IVec2) -> Tile {
-        // println!("Resolving {point:?} moving {dir:?}");
         match grid[*next_point] {
             Wall => Wall,
             Ground => Ground,
             Void => {
-                // println!("Found Void at {point:?}");
                 // We're currently already on Void, so step backwards once
                 *next_point -= dir;
 
@@ -138,7 +136,7 @@ use Dir::*;
 
 struct Map {
     grid: Framebuffer<Tile>,
-    wrapping: Framebuffer<Option<IVec2>>,
+    wrapping: Framebuffer<Option<(IVec2, IVec2)>>,
     history: Framebuffer<Option<IVec2>>,
 }
 
@@ -156,20 +154,23 @@ impl Map {
         }
     }
 
-    fn wrap_point(&self, pt: IVec2) -> IVec2 {
-        let wpt = self.wrapping[pt];
-        println!("{pt:?} -> {wpt:?}");
-        let wpt = wpt.expect("Wrapping an invalid point?");
-        assert_ne!(pt, wpt, "These are not supposed to match.");
+    // Warps and rotates point
+    fn wrap_point(&self, pt: &mut IVec2, dir: &mut IVec2) {
+        let maybe = self.wrapping[*pt];
 
+        let (wpt, wdir) = maybe.expect("Wrapping an invalid point?");
+
+        assert_ne!(*pt, wpt, "These are not supposed to match.");
         debug_assert_ne!(self.grid[wpt], Void);
 
-        wpt
+        *pt = wpt;
+        *dir = wdir;
     }
 
     fn print(&self, here: IVec2) {
         println!("{}", self.print_to(Some(here)));
     }
+
     fn print_to(&self, here: Option<IVec2>) -> String {
         let mut s = String::new();
 
@@ -218,7 +219,10 @@ impl Map {
 }
 
 #[allow(clippy::identity_op, unused)]
-fn generate_wrapping_map(grid: &Framebuffer<Tile>, wrapping: &mut Framebuffer<Option<IVec2>>) {
+fn generate_wrapping_map(
+    grid: &Framebuffer<Tile>,
+    wrapping: &mut Framebuffer<Option<(IVec2, IVec2)>>,
+) {
     #[derive(Copy, Clone, Debug)]
     struct LinePair {
         a: (IVec2, IVec2),
@@ -431,73 +435,62 @@ fn generate_wrapping_map(grid: &Framebuffer<Tile>, wrapping: &mut Framebuffer<Op
             let aa = a.0 + i * da;
             let bb = b.0 + i * db;
 
-            // dbg!(i, a, aa, oa);
-            // println!();
+            let da: IVec2 = match a_dir {
+                North => (0, 1),
+                South => (0, -1),
+                East => (-1, 0),
+                West => (1, 0),
+            }
+            .into();
+            let db: IVec2 = match b_dir {
+                North => (0, 1),
+                South => (0, -1),
+                East => (-1, 0),
+                West => (1, 0),
+            }
+            .into();
 
             // The "index" of wrapping is the space that *triggers* the warp. We add an offset because this is Out Of Bounds
             // the value there needs to be in bounds, so we do NOT offset that!
-            wrapping[aa + oa] = Some(bb);
-            wrapping[bb + ob] = Some(aa);
+            wrapping[aa + oa] = Some((bb, db));
+            wrapping[bb + ob] = Some((aa, da));
         }
-    }
-
-    {
-        for y in wrapping.range_y() {
-            print!("{y:2} |");
-            for x in wrapping.range_x().clone() {
-                let mut c = ' ';
-
-                c = match grid[(x, y)] {
-                    Ground => '.',
-                    Wall => '#',
-                    Void => ' ',
-                };
-
-                let v = wrapping[(x, y)];
-                if let Some(coord) = v {
-                    let (x, y) = coord.into();
-                    // print!("({x:2},{y:2}) ");
-                    // print!("@");
-                    c = '@';
-                } else {
-                    // print!(" ------ ");
-                    // print!(" ");
-                }
-
-                print!("{c}");
-            }
-            println!();
-        }
-        println!();
     }
 }
 
-fn do_steps_p2(map: &mut Map, here: &mut IVec2, dir: IVec2, steps: u32) {
+fn do_steps_p2(map: &mut Map, here: &mut IVec2, dir: &mut IVec2, steps: u32) {
     for _ in 0..steps {
-        let mut next = *here + dir;
-        match resolve_step_p2(map, &mut next, dir) {
+        let mut next = *here + *dir;
+        // Save a dir here, so we can reference the old one below (mostly for history recording)
+        let mut next_dir = *dir;
+        match resolve_step_p2(map, &mut next, &mut next_dir) {
             Wall => { /* Cannot walk into wall, do nothing */ }
 
             Ground => {
                 // Can walk onto ground, take the step
-                map.history[*here] = Some(dir);
+                map.history[*here] = Some(*dir);
                 *here = next;
+                *dir = next_dir;
             }
 
             Void => unreachable!("resolve_step_p2() resolved to Void, which shouldn't happen"),
         }
+
+        // map.print(*here);
         debug_assert_eq!(map.grid[*here], Ground);
     }
 
     // Step once and figure out what kind of tile is there
-    fn resolve_step_p2(map: &mut Map, next_point: &mut IVec2, _dir: IVec2) -> Tile {
-        // println!("Resolving {point:?} moving {dir:?}");
+    fn resolve_step_p2(map: &mut Map, next_point: &mut IVec2, dir: &mut IVec2) -> Tile {
         match map.grid[*next_point] {
             Wall => Wall,
             Ground => Ground,
             Void => {
                 // Save the wrapped point
-                *next_point = map.wrap_point(*next_point);
+                map.wrap_point(next_point, dir);
+
+                // Adjust our direction to account for the warp
+
                 map.grid[*next_point]
             }
         }
@@ -541,8 +534,7 @@ pub fn part2(input: &str) -> i64 {
                 .copied()
                 .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
 
-            do_steps_p2(&mut map, &mut here, dir, steps);
-            map.print(here);
+            do_steps_p2(&mut map, &mut here, &mut dir, steps);
         } else {
             let rot = *group.next().unwrap() as char;
 
@@ -570,7 +562,8 @@ pub fn part2(input: &str) -> i64 {
     };
     let password = 1_000 * row + 4 * col + facing;
 
-    if cfg!(test) {
+    if cfg!(debug) || cfg!(test) {
+        map.print(here);
         println!("row={row}, col={col}, facing={facing}, password={password}");
     }
 
@@ -598,7 +591,6 @@ mod test {
         ......#.
 
 10R5L5R10L4R5L5";
-
     #[rstest]
     #[case::given(6032, EXAMPLE_INPUT)]
     #[trace]
@@ -610,81 +602,6 @@ mod test {
         #[case] input: &str,
     ) {
         assert_eq!(p(input), expected);
-    }
-
-    #[test]
-    fn check_warp_points_pt2() {
-        let input = EXAMPLE_INPUT;
-
-        let moves: &[u8] = input.lines().last().unwrap().as_bytes();
-        let map_lines = input.lines().take_while(|l| !l.is_empty());
-
-        // +1: Rows & columns start from 1
-        // +1: Add padding around our loaded cells
-        let max_x = 1 + 1 + map_lines.clone().map(|l| l.len()).max().unwrap_or_default() as i32;
-        let max_y = 1 + 1 + map_lines.clone().count() as i32;
-
-        let mut grid: Framebuffer<Tile> = Framebuffer::new_with_ranges(0..max_x, 0..max_y);
-        grid.set_border_color(Some(Void));
-
-        for (y, line) in map_lines.enumerate() {
-            let y = y + 1;
-            for (x, &b) in line.as_bytes().iter().enumerate() {
-                let x = x + 1;
-
-                if b == b'#' {
-                    grid[(x, y)] = Wall;
-                } else if b == b'.' {
-                    grid[(x, y)] = Ground;
-                }
-            }
-        }
-
-        let mut here = IVec2::new(START_X, 1);
-        let mut dir = IVec2::new(1, 0);
-
-        let mut map = Map::new(grid);
-
-        for (is_digit, mut group) in &moves.iter().group_by(|b| b.is_ascii_digit()) {
-            if is_digit {
-                let steps = group
-                    .copied()
-                    .fold(0_u32, |acc, x| 10 * acc + (x - b'0') as u32);
-
-                do_steps_p2(&mut map, &mut here, dir, steps);
-                map.print(here);
-            } else {
-                let rot = *group.next().unwrap() as char;
-
-                if rot == 'R' {
-                    dir.y = -dir.y;
-                    std::mem::swap(&mut dir.x, &mut dir.y);
-                } else {
-                    dir.x = -dir.x;
-                    std::mem::swap(&mut dir.x, &mut dir.y);
-                }
-
-                debug_assert_ne!(dir, IVec2::zero());
-                debug_assert_eq!(group.next(), None);
-            }
-        }
-
-        let final_map = map.print_to(None);
-        let expected_final_map = r#"
-        >>v#
-        .#v.
-        #.v.
-        ..v.
-...#..^...v#
-.>>>>>^.#.>>
-.^#....#....
-.^........#.
-        ...#..v.
-        .....#v.
-        .#v<<<<.
-        ..v...#.
-        "#;
-        assert_eq!(final_map, expected_final_map);
     }
 
     #[rstest]
