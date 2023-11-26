@@ -5,5 +5,5 @@ cargo watch -c                        \
     -x "clippy --tests"               \
     -x fmt                            \
     -x "doc --document-private-items" \
-    -x "test --lib"                   \
+    -x "test --lib --quiet"                   \
     -x "aoc $*"

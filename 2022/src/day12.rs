@@ -119,7 +119,7 @@ fn find_path_reverse(day: &Day12, end: (i32, i32)) -> Framebuffer<i64> {
 // Part1 ========================================================================
 #[aoc(day12, part1)]
 pub fn part1(day: &Day12) -> i64 {
-    println!(
+    info!(
         "Height Map size: ({}, {}),",
         day.heightmap.width(),
         day.heightmap.height()
@@ -147,7 +147,7 @@ pub fn part1(day: &Day12) -> i64 {
 
 #[aoc(day12, part1, reverse)]
 pub fn part1_reverse(day: &Day12) -> i64 {
-    println!(
+    info!(
         "Height Map size: ({}, {}),",
         day.heightmap.width(),
         day.heightmap.height()
@@ -176,7 +176,7 @@ pub fn part1_reverse(day: &Day12) -> i64 {
 // Part2 ========================================================================
 #[aoc(day12, part2)]
 pub fn part2(day: &Day12) -> i64 {
-    println!(
+    info!(
         "Height Map size: ({}, {}),",
         day.heightmap.width(),
         day.heightmap.height()

@@ -24,7 +24,7 @@ fn save_image(cave: &Framebuffer<u8>, name: &str) {
 
         let w = scale as usize * cave.range_x().len();
         let h = scale as usize * cave.range_y().len();
-        println!(
+        info!(
             "Saving image to \"{name}\"... ({w}x{h}) ~{:.1}M pixels ...",
             (w * h) as f32 / 1_000_000.0
         );
@@ -43,7 +43,7 @@ fn save_image(cave: &Framebuffer<u8>, name: &str) {
         });
         img.save(name).unwrap();
 
-        println!("... done");
+        info!("... done");
     }
 }
 

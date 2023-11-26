@@ -36,6 +36,24 @@ pub mod vec;
 
 aoc_lib! { year = 2022 }
 
+// Run this function when the binary is loaded. This typically happens BEFORE MAIN.
+// This is a BAD IDEA, but cargo-aoc doesn't give us hooks anywhere else. So it's this or lazy-init in EVERY solution 😬.
+#[ctor::ctor]
+fn init_logging() {
+    use env_logger::{Builder, Env};
+    use prelude::*;
+
+    Builder::from_env(Env::default().default_filter_or("warn"))
+        .is_test(cfg!(test))
+        .init();
+
+    trace!("Hello");
+    debug!("Hello");
+    info!("Hello");
+    warn!("Hello");
+    error!("Hello");
+}
+
 mod prelude {
     pub use crate::framebuffer::Framebuffer;
     pub use crate::vec::VecExt;
@@ -45,6 +63,7 @@ mod prelude {
     pub use derive_more::*;
     pub use either::*;
     pub use itertools::Itertools;
+    pub use log::{debug, error, info, trace, warn};
     pub use num::Complex;
     pub use scan_fmt::scan_fmt;
     pub use smallstr::SmallString;

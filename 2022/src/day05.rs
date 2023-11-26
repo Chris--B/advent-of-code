@@ -153,7 +153,7 @@ fn track_crates(input: &str, is_part1: bool) -> String {
         use rayon::prelude::*;
 
         let moves: Vec<_> = moves.collect();
-        println!("Using Rayon! Processing {} moves", moves.len());
+        info!("Using Rayon! Processing {} moves", moves.len());
 
         let mut crates = vec![];
         for stack in 0..stack_count {

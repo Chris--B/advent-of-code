@@ -75,10 +75,8 @@ fn parse(s: &str) -> Day24 {
         step(&mut storms, max);
     }
 
-    if cfg!(test) {
-        println!("Tracking {} storms", storms.len());
-        println!("[Note] Storms cycle every {} steps", all_storms.len());
-    }
+    info!("Tracking {} storms", storms.len());
+    info!("[Note] Storms cycle every {} steps", all_storms.len());
 
     Day24 {
         storms,
@@ -167,9 +165,7 @@ pub fn find_path(
     points_to_explore_from.push_back(IVec3::new(start.x, start.y, 0));
 
     while let Some(prev) = points_to_explore_from.pop_front() {
-        if cfg!(test) {
-            println!("Exploring {prev:?} dist={}", dist_map[&prev]);
-        }
+        info!("Exploring {prev:?} dist={}", dist_map[&prev]);
 
         // Check in all directions for low distance paths
         for (i, dir) in [
@@ -194,25 +190,19 @@ pub fn find_path(
                 && (here.xy() != end)
                 && (here.x <= 0 || here.x >= day.max.x || here.y <= 0 || here.y >= day.max.y)
             {
-                if cfg!(test) {
-                    println!("    [{i}/5] Can't explore {here:?} due to walls");
-                }
+                info!("    [{i}/5] Can't explore {here:?} due to walls");
                 continue;
             }
 
             // If we would land in a storm, we can't explore here
             if day.is_storm_at(here.xy(), here.z + z_offset) {
-                if cfg!(test) {
-                    println!("    [{i}/5] Can't explore {here:?} due to storms");
-                }
+                info!("    [{i}/5] Can't explore {here:?} due to storms");
                 continue;
             }
 
             // TODO: Improve this
             if here.z as usize > (5 * day.all_storms.len()) {
-                if cfg!(test) {
-                    println!("    [{i}/5] Giving up waiting at {here:?} since it's been too long");
-                }
+                info!("    [{i}/5] Giving up waiting at {here:?} since it's been too long");
                 continue;
             }
 
@@ -273,7 +263,7 @@ pub fn part1(input: &str) -> i32 {
         })
         .inspect(|k| {
             if cfg!(test) {
-                println!("{k:?}");
+                debug!("{k:?}");
             }
         })
         .min_by_key(|k| k.z)

@@ -300,8 +300,8 @@ pub fn part2(input: &str) -> i32 {
                     .into_option()
                     .unwrap();
 
-                println!("x: {min_x}..{max_x} ({})", max_x - min_x);
-                println!("y: {min_y}..{max_y} ({})", max_y - min_y);
+                info!("x: {min_x}..{max_x} ({})", max_x - min_x);
+                info!("y: {min_y}..{max_y} ({})", max_y - min_y);
             }
 
             return round + 1;

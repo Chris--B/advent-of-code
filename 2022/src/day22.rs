@@ -117,7 +117,7 @@ pub fn part1(input: &str) -> i64 {
     let password = 1_000 * row + 4 * col + facing;
 
     if cfg!(test) {
-        println!("row={row}, col={col}, facing={facing}, password={password}");
+        info!("row={row}, col={col}, facing={facing}, password={password}");
     }
 
     password
@@ -164,7 +164,7 @@ impl Map {
         // 12 |        @......#.@
         // 13 |         @@@@@@@@
         //
-        const DEBUG_MAP_WITH_WARPS: bool = cfg!(test) || cfg!(debug_assertions);
+        const DEBUG_MAP_WITH_WARPS: bool = cfg!(test);
         if DEBUG_MAP_WITH_WARPS {
             for y in wrapping.range_y() {
                 print!("{y:3} |");
@@ -212,7 +212,7 @@ impl Map {
     }
 
     fn print(&self, here: IVec2) {
-        println!("{}", self.print_to(Some(here)));
+        info!("{}", self.print_to(Some(here)));
     }
 
     fn print_to(&self, here: Option<IVec2>) -> String {
@@ -774,9 +774,9 @@ pub fn part2(input: &str) -> i64 {
     };
     let password = 1_000 * row + 4 * col + facing;
 
-    if cfg!(debug_assertions) || cfg!(test) {
+    if cfg!(test) {
         map.print(here);
-        println!("row={row}, col={col}, facing={facing}, password={password}");
+        info!("row={row}, col={col}, facing={facing}, password={password}");
     }
 
     password
