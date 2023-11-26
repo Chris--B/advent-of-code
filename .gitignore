@@ -5,8 +5,10 @@
 # Mac
 .DS_Store
 
-# Personal pattern
+# Personal patterns
 _*
+**/out/
+out.*
 
 # Visualizations
 **/viz/
