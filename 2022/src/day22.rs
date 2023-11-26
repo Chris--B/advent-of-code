@@ -225,13 +225,14 @@ fn generate_wrapping_map(
 ) {
     #[derive(Copy, Clone, Debug)]
     struct LinePair {
-        a: (IVec2, IVec2),
+        a: ((i32, i32), (i32, i32)),
         a_dir: Dir,
 
-        b: (IVec2, IVec2),
+        b: ((i32, i32), (i32, i32)),
         b_dir: Dir,
     }
     // Example and Given inputs are different and need to be handled differently. :(
+    // Note: However, both have exactly 7 pairs.
     let line_pairs = if cfg!(test) {
         // Hard-code the lines that match. We'll walk along each and fill in `wrapping` using the 'other' line.
         vec![
@@ -253,10 +254,10 @@ fn generate_wrapping_map(
             //         .#......
             //         ......#.
             LinePair {
-                a: ((9, 1).into(), (9, 5).into()),
+                a: ((9, 1), (9, 5)),
                 a_dir: West, // 'problem side'
 
-                b: ((5, 5).into(), (9, 5).into()),
+                b: ((5, 5), (9, 5)),
                 b_dir: North,
             },
             //         ...#!
@@ -272,10 +273,10 @@ fn generate_wrapping_map(
             //         .#......@
             //         ......#.!
             LinePair {
-                a: ((12, 1).into(), (12, 5).into()),
+                a: ((12, 1), (12, 5)),
                 a_dir: East,
 
-                b: ((16, 12).into(), (16, 8).into()),
+                b: ((16, 12), (16, 8)),
                 b_dir: East,
             },
             //         ...#
@@ -291,10 +292,10 @@ fn generate_wrapping_map(
             //         .#......
             //         ......#.
             LinePair {
-                a: ((12, 5).into(), (12, 9).into()),
+                a: ((12, 5), (12, 9)),
                 a_dir: East,
 
-                b: ((16, 9).into(), (12, 9).into()),
+                b: ((16, 9), (12, 9)),
                 b_dir: North,
             },
             //         !@@@
@@ -311,10 +312,10 @@ fn generate_wrapping_map(
             //         .#......
             //         ......#.
             LinePair {
-                a: ((9, 1).into(), (13, 1).into()),
+                a: ((9, 1), (13, 1)),
                 a_dir: North,
 
-                b: ((4, 5).into(), (0, 5).into()),
+                b: ((4, 5), (0, 5)),
                 b_dir: North,
             },
             //          ...#
@@ -331,10 +332,10 @@ fn generate_wrapping_map(
             //          ......#.
             //              @@@!
             LinePair {
-                a: ((1, 5).into(), (1, 9).into()),
+                a: ((1, 5), (1, 9)),
                 a_dir: West,
 
-                b: ((16, 12).into(), (12, 12).into()),
+                b: ((16, 12), (12, 12)),
                 b_dir: South,
             },
             //         ...#
@@ -351,10 +352,10 @@ fn generate_wrapping_map(
             //         ......#.
             //         @@@!
             LinePair {
-                a: ((1, 8).into(), (5, 8).into()),
+                a: ((1, 8), (5, 8)),
                 a_dir: South,
 
-                b: ((12, 12).into(), (8, 12).into()),
+                b: ((12, 12), (8, 12)),
                 b_dir: South,
             },
             //         ...#
@@ -370,10 +371,10 @@ fn generate_wrapping_map(
             //        @.#......
             //        @......#.
             LinePair {
-                a: ((8, 8).into(), (4, 8).into()),
+                a: ((8, 8), (4, 8)),
                 a_dir: South,
 
-                b: ((8, 8).into(), (8, 12).into()),
+                b: ((8, 8), (8, 12)),
                 b_dir: South,
             },
         ]
@@ -383,6 +384,9 @@ fn generate_wrapping_map(
     };
 
     for LinePair { a, a_dir, b, b_dir } in line_pairs {
+        let a = (IVec2::new(a.0 .0, a.0 .1), IVec2::new(a.1 .0, a.1 .1));
+        let b = (IVec2::new(b.0 .0, b.0 .1), IVec2::new(b.1 .0, b.1 .1));
+
         // Make sure the lines are both equal-length
         {
             let da = a.1 - a.0;
