@@ -43,8 +43,21 @@ fn init_logging() {
     use env_logger::{Builder, Env};
     use prelude::*;
 
-    Builder::from_env(Env::default().default_filter_or("warn"))
+    let mut env = Env::default();
+    if cfg!(test) || cfg!(debug_assert) {
+        // Debug and test builds should log MORE
+        env = env.default_filter_or("debug");
+    } else {
+        // Everyone else can log warn and above
+        env = env.default_filter_or("warn");
+    }
+
+    Builder::from_env(env)
         .is_test(cfg!(test))
+        .format_timestamp(None)
+        .format_module_path(false)
+        .format_target(false)
+        .format_indent(Some(4))
         .init();
 
     trace!("Hello");
