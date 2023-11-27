@@ -4,7 +4,7 @@ use std::fmt;
 
 type UnresolvedValue = Either<Complex<f64>, (Op, Monkey, Monkey)>;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash)]
 enum Op {
     Add,
     Sub,
@@ -18,7 +18,7 @@ struct MonkeyInfo {
     value: UnresolvedValue,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 struct Monkey([u8; 4]);
 
 impl Monkey {
@@ -39,20 +39,13 @@ impl fmt::Debug for Monkey {
     }
 }
 
-fn parse_monkeys(input: &str) -> (Vec<MonkeyInfo>, usize) {
+fn parse_monkeys(input: &str) -> Vec<MonkeyInfo> {
     let lines: Vec<_> = input.lines().map(|s| s.as_bytes()).collect();
-    let mut monkeys = vec![];
 
-    let mut root_idx = 0;
-
-    for line in &lines {
+    let mut monkeys = Vec::with_capacity(lines.len());
+    for line in lines {
         let mut parts = line.split(|b| *b == b':');
         let name = Monkey(parts.next().unwrap().try_into().unwrap());
-
-        // humn and root are special so we'll save them
-        if name == Monkey(*b"root") {
-            root_idx = monkeys.len();
-        }
 
         let expr = parts.next().unwrap();
         let value = if expr[1].is_ascii_digit() {
@@ -78,21 +71,21 @@ fn parse_monkeys(input: &str) -> (Vec<MonkeyInfo>, usize) {
         monkeys.push(info);
     }
 
-    (monkeys, root_idx)
+    monkeys
 }
 
-fn resolve_monkey(monkeys: &mut [MonkeyInfo], idx: usize) -> Complex<f64> {
+fn resolve_monkey(
+    monkeys: &mut [MonkeyInfo],
+    idx_lookup: &HashMap<Monkey, usize>,
+    idx: usize,
+) -> Complex<f64> {
     debug!("resolving {}", monkeys[idx].name);
 
     let val = match monkeys[idx].value {
         Left(n) => n,
         Right((op, left, right)) => {
-            // 😬😬😬
-            let left_idx = monkeys.iter().position(|m| m.name == left).unwrap();
-            let right_idx = monkeys.iter().position(|m| m.name == right).unwrap();
-
-            let left = resolve_monkey(monkeys, left_idx);
-            let right = resolve_monkey(monkeys, right_idx);
+            let left = resolve_monkey(monkeys, idx_lookup, idx_lookup[&left]);
+            let right = resolve_monkey(monkeys, idx_lookup, idx_lookup[&right]);
 
             debug!(
                 "resolving {name} left={left}, op={op:?} right={right}",
@@ -116,10 +109,17 @@ fn resolve_monkey(monkeys: &mut [MonkeyInfo], idx: usize) -> Complex<f64> {
 // Part1 ========================================================================
 #[aoc(day21, part1)]
 pub fn part1(input: &str) -> f64 {
-    let (mut monkeys, root_idx) = parse_monkeys(input);
+    let mut monkeys = parse_monkeys(input);
 
     // Recursively resolve in-place
-    resolve_monkey(&mut monkeys, root_idx);
+    let idx_lookup: HashMap<_, _> = monkeys
+        .iter()
+        .enumerate()
+        .map(|(idx, m)| (m.name, idx))
+        .collect();
+
+    let root_idx = idx_lookup[&Monkey(*b"root")];
+    resolve_monkey(&mut monkeys, &idx_lookup, root_idx);
 
     monkeys[root_idx]
         .value
@@ -131,39 +131,35 @@ pub fn part1(input: &str) -> f64 {
 // Part2 ========================================================================
 #[aoc(day21, part2)]
 pub fn part2(input: &str) -> f64 {
-    let (mut monkeys, root_idx) = parse_monkeys(input);
+    let mut monkeys = parse_monkeys(input);
+
+    // Recursively resolve in-place
+    let idx_lookup: HashMap<_, _> = monkeys
+        .iter()
+        .enumerate()
+        .map(|(idx, m)| (m.name, idx))
+        .collect();
 
     // This is the only non-real entry in the list. We'll use it as a poor-man's algebraic solver.
     // This only works because no monkey in the list ever shows up twice (and we don't get accidental i**2)
-    monkeys
-        .iter_mut()
-        .find(|v| v.name == Monkey(*b"humn"))
-        .expect("Unable to find 'humn' in input")
-        .value = Left(Complex::new(0., 1.));
+    let humn_idx = idx_lookup[&Monkey(*b"humn")];
+    monkeys[humn_idx].value = Left(Complex::new(0., 1.));
 
     // We need root's two deps to be equal, so save those now.
+    let root_idx = idx_lookup[&Monkey(*b"root")];
     let (_op, root_left, root_right) = monkeys[root_idx]
         .value
         .right()
         .expect("root shouldn't be resolved after parsing");
 
-    // Recursively resolve in-place
-    resolve_monkey(&mut monkeys, root_idx);
+    resolve_monkey(&mut monkeys, &idx_lookup, root_idx);
 
     // Grab both inputs to root
-    let a = monkeys
-        .iter()
-        .find(|v| v.name == root_left)
-        .and_then(|v| v.value.left())
-        .unwrap();
-    let b = monkeys
-        .iter()
-        .find(|v| v.name == root_right)
-        .and_then(|v| v.value.left())
-        .unwrap();
+    let a = monkeys[idx_lookup[&root_left]].value.left().unwrap();
+    let b = monkeys[idx_lookup[&root_right]].value.left().unwrap();
 
-    info!("Resolved root_left={root_left} to {a:?}");
-    info!("Resolved root_right={root_right} to {b:?}");
+    info!("Resolved root_left={root_left} to {a}");
+    info!("Resolved root_right={root_right} to {b}");
 
     // And algebra our way to success!
     (a.re - b.re) / (b.im - a.im)
