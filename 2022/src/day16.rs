@@ -9,6 +9,10 @@ impl Name {
     fn new(s: &str) -> Self {
         Self(iter_to_array(s.chars().take(2)))
     }
+
+    fn as_string(&self) -> String {
+        self.0.iter().collect()
+    }
 }
 
 impl fmt::Debug for Name {
@@ -17,13 +21,20 @@ impl fmt::Debug for Name {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 struct Valve {
     open: bool,
     rate: i32,
 }
 
-#[derive(Clone, Debug)]
+impl Valve {
+    fn new(rate: i32) -> Self {
+        // "All of the valves begin **closed**"
+        Self { rate, open: false }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Day16 {
     // Whether a valve is open or not
     valves: HashMap<Name, Valve>,
@@ -43,7 +54,7 @@ fn parse(s: &str) -> Day16 {
         // Skip "Valve "
         let line = &line[6..];
 
-        // Pars valve
+        // Parse valve
         let valve_name = Name::new(line);
 
         // Skip "AA has flow rate="
@@ -56,9 +67,15 @@ fn parse(s: &str) -> Day16 {
         let tunnel_text = &line[23..].trim();
         let these_tunnels: Vec<Name> = tunnel_text.split(", ").map(Name::new).collect();
 
-        valves.insert(valve_name, Valve { open: false, rate });
+        valves.insert(valve_name, Valve::new(rate));
         tunnels.insert(valve_name, these_tunnels);
     }
+
+    info!(
+        "Loaded {n_tunnels} tunnels between {n_valves} valves",
+        n_valves = valves.len(),
+        n_tunnels = tunnels.len(),
+    );
 
     Day16 { valves, tunnels }
 }
@@ -66,8 +83,10 @@ fn parse(s: &str) -> Day16 {
 // Part1 ========================================================================
 #[aoc(day16, part1)]
 pub fn part1(input: &str) -> i64 {
+    const AA: Name = Name(['A', 'A']);
+
     let mut day = parse(input);
-    let mut here = Name::new("AA");
+    let mut here = AA;
 
     day.valves.get_mut(&here).unwrap().open = true;
 
@@ -76,29 +95,31 @@ pub fn part1(input: &str) -> i64 {
     //  Reorder according to tunnel deps (e.g. JJ=20, but we need to go to II first)
     //  Simulate Move/Open steps (1 min to move, 1 min to open)
     // ... is this a minimal spanning tree?
-
     let mut all_pressure = 0_i32;
 
+    // Run for 30 minutes
     for m in 1..=30 {
-        println!("== Minute {m} ==");
+        info!("== Minute {m} ==");
 
         let open = day
             .valves
             .iter()
-            .filter(|v| v.1.open)
-            .filter(|v| v.0 .0 != ['A', 'A']);
-        if open.clone().count() > 0 {
-            print!("Valves ");
-            for (name, _valve) in open.clone() {
-                print!("{name:?}, ");
-            }
+            .filter(|(_name, valve)| valve.open)
+            .filter(|(name, _valve)| **name != AA);
+        if log_enabled!(Info) {
+            if open.clone().count() > 0 {
+                let names: String = open
+                    .clone()
+                    .map(|(name, _valve)| name.as_string())
+                    .join(", ");
 
-            let pressure: i32 = open.clone().map(|v| v.1.rate).sum();
-            println!(" are open, releasing {pressure} pressure");
-        } else {
-            println!("No valves are open.");
+                let pressure: i32 = open.clone().map(|(_name, valve)| valve.rate).sum();
+                info!("Valves {names} are open, releasing {pressure} pressure");
+            } else {
+                info!("No valves are open.");
+            }
         }
-        all_pressure += open.map(|v| v.1.rate).sum::<i32>();
+        all_pressure += open.map(|(_name, valve)| valve.rate).sum::<i32>();
 
         if day.valves[&here].open {
             // Move rooms
@@ -113,14 +134,14 @@ pub fn part1(input: &str) -> i64 {
             });
 
             here = options[0];
-            println!("You move to valve {here:?}");
+            info!("You move to valve {here:?}");
         } else {
             // Open this one
             day.valves.get_mut(&here).unwrap().open = true;
-            println!("You open valve {here:?}");
+            info!("You open valve {here:?}");
         }
 
-        println!();
+        info!("");
     }
 
     all_pressure as i64
@@ -139,8 +160,7 @@ mod test {
     use pretty_assertions::{assert_eq, assert_ne};
     use rstest::*;
 
-    const EXAMPLE_INPUT: &str = r"
-Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
+    const EXAMPLE_INPUT: &str = r"Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
 Valve BB has flow rate=13; tunnels lead to valves CC, AA
 Valve CC has flow rate=2; tunnels lead to valves DD, BB
 Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
@@ -151,6 +171,56 @@ Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II
 ";
+
+    #[test]
+    fn check_parse() {
+        const AA: Name = Name(['A', 'A']);
+        const BB: Name = Name(['B', 'B']);
+        const CC: Name = Name(['C', 'C']);
+        const DD: Name = Name(['D', 'D']);
+        const EE: Name = Name(['E', 'E']);
+        const FF: Name = Name(['F', 'F']);
+        const GG: Name = Name(['G', 'G']);
+        const HH: Name = Name(['H', 'H']);
+        const II: Name = Name(['I', 'I']);
+        const JJ: Name = Name(['J', 'J']);
+
+        // Note: When comparing these two, HashMap ordering is RANDOM, so if anything is wrong the entire thing gets noisey!
+        assert_eq!(
+            parse(EXAMPLE_INPUT),
+            Day16 {
+                valves: [
+                    (AA, Valve::new(0)),
+                    (BB, Valve::new(13)),
+                    (CC, Valve::new(2)),
+                    (DD, Valve::new(20)),
+                    (EE, Valve::new(3)),
+                    (FF, Valve::new(0)),
+                    (GG, Valve::new(0)),
+                    (HH, Valve::new(22)),
+                    (II, Valve::new(0)),
+                    (JJ, Valve::new(21)),
+                ]
+                .into_iter()
+                .collect(),
+
+                tunnels: [
+                    (AA, vec![DD, II, BB]),
+                    (BB, vec![CC, AA]),
+                    (CC, vec![DD, BB]),
+                    (DD, vec![CC, AA, EE]),
+                    (EE, vec![FF, DD]),
+                    (FF, vec![EE, GG]),
+                    (GG, vec![FF, HH]),
+                    (HH, vec![GG]),
+                    (II, vec![AA, JJ]),
+                    (JJ, vec![II]),
+                ]
+                .into_iter()
+                .collect(),
+            }
+        );
+    }
 
     #[rstest]
     #[case::given(1651, EXAMPLE_INPUT)]

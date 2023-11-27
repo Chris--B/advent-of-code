@@ -63,7 +63,7 @@ mod prelude {
     pub use derive_more::*;
     pub use either::*;
     pub use itertools::Itertools;
-    pub use log::{debug, error, info, trace, warn};
+    pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::Complex;
     pub use scan_fmt::scan_fmt;
     pub use smallstr::SmallString;
