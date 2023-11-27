@@ -2,18 +2,7 @@ use crate::prelude::*;
 
 use std::fmt;
 
-fn _str_to_idx(bs: &[u8]) -> u32 {
-    debug_assert!(bs.len() == 4, "Expected 4 bytes but found {}", bs.len());
-    let mut idx = 0;
-
-    for b in bs.iter().copied() {
-        debug_assert!(b - b'a' < 26);
-        idx *= 26;
-        idx += (b - b'a') as u32;
-    }
-
-    idx
-}
+type UnresolvedValue = Either<Complex<f64>, (Op, Monkey, Monkey)>;
 
 #[derive(Copy, Clone, Debug)]
 enum Op {
@@ -26,63 +15,49 @@ enum Op {
 #[derive(Copy, Clone, Debug)]
 struct MonkeyInfo {
     name: Monkey,
-    value: Either<i64, (Op, Monkey, Monkey)>,
+    value: UnresolvedValue,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 struct Monkey([u8; 4]);
 
-impl fmt::Debug for Monkey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\"{}\"", std::str::from_utf8(&self.0).unwrap())
+impl Monkey {
+    fn name(&self) -> &str {
+        std::str::from_utf8(&self.0).unwrap()
     }
 }
 
-fn resolve_monkey(monkeys: &mut [MonkeyInfo], idx: usize) -> i64 {
-    let val = match monkeys[idx].value {
-        Left(n) => n,
-        Right((op, left, right)) => {
-            // 😬😬😬
-            let left_idx = monkeys.iter().position(|m| m.name == left).unwrap();
-            let right_idx = monkeys.iter().position(|m| m.name == right).unwrap();
-
-            let left = resolve_monkey(monkeys, left_idx);
-            let right = resolve_monkey(monkeys, right_idx);
-
-            match op {
-                Op::Add => left + right,
-                Op::Sub => left - right,
-                Op::Mul => left * right,
-                Op::Div => left / right,
-            }
-        }
-    };
-
-    monkeys[idx].value = Left(val);
-    val
+impl fmt::Display for Monkey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "\"{}\"", self.name())
+    }
 }
 
-// Part1 ========================================================================
-#[aoc(day21, part1)]
-pub fn part1(input: &str) -> i64 {
+impl fmt::Debug for Monkey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "\"{}\"", self.name())
+    }
+}
+
+fn parse_monkeys(input: &str) -> (Vec<MonkeyInfo>, usize) {
     let lines: Vec<_> = input.lines().map(|s| s.as_bytes()).collect();
     let mut monkeys = vec![];
 
-    // Parse monkeys
-    let mut root = 0;
+    let mut root_idx = 0;
+
     for line in &lines {
         let mut parts = line.split(|b| *b == b':');
         let name = Monkey(parts.next().unwrap().try_into().unwrap());
 
-        // Root is special so we'll save it
+        // humn and root are special so we'll save them
         if name == Monkey(*b"root") {
-            root = monkeys.len();
+            root_idx = monkeys.len();
         }
 
         let expr = parts.next().unwrap();
         let value = if expr[1].is_ascii_digit() {
             // ex: " 5"
-            Left(fast_parse_u32(&expr[1..]) as i64)
+            Left(Complex::new(fast_parse_u32(&expr[1..]) as f64, 0.))
         } else {
             // Everything is really evenly sized
             // ex: " pppw + sjmn"
@@ -103,17 +78,96 @@ pub fn part1(input: &str) -> i64 {
         monkeys.push(info);
     }
 
-    // Recursively resolve
-    resolve_monkey(&mut monkeys, root);
+    (monkeys, root_idx)
+}
 
-    monkeys[root].value.left().unwrap()
+fn resolve_monkey(monkeys: &mut [MonkeyInfo], idx: usize) -> Complex<f64> {
+    debug!("resolving {}", monkeys[idx].name);
+
+    let val = match monkeys[idx].value {
+        Left(n) => n,
+        Right((op, left, right)) => {
+            // 😬😬😬
+            let left_idx = monkeys.iter().position(|m| m.name == left).unwrap();
+            let right_idx = monkeys.iter().position(|m| m.name == right).unwrap();
+
+            let left = resolve_monkey(monkeys, left_idx);
+            let right = resolve_monkey(monkeys, right_idx);
+
+            debug!(
+                "resolving {name} left={left}, op={op:?} right={right}",
+                name = monkeys[idx].name
+            );
+
+            match op {
+                Op::Add => left + right,
+                Op::Sub => left - right,
+                Op::Mul => left * right,
+                Op::Div => left / right,
+            }
+        }
+    };
+    debug!("resolving {} to {val}", monkeys[idx].name);
+
+    monkeys[idx].value = Left(val);
+    val
+}
+
+// Part1 ========================================================================
+#[aoc(day21, part1)]
+pub fn part1(input: &str) -> f64 {
+    let (mut monkeys, root_idx) = parse_monkeys(input);
+
+    // Recursively resolve in-place
+    resolve_monkey(&mut monkeys, root_idx);
+
+    monkeys[root_idx]
+        .value
+        .left()
+        .expect("Unresolved monkey at root")
+        .re
 }
 
 // Part2 ========================================================================
-// #[aoc(day21, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     0
-// }
+#[aoc(day21, part2)]
+pub fn part2(input: &str) -> f64 {
+    let (mut monkeys, root_idx) = parse_monkeys(input);
+
+    // This is the only non-real entry in the list. We'll use it as a poor-man's algebraic solver.
+    // This only works because no monkey in the list ever shows up twice (and we don't get accidental i**2)
+    monkeys
+        .iter_mut()
+        .find(|v| v.name == Monkey(*b"humn"))
+        .expect("Unable to find 'humn' in input")
+        .value = Left(Complex::new(0., 1.));
+
+    // We need root's two deps to be equal, so save those now.
+    let (_op, root_left, root_right) = monkeys[root_idx]
+        .value
+        .right()
+        .expect("root shouldn't be resolved after parsing");
+
+    // Recursively resolve in-place
+    resolve_monkey(&mut monkeys, root_idx);
+
+    // Grab both inputs to root
+    let a = monkeys
+        .iter()
+        .find(|v| v.name == root_left)
+        .and_then(|v| v.value.left())
+        .unwrap();
+    let b = monkeys
+        .iter()
+        .find(|v| v.name == root_right)
+        .and_then(|v| v.value.left())
+        .unwrap();
+
+    info!("Resolved root_left={root_left} to {a:?}");
+    info!("Resolved root_right={root_right} to {b:?}");
+
+    // And algebra our way to success!
+    (a.re - b.re) / (b.im - a.im)
+}
 
 #[cfg(test)]
 mod test {
@@ -141,30 +195,30 @@ hmdt: 32
 ";
 
     #[rstest]
-    #[case::given(152, EXAMPLE_INPUT)]
+    #[case::given(152., EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&str) -> i64,
-        #[case] expected: i64,
+        p: impl FnOnce(&str) -> f64,
+        #[case] expected: f64,
         #[case] input: &str,
     ) {
         let input = input.trim();
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(301, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(301., EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> f64,
+        #[case] expected: f64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
