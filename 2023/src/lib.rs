@@ -1,0 +1,77 @@
+#![cfg_attr(feature = "simd", feature(portable_simd))]
+#![cfg_attr(feature = "simd", feature(stdsimd))]
+#![allow(clippy::comparison_chain)]
+
+use aoc_runner_derive::aoc_lib;
+
+pub mod day01;
+// pub mod day02;
+// pub mod day03;
+// pub mod day04;
+// pub mod day05;
+// pub mod day06;
+// pub mod day07;
+// pub mod day08;
+// pub mod day09;
+// pub mod day10;
+// pub mod day11;
+// pub mod day12;
+// pub mod day13;
+// pub mod day14;
+// pub mod day15;
+// pub mod day16;
+// pub mod day17;
+// pub mod day18;
+// pub mod day19;
+// pub mod day20;
+// pub mod day21;
+// pub mod day22;
+// pub mod day23;
+// pub mod day24;
+// pub mod day25;
+
+aoc_lib! { year = 2023 }
+
+// Run this function when the binary is loaded. This typically happens BEFORE MAIN.
+// This is a BAD IDEA, but cargo-aoc doesn't give us hooks anywhere else. So it's this or lazy-init in EVERY solution 😬.
+#[ctor::ctor]
+fn init_logging() {
+    use env_logger::{Builder, Env};
+    use prelude::*;
+
+    let mut env = Env::default();
+    if cfg!(test) || cfg!(debug_assert) {
+        // Debug and test builds should log MORE
+        env = env.default_filter_or("debug");
+    } else {
+        // Everyone else can log warn and above
+        env = env.default_filter_or("warn");
+    }
+
+    Builder::from_env(env)
+        .is_test(cfg!(test))
+        .format_timestamp(None)
+        .format_module_path(false)
+        .format_target(false)
+        .format_indent(Some(4))
+        .init();
+
+    trace!("Hello");
+    debug!("Hello");
+    info!("Hello");
+    warn!("Hello");
+    error!("Hello");
+}
+
+mod prelude {
+
+    pub use aoc_runner_derive::{aoc, aoc_generator};
+
+    pub use itertools::Itertools;
+    pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
+    pub use num::Complex;
+    pub use scan_fmt::scan_fmt;
+
+    pub use std::collections::{HashMap, HashSet, VecDeque};
+    pub use std::num::Wrapping;
+}
