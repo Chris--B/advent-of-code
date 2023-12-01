@@ -26,6 +26,43 @@ pub fn part1(input: &str) -> i64 {
     sum
 }
 
+#[aoc(day1, part1, v2)]
+pub fn part1_v2(input: &str) -> i64 {
+    let mut sum = 0;
+
+    for line in input.as_bytes().split(|b| *b == b'\n') {
+        let mut a = 0;
+        for i in 0..line.len() {
+            if let Some(c) = line.get(i) {
+                if let b'0'..=b'9' = *c {
+                    a = (c - b'0') as i64;
+                }
+            }
+            if a != 0 {
+                break;
+            }
+        }
+
+        let mut b = 0;
+        for i in 0..line.len() {
+            let j = line.len() - i - 1;
+
+            if let Some(c) = line.get(j) {
+                if let b'0'..=b'9' = *c {
+                    b = (c - b'0') as i64;
+                }
+            }
+            if b != 0 {
+                break;
+            }
+        }
+
+        sum += a * 10 + b;
+    }
+
+    sum
+}
+
 // Part2 ========================================================================
 #[aoc(day1, part2)]
 pub fn part2(input: &str) -> i64 {
@@ -211,7 +248,7 @@ zoneight234
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_v2)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
