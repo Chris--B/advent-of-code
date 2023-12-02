@@ -177,6 +177,65 @@ pub fn part2_keep_tally(games: &str) -> i64 {
     sum
 }
 
+#[aoc(day2, part2, manual_parsing)]
+pub fn part2_manual_parsing(games: &str) -> i64 {
+    let mut sum = 0;
+    let mut rgb = [0; 3];
+    let mut x = 0;
+
+    for thing in games.as_bytes().split(u8::is_ascii_whitespace) {
+        let s = std::str::from_utf8(thing).unwrap();
+
+        if thing.is_empty() {
+            continue;
+        }
+
+        if thing[0] == b'G' {
+            // New game, reset state
+            sum += rgb[0] * rgb[1] * rgb[2];
+            rgb = [0; 3];
+            continue;
+        }
+
+        if thing.last().copied() == Some(b':') {
+            continue;
+        }
+
+        if thing[0].is_ascii_digit() {
+            x = fast_parse_u8(thing) as i64;
+            continue;
+        }
+
+        // Note: Interesting bit pattern we may be able to take advantage of...
+        // let r = (b'r' - 1) & 0b01_0010 >> 4; // 1
+        // let g = (b'g' - 1) & 0b01_0010; // 2
+        // let b = (b'b' - 1) & 0b01_0010; // 0
+        // println!("r={r:7b}\ng={g:7b}\nb={b:7b}");
+        // println!(" -> {s}");
+
+        if thing[0] == b'r' {
+            rgb[0] = rgb[0].max(x);
+            continue;
+        }
+        if thing[0] == b'g' {
+            rgb[1] = rgb[1].max(x);
+            continue;
+        }
+        if thing[0] == b'b' {
+            rgb[2] = rgb[2].max(x);
+            continue;
+        }
+
+        // Should never hit here on valid input
+        unreachable!("Unhandled: {s}");
+    }
+
+    // 'finish' the final line
+    sum += rgb[0] * rgb[1] * rgb[2];
+
+    sum
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -239,7 +298,7 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2, part2_keep_tally)]
+        #[values(part2, part2_keep_tally, part2_manual_parsing)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,

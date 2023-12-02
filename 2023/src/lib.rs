@@ -74,4 +74,27 @@ mod prelude {
 
     pub use std::collections::{HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
+
+    pub use crate::fast_parse_u8;
+}
+
+pub fn fast_parse_u8(input: &[u8]) -> u32 {
+    if cfg!(debug_assertions) {
+        for c in input {
+            assert!(c.is_ascii_digit());
+        }
+        assert!(
+            input.len() < 3,
+            "input expects a 2 digit int but found {:?}",
+            std::str::from_utf8(input)
+        );
+    }
+    let mut digits = [0_u32; 2];
+    let mut x = 1;
+    for (i, b) in input.iter().rev().enumerate() {
+        digits[i] = x * (*b - b'0') as u32;
+        x *= 10;
+    }
+
+    digits.into_iter().sum()
 }
