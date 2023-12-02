@@ -178,62 +178,51 @@ pub fn part2_keep_tally(games: &str) -> i64 {
 }
 
 #[aoc(day2, part2, manual_parsing)]
-pub fn part2_manual_parsing(games: &str) -> i64 {
-    let mut sum = 0;
+pub fn part2_manual_parsing(input: &str) -> i64 {
+    let input = input.trim().as_bytes();
+
     let mut rgb = [0; 3];
-    let mut x = 0;
+    let mut sum = 0;
 
-    for thing in games.as_bytes().split(u8::is_ascii_whitespace) {
-        let s = std::str::from_utf8(thing).unwrap();
+    let mut pos = 1;
+    let mut game = 1;
 
-        if thing.is_empty() {
-            continue;
-        }
+    while pos < input.len() {
+        // Sample line:
+        //      "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green"
+        if input[pos] == b'a' {
+            // Skip over "Game N:" prefix, accounting for 1, 2, or 3 digit Game IDs
+            pos += 7 + (game > 9) as usize + (game > 99) as usize;
+            game += 1;
 
-        if thing[0] == b'G' {
-            // New game, reset state
+            // Save and reset the game state, since we found a new game
             sum += rgb[0] * rgb[1] * rgb[2];
             rgb = [0; 3];
-            continue;
-        }
+        } else {
+            // We expect a cube count next, so parse it inline here
+            let mut v: u32 = (input[pos] - b'0') as u32;
+            pos += 1;
 
-        if thing.last().copied() == Some(b':') {
-            continue;
-        }
+            while input[pos] != b' ' {
+                v = 10 * v + (input[pos] - b'0') as u32;
+                pos += 1;
+            }
+            // slip ' '
+            pos += 1;
 
-        if thing[0].is_ascii_digit() {
-            x = fast_parse_u8(thing) as i64;
-            continue;
-        }
+            // Use some bit magic to compute the rgb index, so we can avoid branching here
+            let col: usize = ((input[pos] as usize * 7) >> 5) & 3;
+            rgb[col] = rgb[col].max(v);
 
-        // Note: Interesting bit pattern we may be able to take advantage of...
-        // let r = (b'r' - 1) & 0b01_0010 >> 4; // 1
-        // let g = (b'g' - 1) & 0b01_0010; // 2
-        // let b = (b'b' - 1) & 0b01_0010; // 0
-        // println!("r={r:7b}\ng={g:7b}\nb={b:7b}");
-        // println!(" -> {s}");
-
-        if thing[0] == b'r' {
-            rgb[0] = rgb[0].max(x);
-            continue;
+            pos += 5 + col;
         }
-        if thing[0] == b'g' {
-            rgb[1] = rgb[1].max(x);
-            continue;
-        }
-        if thing[0] == b'b' {
-            rgb[2] = rgb[2].max(x);
-            continue;
-        }
-
-        // Should never hit here on valid input
-        unreachable!("Unhandled: {s}");
     }
 
-    // 'finish' the final line
+    // Since we finalize a game when starting a new one, we'll never finalize the final game.
+    // Do so now.
     sum += rgb[0] * rgb[1] * rgb[2];
 
-    sum
+    sum as i64
 }
 
 #[cfg(test)]
