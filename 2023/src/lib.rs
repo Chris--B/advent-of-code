@@ -63,6 +63,7 @@ fn init_logging() {
     error!("Hello");
 }
 
+#[allow(unused_imports)]
 mod prelude {
 
     pub use aoc_runner_derive::{aoc, aoc_generator};

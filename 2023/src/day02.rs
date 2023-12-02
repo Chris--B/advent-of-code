@@ -207,11 +207,11 @@ pub fn part2_manual_parsing(input: &str) -> i64 {
                 v = 10 * v + (input[pos] - b'0') as u32;
                 pos += 1;
             }
-            // slip ' '
+            // skip ' '
             pos += 1;
 
             // Use some bit magic to compute the rgb index, so we can avoid branching here
-            let col: usize = ((input[pos] as usize * 7) >> 5) & 3;
+            let col: usize = ((input[pos + 1] as usize) >> 3) & 3;
             rgb[col] = rgb[col].max(v);
 
             pos += 5 + col;
