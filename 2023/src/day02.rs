@@ -24,11 +24,10 @@ fn is_possible(game: &[Cubes], c: &Cubes) -> bool {
     true
 }
 
-#[aoc_generator(day2)]
 pub fn parse(input: &str) -> Vec<Vec<Cubes>> {
     let mut games = vec![];
 
-    for line in input.lines() {
+    for line in input.trim().lines() {
         // Example line:
         //      Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
 
@@ -68,8 +67,8 @@ pub fn parse(input: &str) -> Vec<Vec<Cubes>> {
 }
 
 #[aoc(day2, part1)]
-pub fn part1(games: &[Vec<Cubes>]) -> i64 {
-    games
+pub fn part1(input: &str) -> i64 {
+    parse(input)
         .iter()
         .enumerate()
         .map(|(idx, game)| (1 + idx as i64, game))
@@ -90,10 +89,54 @@ pub fn part1(games: &[Vec<Cubes>]) -> i64 {
         .sum()
 }
 
+#[aoc(day2, part1, keep_tally)]
+pub fn part1_keep_tally(games: &str) -> i64 {
+    let given = Cubes {
+        red: 12,
+        green: 13,
+        blue: 14,
+    };
+
+    let mut sum = 0;
+
+    'game_loop: for (idx, game_line) in games.trim().lines().enumerate() {
+        let id = 1 + idx as i64;
+
+        let (_prefix, draws) = game_line.split_once(':').unwrap();
+        for entry in draws.split([',', ';']) {
+            let (count, field) = entry.trim().split_once(' ').unwrap();
+            let count: u32 = count.parse().unwrap();
+
+            match field.trim() {
+                "red" => {
+                    if count > given.red {
+                        continue 'game_loop;
+                    }
+                }
+                "green" => {
+                    if count > given.green {
+                        continue 'game_loop;
+                    }
+                }
+                "blue" => {
+                    if count > given.blue {
+                        continue 'game_loop;
+                    }
+                }
+                other => unreachable!("{other}"),
+            }
+        }
+
+        sum += id;
+    }
+
+    sum
+}
+
 // Part2 ========================================================================
 #[aoc(day2, part2)]
-pub fn part2(games: &[Vec<Cubes>]) -> i64 {
-    games
+pub fn part2(input: &str) -> i64 {
+    parse(input)
         .iter()
         .map(|game| -> Cubes {
             let mut power = Cubes::default();
@@ -106,6 +149,32 @@ pub fn part2(games: &[Vec<Cubes>]) -> i64 {
         })
         .map(|c| (c.red * c.green * c.blue) as i64)
         .sum()
+}
+
+#[aoc(day2, part2, keep_tally)]
+pub fn part2_keep_tally(games: &str) -> i64 {
+    let mut sum = 0;
+
+    for game_line in games.trim().lines() {
+        let mut min = Cubes::new();
+
+        let (_prefix, draws) = game_line.split_once(':').unwrap();
+        for entry in draws.split([',', ';']) {
+            let (count, field) = entry.trim().split_once(' ').unwrap();
+            let count: u32 = count.parse().unwrap();
+
+            match field.trim() {
+                "red" => min.red = count.max(min.red),
+                "green" => min.green = count.max(min.green),
+                "blue" => min.blue = count.max(min.blue),
+                other => unreachable!("{other}"),
+            }
+        }
+
+        sum += (min.red * min.green * min.blue) as i64;
+    }
+
+    sum
 }
 
 #[cfg(test)]
@@ -157,13 +226,12 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
-        p: impl FnOnce(&[Vec<Cubes>]) -> i64,
+        #[values(part1, part1_keep_tally)]
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
-        let input = parse(input.trim());
-        assert_eq!(p(&input), expected);
+        assert_eq!(p(input), expected);
     }
 
     #[rstest]
@@ -171,12 +239,11 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
-        p: impl FnOnce(&[Vec<Cubes>]) -> i64,
+        #[values(part2, part2_keep_tally)]
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
-        let input = parse(input.trim());
-        assert_eq!(p(&input), expected);
+        assert_eq!(p(input), expected);
     }
 }
