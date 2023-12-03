@@ -1,19 +1,20 @@
 use crate::prelude::*;
 
-fn parse(s: &str) -> HashMap<(i32, i32), char> {
+fn parse(s: &str) -> HashMap<(i64, i64), char> {
     let mut grid = HashMap::new();
 
     for (y, line) in s.lines().enumerate() {
-        let y = y as i32;
+        let y = y as i64;
         for (i, c) in line.chars().enumerate() {
-            let x: i32 = i as i32;
+            let x: i64 = i as i64;
             match c {
-                '0'..='9' => grid.insert((x, y), c),
-                '.' => {
-                    // Do nothing
-                    None
+                '0'..='9' => {
+                    grid.insert((x, y), c);
                 }
-                _ => grid.insert((x, y), '*'),
+                '.' => { /* Do nothing */ }
+                _ => {
+                    grid.insert((x, y), '*');
+                }
             };
         }
     }
@@ -21,15 +22,11 @@ fn parse(s: &str) -> HashMap<(i32, i32), char> {
     grid
 }
 
-fn extract_num(s: &str, x0: i32, x1: i32, y: i32, width: i32) -> i32 {
+fn extract_num(s: &str, x0: i64, x1: i64, y: i64, width: i64) -> i64 {
     let i0 = (x0 + y * width) as usize;
     let i1 = (x1 + y * width) as usize;
 
-    // dbg!("x");
-    // dbg!((x0, x1, y));
-    // dbg!(&s[i0..i1]);
-
-    s[i0..i1].parse().unwrap_or_default()
+    s[i0..i1].parse().unwrap()
 }
 
 // Part1 ========================================================================
@@ -52,25 +49,34 @@ pub fn part1(input: &str) -> i64 {
         .into_option()
         .unwrap();
 
-    dbg!((min_x, max_x));
-    dbg!((min_y, max_y));
-
     let mut nums = vec![];
 
+    // Walk the grid one row (x-axis) at a time
+    // We don't use the expected forloop here so we an jump ahead and parse numbers
     for y in min_y..=max_y {
         let mut x = min_x;
         while x <= max_x {
             if let Some(c) = grid.get(&(x, y)) {
+                // If we found a digit we should record this and try to parse a number. Everything else is ignored.
                 if c.is_ascii_digit() {
+                    // Walk x forward until we run out of digits.
+                    // The grid is a hashmap and doesn't have a notion of "out of bounds"
                     let mut xx = x;
-                    while let Some(c) = grid.get(&(xx, y)) {
+                    'cur_num: while let Some(c) = grid.get(&(xx, y)) {
                         if !c.is_ascii_digit() {
-                            break;
+                            // We found something that's not a digit, so we're out of this.
+                            break 'cur_num;
                         }
                         xx += 1;
                     }
 
-                    let num: i32 = extract_num(input, x, xx, y, if cfg!(test) { 11 } else { 141 });
+                    // NOTE: Do NOT use max_x-min_x, because this uses the bounds of all non-empty cells.
+                    // The example and real input both have empty columns on the far edge, and so those will be incorrect
+                    // for indexing into the string.
+                    //
+                    // Add 1 to width here to account for '\n'
+                    let width = input.lines().next().unwrap().len() as i64 + 1;
+                    let num: i64 = extract_num(input, x, xx, y, width);
                     nums.push((x, y, num, xx - x));
 
                     x = xx;
@@ -80,7 +86,6 @@ pub fn part1(input: &str) -> i64 {
             x += 1;
         }
     }
-    assert!(!nums.is_empty());
 
     let mut sum = 0;
 
@@ -104,7 +109,7 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
-    sum as i64
+    sum
 }
 
 // Part2 ========================================================================
@@ -129,20 +134,32 @@ pub fn part2(input: &str) -> i64 {
 
     let mut nums = vec![];
 
+    // Walk the grid one row (x-axis) at a time
+    // We don't use the expected forloop here so we an jump ahead and parse numbers
     for y in min_y..=max_y {
         let mut x = min_x;
         while x <= max_x {
             if let Some(c) = grid.get(&(x, y)) {
+                // If we found a digit we should record this and try to parse a number. Everything else is ignored.
                 if c.is_ascii_digit() {
+                    // Walk x forward until we run out of digits.
+                    // The grid is a hashmap and doesn't have a notion of "out of bounds"
                     let mut xx = x;
-                    while let Some(c) = grid.get(&(xx, y)) {
+                    'cur_num: while let Some(c) = grid.get(&(xx, y)) {
                         if !c.is_ascii_digit() {
-                            break;
+                            // We found something that's not a digit, so we're out of this.
+                            break 'cur_num;
                         }
                         xx += 1;
                     }
 
-                    let num: i32 = extract_num(input, x, xx, y, if cfg!(test) { 11 } else { 141 });
+                    // NOTE: Do NOT use max_x-min_x, because this uses the bounds of all non-empty cells.
+                    // The example and real input both have empty columns on the far edge, and so those will be incorrect
+                    // for indexing into the string.
+                    //
+                    // Add 1 to width here to account for '\n'
+                    let width = input.lines().next().unwrap().len() as i64 + 1;
+                    let num: i64 = extract_num(input, x, xx, y, width);
                     nums.push((x, y, num, xx - x));
 
                     x = xx;
@@ -154,7 +171,6 @@ pub fn part2(input: &str) -> i64 {
     }
     assert!(!nums.is_empty());
 
-    let mut next_to_counts = HashMap::new();
     let mut next_to_nums = HashMap::new();
 
     'nums_loop: for (x, y, num, n) in nums.iter().copied() {
@@ -170,7 +186,6 @@ pub fn part2(input: &str) -> i64 {
         for (xx, yy) in to_check {
             if let Some(c) = grid.get(&(xx, yy)) {
                 if !c.is_ascii_digit() {
-                    *next_to_counts.entry((xx, yy)).or_insert(0) += 1;
                     next_to_nums.entry((xx, yy)).or_insert(vec![]).push(num);
                     continue 'nums_loop;
                 }
@@ -178,11 +193,11 @@ pub fn part2(input: &str) -> i64 {
         }
     }
 
-    next_to_counts
+    next_to_nums
         .iter()
-        .filter_map(|(xy, count)| -> Option<i64> {
-            if *count == 2 {
-                Some(next_to_nums[xy].iter().copied().product::<i32>() as i64)
+        .filter_map(|(xy, nums)| -> Option<i64> {
+            if nums.len() == 2 {
+                Some(next_to_nums[xy].iter().copied().product())
             } else {
                 None
             }
@@ -212,6 +227,7 @@ mod test {
 
     #[rstest]
     #[case::given(4361, EXAMPLE_INPUT)]
+    #[case::adam_ex(300, "100*200")]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
@@ -226,6 +242,7 @@ mod test {
 
     #[rstest]
     #[case::given(467835, EXAMPLE_INPUT)]
+    #[case::adam_ex(100*200, "100*200")]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
