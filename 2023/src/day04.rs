@@ -1,5 +1,7 @@
 use crate::prelude::*;
 
+use smallvec::{smallvec, SmallVec};
+
 fn parse_matches_count(input: &'_ str) -> impl Iterator<Item = usize> + '_ {
     input.lines().filter(|l| !l.is_empty()).map(|line| {
         let (_, line) = line.split_once(':').unwrap();
@@ -40,25 +42,69 @@ pub fn part2(input: &str) -> i64 {
         let mcount = card_mcount[cid];
 
         for c in ((cid + 1)..).take(mcount) {
-            if cfg!(debug_assertions) {
-                println!("[{cid}] {copies} instances of Card {cid} have {mcount} matching numbers, so you win {copies}");
-            }
             card_copies[c] += copies;
         }
-        if cfg!(debug_assertions) {
-            if mcount == 0 {
-                println!("[{cid}] No matches");
-            }
+    }
 
-            println!(
-                "[{cid}] {{\n    {}\n}}",
-                card_copies
-                    .iter()
-                    .enumerate()
-                    .map(|(i, n)| format!("Card {i}: {n}"))
-                    .join("\n    ")
-            );
-            println!();
+    card_copies.iter().sum()
+}
+
+// V2 ==========================================================================
+fn parse_matches_count_v2(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
+    input.trim().lines().map(|line| {
+        let colon = line.find(':').unwrap() + 1;
+        let bar = line[colon..].find('|').unwrap() + colon;
+
+        let mut winning: u128 = 0;
+        {
+            let mut v: u8 = 0;
+            for (i, c) in line[(colon + 1)..bar].as_bytes().iter().enumerate() {
+                if i % 3 == 2 {
+                    winning |= 1 << v;
+                    v = 0;
+                } else {
+                    v = 10 * v + (*c & 0b1111);
+                }
+            }
+            winning |= 1 << v;
+        }
+
+        let mut player = 0;
+        {
+            let mut v: u8 = 0;
+            for (i, c) in line[(bar + 2)..].as_bytes().iter().enumerate() {
+                if i % 3 == 2 {
+                    player |= 1 << v;
+                    v = 0;
+                } else {
+                    v = 10 * v + (*c & 0b1111);
+                }
+            }
+            player |= 1 << v;
+        }
+
+        (winning & player).count_ones() as u16
+    })
+}
+
+// Part1 ========================================================================
+#[aoc(day4, part1, v2)]
+pub fn part1_v2(input: &str) -> i64 {
+    parse_matches_count_v2(input)
+        .filter(|m| *m != 0)
+        .map(|m| 1 << (m - 1))
+        .sum()
+}
+
+// Part2 ========================================================================
+#[aoc(day4, part2, v2)]
+pub fn part2_v2(input: &str) -> i64 {
+    let card_mcounts: SmallVec<[u16; 256]> = parse_matches_count_v2(input).collect();
+    let mut card_copies: SmallVec<[i64; 256]> = smallvec![1; card_mcounts.len()];
+
+    for (i, mcount) in card_mcounts.into_iter().enumerate() {
+        for c in 0..(mcount as usize) {
+            card_copies[i + 1 + c] += card_copies[i];
         }
     }
 
@@ -86,7 +132,7 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_v2)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -100,7 +146,7 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_v2)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
