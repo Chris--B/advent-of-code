@@ -116,9 +116,14 @@ pub fn part2_v2(input: &str) -> i64 {
 
 // V3 ==========================================================================
 fn parse_matches_count_v3(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
-    input.trim().lines().map(|line| {
-        let line = line.trim();
-        debug_assert!(!line.is_empty());
+    let input = input.trim().as_bytes();
+
+    const LINE: usize = if cfg!(test) { 48 } else { 116 } + 1;
+
+    let n_lines = input.len() / LINE;
+    (0..n_lines).map(|line_id| {
+        // let line = &input[line_id * LINE..][..LINE];
+        let line = unsafe { std::slice::from_raw_parts(input.as_ptr().add(LINE * line_id), LINE) };
 
         // Sample lines:
         //                  .      v wi             v pi
@@ -126,11 +131,9 @@ fn parse_matches_count_v3(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
         //  Input:          Card   1: 43 19 57 13 44 22 29 20 34 33 | 34 68 13 38 32 57 20 64 42  7 44 54 16 51 33 85 43 24 86 93 83 29 25 19 22
         const WI: usize = if cfg!(test) { 7 } else { 9 };
         const PI: usize = if cfg!(test) { 24 } else { 41 };
-        const LINE: usize = if cfg!(test) { 48 } else { 116 };
 
         // Winner: " 41 48 83 86 17"
-        let w_str = line[WI..(PI - 2)].as_bytes();
-        debug_assert_eq!(w_str.len() % 3, 0);
+        let w_str = &line[WI..(PI - 2)];
         let mut w: u128 = 0;
         for (_, a, b) in w_str.iter().tuples() {
             let j = 10 * (a & 0b1111) + (b & 0b1111);
@@ -138,8 +141,7 @@ fn parse_matches_count_v3(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
         }
 
         // Player: " 83 86  6 31 17  9 48 53"
-        let p_str = line[PI..LINE].as_bytes();
-        debug_assert_eq!(p_str.len() % 3, 0);
+        let p_str = &line[PI..];
         let mut p: u128 = 0;
         for (_, a, b) in p_str.iter().tuples() {
             let j = 10 * (a & 0b1111) + (b & 0b1111);
@@ -156,13 +158,15 @@ pub fn part1_v3(input: &str) -> i64 {
     parse_matches_count_v3(input)
         .filter(|m| *m != 0)
         .map(|m| 1 << (m - 1))
+        // Clever but slower?
+        // .map(|m| (1 << m) >> 1)
         .sum()
 }
 
 // Part2 ========================================================================
 #[aoc(day4, part2, v3)]
 pub fn part2_v3(input: &str) -> i64 {
-    let mut card_copies: SmallVec<[i64; 256]> = smallvec![1; N_CARDS];
+    let mut card_copies = [1; N_CARDS];
 
     for (i, matches) in parse_matches_count_v3(input).enumerate() {
         for c in 0..(matches as usize) {
