@@ -225,8 +225,15 @@ mod test {
 .664.598..
 ";
 
+    const EDGE_CASE_1: &str = r"
+123....
+...*...
+....123
+";
+
     #[rstest]
     #[case::given(4361, EXAMPLE_INPUT)]
+    #[case::given(2*123, EDGE_CASE_1)]
     #[case::adam_ex(300, "100*200")]
     #[trace]
     fn check_ex_part_1(
@@ -242,6 +249,7 @@ mod test {
 
     #[rstest]
     #[case::given(467835, EXAMPLE_INPUT)]
+    #[case::given(123*123, EDGE_CASE_1)]
     #[case::adam_ex(100*200, "100*200")]
     #[trace]
     fn check_ex_part_2(
