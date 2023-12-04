@@ -132,8 +132,8 @@ fn parse_matches_count_v3(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
         let w_str = line[WI..(PI - 2)].as_bytes();
         debug_assert_eq!(w_str.len() % 3, 0);
         let mut w: u128 = 0;
-        for i in 0..(w_str.len() / 3) {
-            let j = 10 * (w_str[3 * i + 1] & 0b1111) + (w_str[3 * i + 2] & 0b1111);
+        for (_, a, b) in w_str.iter().tuples() {
+            let j = 10 * (a & 0b1111) + (b & 0b1111);
             w |= 1_u128 << j;
         }
 
@@ -141,8 +141,8 @@ fn parse_matches_count_v3(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
         let p_str = line[PI..LINE].as_bytes();
         debug_assert_eq!(p_str.len() % 3, 0);
         let mut p: u128 = 0;
-        for i in 0..(p_str.len() / 3) {
-            let j = 10 * (p_str[3 * i + 1] & 0b1111) + (p_str[3 * i + 2] & 0b1111);
+        for (_, a, b) in p_str.iter().tuples() {
+            let j = 10 * (a & 0b1111) + (b & 0b1111);
             p |= 1_u128 << j;
         }
 
