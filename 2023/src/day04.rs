@@ -2,6 +2,10 @@ use crate::prelude::*;
 
 use smallvec::{smallvec, SmallVec};
 
+const N_CARDS: usize = if cfg!(test) { 6 } else { 204 };
+// const N_WINNING: usize = if cfg!(test) { 5 } else { 10 };
+// const N_PLAYER: usize = if cfg!(test) { 8 } else { 25 };
+
 fn parse_matches_count(input: &'_ str) -> impl Iterator<Item = usize> + '_ {
     input.lines().filter(|l| !l.is_empty()).map(|line| {
         let (_, line) = line.split_once(':').unwrap();
@@ -22,7 +26,7 @@ fn parse_matches_count(input: &'_ str) -> impl Iterator<Item = usize> + '_ {
 }
 
 // Part1 ========================================================================
-#[aoc(day4, part1)]
+#[aoc(day4, part1, v1)]
 pub fn part1(input: &str) -> i64 {
     parse_matches_count(input)
         .filter(|m| *m != 0)
@@ -31,7 +35,7 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-#[aoc(day4, part2)]
+#[aoc(day4, part2, v1)]
 pub fn part2(input: &str) -> i64 {
     let card_mcount: Vec<_> = parse_matches_count(input).collect();
     let n_cards = card_mcount.len();
@@ -99,11 +103,69 @@ pub fn part1_v2(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day4, part2, v2)]
 pub fn part2_v2(input: &str) -> i64 {
-    let card_mcounts: SmallVec<[u16; 256]> = parse_matches_count_v2(input).collect();
-    let mut card_copies: SmallVec<[i64; 256]> = smallvec![1; card_mcounts.len()];
+    let mut card_copies: SmallVec<[i64; 256]> = smallvec![1; N_CARDS];
 
-    for (i, mcount) in card_mcounts.into_iter().enumerate() {
-        for c in 0..(mcount as usize) {
+    for (i, matches) in parse_matches_count_v2(input).enumerate() {
+        for c in 0..(matches as usize) {
+            card_copies[i + 1 + c] += card_copies[i];
+        }
+    }
+
+    card_copies.iter().sum()
+}
+
+// V3 ==========================================================================
+fn parse_matches_count_v3(input: &'_ str) -> impl Iterator<Item = u16> + '_ {
+    input.trim().lines().map(|line| {
+        let line = line.trim();
+        debug_assert!(!line.is_empty());
+
+        // Sample lines:
+        //                  .      v wi             v pi
+        //  Exmaple:        Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+        //  Input:          Card   1: 43 19 57 13 44 22 29 20 34 33 | 34 68 13 38 32 57 20 64 42  7 44 54 16 51 33 85 43 24 86 93 83 29 25 19 22
+        const WI: usize = if cfg!(test) { 7 } else { 9 };
+        const PI: usize = if cfg!(test) { 24 } else { 41 };
+        const LINE: usize = if cfg!(test) { 48 } else { 116 };
+
+        // Winner: " 41 48 83 86 17"
+        let w_str = line[WI..(PI - 2)].as_bytes();
+        debug_assert_eq!(w_str.len() % 3, 0);
+        let mut w: u128 = 0;
+        for i in 0..(w_str.len() / 3) {
+            let j = 10 * (w_str[3 * i + 1] & 0b1111) + (w_str[3 * i + 2] & 0b1111);
+            w |= 1_u128 << j;
+        }
+
+        // Player: " 83 86  6 31 17  9 48 53"
+        let p_str = line[PI..LINE].as_bytes();
+        debug_assert_eq!(p_str.len() % 3, 0);
+        let mut p: u128 = 0;
+        for i in 0..(p_str.len() / 3) {
+            let j = 10 * (p_str[3 * i + 1] & 0b1111) + (p_str[3 * i + 2] & 0b1111);
+            p |= 1_u128 << j;
+        }
+
+        (w & p).count_ones() as u16
+    })
+}
+
+// Part1 ========================================================================
+#[aoc(day4, part1, v3)]
+pub fn part1_v3(input: &str) -> i64 {
+    parse_matches_count_v3(input)
+        .filter(|m| *m != 0)
+        .map(|m| 1 << (m - 1))
+        .sum()
+}
+
+// Part2 ========================================================================
+#[aoc(day4, part2, v3)]
+pub fn part2_v3(input: &str) -> i64 {
+    let mut card_copies: SmallVec<[i64; 256]> = smallvec![1; N_CARDS];
+
+    for (i, matches) in parse_matches_count_v3(input).enumerate() {
+        for c in 0..(matches as usize) {
             card_copies[i + 1 + c] += card_copies[i];
         }
     }
@@ -132,7 +194,7 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_v2)]
+        #[values(part1, part1_v2, part1_v3)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -146,7 +208,7 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2, part2_v2)]
+        #[values(part2, part2_v2, part2_v3)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
