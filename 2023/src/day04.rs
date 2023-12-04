@@ -32,57 +32,63 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-type Game = [i64; 100];
-
 #[aoc(day4, part2)]
 pub fn part2(input: &str) -> i64 {
-    let mut game = [0; 100];
+    let card_mcount: Vec<_> = input
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(|line| {
+            let (card_name, line) = line.split_once(':').unwrap();
+            let (_, cid) = card_name.split_once(' ').unwrap();
+            let cid: usize = cid.trim().parse().unwrap();
 
-    let mut cards = vec![];
+            let (w, p) = line.split_once('|').unwrap();
 
-    for line in input.lines() {
-        let (card_name, line) = line.split_once(':').unwrap();
-        let (_, cid) = card_name.split_once(' ').unwrap();
-        let cid: i64 = cid.trim().parse().unwrap();
+            let mut w_set = w
+                .split_whitespace()
+                .map(|s| -> u128 { s.parse().unwrap() })
+                .fold(0_u128, |acc, x| acc | (1 << x));
 
-        let (w, p) = line.split_once('|').unwrap();
+            let mut p_set = p
+                .split_whitespace()
+                .map(|s| -> u128 { s.parse().unwrap() })
+                .fold(0_u128, |acc, x| acc | (1 << x));
 
-        let mut w_set = w
-            .split_whitespace()
-            .map(|s| -> u128 { s.parse().unwrap() })
-            .fold(0_u128, |acc, x| acc | (1 << x));
+            (w_set & p_set).count_ones() as usize
+        })
+        .collect();
 
-        let mut p_set = p
-            .split_whitespace()
-            .map(|s| -> u128 { s.parse().unwrap() })
-            .fold(0_u128, |acc, x| acc | (1 << x));
+    let n_cards = card_mcount.len();
+    let mut card_copies = vec![1; n_cards];
 
-        let score = (w_set & p_set).count_ones();
+    for cid in 0..(n_cards - 1) {
+        let copies = card_copies[cid];
+        let mcount = card_mcount[cid];
 
-        cards.push((cid, score));
-    }
-
-    let mut r = 0;
-    loop {
-        dbg!(cards.len());
-
-        if r >= cards.len() {
-            break;
-        }
-
-        let (cid, score) = cards[r];
-
-        for j in r..cards.len() {
-            let c = cards[j];
-            for _ in 0..score {
-                cards.push(c);
+        for c in ((cid + 1)..).take(mcount) {
+            if cfg!(debug_assertions) {
+                println!("[{cid}] {copies} instances of Card {cid} have {mcount} matching numbers, so you win {copies}");
             }
+            card_copies[c] += copies;
         }
+        if cfg!(debug_assertions) {
+            if (mcount == 0) {
+                println!("[{cid}] No matches");
+            }
 
-        r += 1;
+            println!(
+                "[{cid}] {{\n    {}\n}}",
+                card_copies
+                    .iter()
+                    .enumerate()
+                    .map(|(i, n)| format!("Card {i}: {n}"))
+                    .join("\n    ")
+            );
+            println!();
+        }
     }
 
-    r as i64
+    card_copies.iter().sum()
 }
 
 #[cfg(test)]
