@@ -32,9 +32,57 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
+type Game = [i64; 100];
+
 #[aoc(day4, part2)]
 pub fn part2(input: &str) -> i64 {
-    unimplemented!();
+    let mut game = [0; 100];
+
+    let mut cards = vec![];
+
+    for line in input.lines() {
+        let (card_name, line) = line.split_once(':').unwrap();
+        let (_, cid) = card_name.split_once(' ').unwrap();
+        let cid: i64 = cid.trim().parse().unwrap();
+
+        let (w, p) = line.split_once('|').unwrap();
+
+        let mut w_set = w
+            .split_whitespace()
+            .map(|s| -> u128 { s.parse().unwrap() })
+            .fold(0_u128, |acc, x| acc | (1 << x));
+
+        let mut p_set = p
+            .split_whitespace()
+            .map(|s| -> u128 { s.parse().unwrap() })
+            .fold(0_u128, |acc, x| acc | (1 << x));
+
+        let score = (w_set & p_set).count_ones();
+
+        cards.push((cid, score));
+    }
+
+    let mut r = 0;
+    loop {
+        dbg!(cards.len());
+
+        if r >= cards.len() {
+            break;
+        }
+
+        let (cid, score) = cards[r];
+
+        for j in r..cards.len() {
+            let c = cards[j];
+            for _ in 0..score {
+                cards.push(c);
+            }
+        }
+
+        r += 1;
+    }
+
+    r as i64
 }
 
 #[cfg(test)]
@@ -80,17 +128,17 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(30, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
