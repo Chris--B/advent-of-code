@@ -101,6 +101,47 @@ pub fn part2(input: &str) -> i64 {
     let num_seeds_total: i64 = seeds.iter().map(|(a, b)| b).sum();
     dbg!(num_seeds_total);
 
+    if cfg!(test) {
+        println!();
+        for label in [
+            "seed",
+            "soil",
+            "fertilizer",
+            "water",
+            "light",
+            "temp",
+            "humidity",
+            "location",
+        ] {
+            print!("{label}, ");
+        }
+        println!();
+
+        for row in seeds.iter().flat_map(|(a, b)| {
+            let a = *a;
+            let b = a + *b;
+
+            (a..=b).map(|s| {
+                let x0 = almanac.get_seed_to_soil(s);
+                let x1 = almanac.get_soil_to_fertilizer(x0);
+                let x2 = almanac.get_fertilizer_to_water(x1);
+                let x3 = almanac.get_water_to_light(x2);
+                let x4 = almanac.get_light_to_temperature(x3);
+                let x5 = almanac.get_temperature_to_humidity(x4);
+                let x6 = almanac.get_humidity_to_location(x5);
+
+                [s, x0, x1, x2, x3, x4, x5, x6]
+            })
+        }) {
+            for v in row {
+                print!("{v}, ");
+            }
+            println!();
+        }
+
+        println!();
+    }
+
     seeds
         .iter()
         .flat_map(|(a, b)| {
