@@ -26,7 +26,7 @@ fn parse_seeds_p2(s: &str) -> Vec<(i64, i64)> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct Map {
+struct MapEntry {
     dst: i64,
     src: i64,
     count: i64,
@@ -34,12 +34,12 @@ struct Map {
 
 #[derive(Clone, Debug)]
 struct Almanac {
-    maps: [Vec<Map>; 7],
+    maps: [Vec<MapEntry>; 7],
 }
 
 impl Almanac {
     fn from_str(s: &str) -> Self {
-        let mut maps: [Vec<Map>; 7] = Default::default();
+        let mut maps: [Vec<MapEntry>; 7] = Default::default();
         let mut i = 0;
 
         for (is_empty, group) in &s.lines().group_by(|line| line.is_empty()) {
@@ -52,7 +52,7 @@ impl Almanac {
                     let src: i64 = parts.next().unwrap().parse().unwrap();
                     let count: i64 = parts.next().unwrap().parse().unwrap();
 
-                    maps[i].push(Map { dst, src, count });
+                    maps[i].push(MapEntry { dst, src, count });
                 }
             }
         }
@@ -60,14 +60,10 @@ impl Almanac {
         Self { maps }
     }
 
-    fn find_in_map(&self, src: i64, i: usize) -> i64 {
-        let map = self.maps[i]
-            .iter()
-            .find(|map| map.src <= src && src < map.src + map.count);
-
-        if let Some(map) = map {
-            if map.src <= src && src <= map.src + map.count {
-                return map.dst + (src - map.src);
+    fn find_in_map(&self, src: i64, map: &[MapEntry]) -> i64 {
+        if let Some(e) = map.iter().find(|e| e.src <= src && src < e.src + e.count) {
+            if e.src <= src && src <= e.src + e.count {
+                return e.dst + (src - e.src);
             }
         }
 
@@ -76,7 +72,7 @@ impl Almanac {
     }
 
     fn get_seed_to_location(&self, mut rsrc: i64) -> i64 {
-        for map in 0..self.maps.len() {
+        for map in &self.maps {
             rsrc = self.find_in_map(rsrc, map);
         }
 
@@ -174,7 +170,7 @@ humidity-to-location map:
         let _seeds = parse_seeds_p1(seeds_line);
         let almanac = Almanac::from_str(input.trim());
 
-        assert_eq!(almanac.find_in_map(seed, 0), soil);
+        assert_eq!(almanac.find_in_map(seed, &almanac.maps[0]), soil);
     }
 
     #[rstest]
