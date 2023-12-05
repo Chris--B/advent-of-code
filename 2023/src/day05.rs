@@ -1,4 +1,3 @@
-#![allow(dead_code, unused)]
 use crate::prelude::*;
 
 fn parse_seeds_p1(s: &str) -> Vec<i64> {
@@ -33,49 +32,18 @@ struct Map {
     count: i64,
 }
 
-impl Map {
-    fn new(dst: i64, src: i64, count: i64) -> Self {
-        Self { src, dst, count }
-    }
-}
-
 #[derive(Clone, Debug)]
 struct Almanac {
-    seed_to_soil: Vec<Map>,
-    soil_to_fertilizer: Vec<Map>,
-    fertilizer_to_water: Vec<Map>,
-    water_to_light: Vec<Map>,
-    light_to_temperature: Vec<Map>,
-    temperature_to_humidity: Vec<Map>,
-    humidity_to_location: Vec<Map>,
-}
-
-fn find_in_map(map: &[Map], src: i64) -> i64 {
-    let map = map
-        .iter()
-        .find(|map| map.src <= src && src < map.src + map.count);
-
-    if let Some(map) = map {
-        if map.src <= src && src <= map.src + map.count {
-            // dbg!(src, map, map.src, map.dst, (src - map.dst));
-            return map.dst + (src - map.src);
-        }
-    }
-
-    // 1-to-1
-    src
+    maps: [Vec<Map>; 7],
 }
 
 impl Almanac {
     fn from_str(s: &str) -> Self {
-        let mut maps: Vec<Vec<Map>> = vec![];
-
+        let mut maps: [Vec<Map>; 7] = Default::default();
         let mut i = 0;
-        maps.push(vec![]);
 
         for (is_empty, group) in &s.lines().group_by(|line| line.is_empty()) {
             if is_empty {
-                maps.push(vec![]);
                 i += 1;
             } else {
                 for line in group.into_iter().skip(1) {
@@ -89,65 +57,30 @@ impl Almanac {
             }
         }
 
-        // Note: This is BACKWARDS from the order in the Almanac struct because we are popping off of our list.
-        let humidity_to_location = maps.pop().unwrap();
-        let temperature_to_humidity = maps.pop().unwrap();
-        let light_to_temperature = maps.pop().unwrap();
-        let water_to_light = maps.pop().unwrap();
-        let fertilizer_to_water = maps.pop().unwrap();
-        let soil_to_fertilizer = maps.pop().unwrap();
-        let seed_to_soil = maps.pop().unwrap();
+        Self { maps }
+    }
 
-        // Should be empty
-        debug_assert_eq!(maps, Vec::<Vec<_>>::new());
+    fn find_in_map(&self, src: i64, i: usize) -> i64 {
+        let map = self.maps[i]
+            .iter()
+            .find(|map| map.src <= src && src < map.src + map.count);
 
-        Self {
-            seed_to_soil,
-            soil_to_fertilizer,
-            fertilizer_to_water,
-            water_to_light,
-            light_to_temperature,
-            temperature_to_humidity,
-            humidity_to_location,
+        if let Some(map) = map {
+            if map.src <= src && src <= map.src + map.count {
+                return map.dst + (src - map.src);
+            }
         }
+
+        // 1-to-1
+        src
     }
 
-    fn get_seed_to_soil(&self, seed: i64) -> i64 {
-        find_in_map(&self.seed_to_soil, seed)
-    }
+    fn get_seed_to_location(&self, mut rsrc: i64) -> i64 {
+        for map in 0..self.maps.len() {
+            rsrc = self.find_in_map(rsrc, map);
+        }
 
-    fn get_soil_to_fertilizer(&self, seed: i64) -> i64 {
-        find_in_map(&self.soil_to_fertilizer, seed)
-    }
-
-    fn get_fertilizer_to_water(&self, seed: i64) -> i64 {
-        find_in_map(&self.fertilizer_to_water, seed)
-    }
-
-    fn get_water_to_light(&self, seed: i64) -> i64 {
-        find_in_map(&self.water_to_light, seed)
-    }
-
-    fn get_light_to_temperature(&self, seed: i64) -> i64 {
-        find_in_map(&self.light_to_temperature, seed)
-    }
-
-    fn get_temperature_to_humidity(&self, seed: i64) -> i64 {
-        find_in_map(&self.temperature_to_humidity, seed)
-    }
-
-    fn get_humidity_to_location(&self, seed: i64) -> i64 {
-        find_in_map(&self.humidity_to_location, seed)
-    }
-
-    fn get_seed_to_location(&self, seed: i64) -> i64 {
-        let x = self.get_seed_to_soil(seed);
-        let x = self.get_soil_to_fertilizer(x);
-        let x = self.get_fertilizer_to_water(x);
-        let x = self.get_water_to_light(x);
-        let x = self.get_light_to_temperature(x);
-        let x = self.get_temperature_to_humidity(x);
-        self.get_humidity_to_location(x)
+        rsrc
     }
 }
 
@@ -172,49 +105,8 @@ pub fn part2(input: &str) -> i64 {
     let seeds = parse_seeds_p2(seeds_line);
     let almanac = Almanac::from_str(input.trim());
 
-    let num_seeds_total: i64 = seeds.iter().map(|(a, b)| b).sum();
+    let num_seeds_total: i64 = seeds.iter().map(|ab| ab.1).sum();
     dbg!(num_seeds_total);
-
-    if cfg!(test) {
-        println!();
-        for label in [
-            "seed",
-            "soil",
-            "fertilizer",
-            "water",
-            "light",
-            "temp",
-            "humidity",
-            "location",
-        ] {
-            print!("{label}, ");
-        }
-        println!();
-
-        for row in seeds.iter().flat_map(|(a, b)| {
-            let a = *a;
-            let b = a + *b;
-
-            (a..=b).map(|s| {
-                let x0 = almanac.get_seed_to_soil(s);
-                let x1 = almanac.get_soil_to_fertilizer(x0);
-                let x2 = almanac.get_fertilizer_to_water(x1);
-                let x3 = almanac.get_water_to_light(x2);
-                let x4 = almanac.get_light_to_temperature(x3);
-                let x5 = almanac.get_temperature_to_humidity(x4);
-                let x6 = almanac.get_humidity_to_location(x5);
-
-                [s, x0, x1, x2, x3, x4, x5, x6]
-            })
-        }) {
-            for v in row {
-                print!("{v}, ");
-            }
-            println!();
-        }
-
-        println!();
-    }
 
     seeds
         .iter()
@@ -272,14 +164,6 @@ humidity-to-location map:
 ";
 
     #[rstest]
-    #[case::sample_line_1([50, 98, 2], Map { dst: 50, src: 98, count: 2})]
-    #[case::sample_line_2([52, 50, 48], Map { dst: 52, src: 50, count: 48})]
-    #[trace]
-    fn check_sample_lines(#[case] nums: [i64; 3], #[case] map: Map) {
-        assert_eq!(Map::new(nums[0], nums[1], nums[2]), map);
-    }
-
-    #[rstest]
     #[case::seed_79(79, 81)]
     #[case::seed_14(14, 14)]
     #[case::seed_55(55, 57)]
@@ -290,7 +174,7 @@ humidity-to-location map:
         let _seeds = parse_seeds_p1(seeds_line);
         let almanac = Almanac::from_str(input.trim());
 
-        assert_eq!(almanac.get_seed_to_soil(seed), soil);
+        assert_eq!(almanac.find_in_map(seed, 0), soil);
     }
 
     #[rstest]
