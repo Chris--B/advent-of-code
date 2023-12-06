@@ -77,6 +77,8 @@ mod prelude {
     pub use std::collections::{HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
 
+    pub use crate::fast_parse_u32;
+    pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
 }
 
@@ -95,6 +97,39 @@ pub fn fast_parse_u8(input: &[u8]) -> u32 {
     let mut x = 1;
     for (i, b) in input.iter().rev().enumerate() {
         digits[i] = x * (*b - b'0') as u32;
+        x *= 10;
+    }
+
+    digits.into_iter().sum()
+}
+
+pub fn fast_parse_u32(input: &[u8]) -> u32 {
+    let mut digits = [0_u32; 7];
+    debug_assert!(
+        input.len() <= digits.len(),
+        "Expected {} digits but now need to support {}",
+        digits.len(),
+        input.len(),
+    );
+
+    let mut x = 1;
+    for (i, b) in input.iter().rev().enumerate() {
+        digits[i] = x * (*b - b'0') as u32;
+        x *= 10;
+    }
+
+    digits.into_iter().sum()
+}
+
+pub fn fast_parse_u64<I>(input: I) -> u64
+where
+    I: Iterator<Item = u8> + std::iter::DoubleEndedIterator,
+{
+    let mut digits = [0_u64; 19];
+
+    let mut x = 1;
+    for (i, b) in input.rev().enumerate() {
+        digits[i] = x * (b - b'0') as u64;
         x *= 10;
     }
 
