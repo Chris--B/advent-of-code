@@ -95,7 +95,7 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-#[aoc(day5, part2)]
+// #[aoc(day5, part2)]
 pub fn part2(input: &str) -> i64 {
     let (seeds_line, input) = input.trim().split_once('\n').unwrap();
     let seeds = parse_seeds_p2(seeds_line);
