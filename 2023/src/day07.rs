@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::prelude::*;
 
 #[derive(Debug, Copy, Clone, PartialOrd, Ord, PartialEq, Eq)]
@@ -73,23 +71,14 @@ impl Hand {
     }
 
     fn kind_p2(self) -> u8 {
-        let mut best = self;
         let mut best_kind = 0;
-
-        let worst_case = f64::powf(14., self.jokers() as f64) as usize;
-        // println!("worst_case={worst_case}");
 
         let mut queue = VecDeque::new();
         queue.push_back(self);
 
         while let Some(hand) = queue.pop_front() {
-            // println!("Queue has {} hands + this one: {hand:?}", queue.len());
-            assert!(queue.len() <= worst_case);
-
-            // println!("    {hand:?} has {} jokers", hand.jokers());
             if let Some(idx) = hand.0.iter().position(|c| *c == 11) {
-                // println!("    Joker at idx={idx}");
-
+                // If we can find a J, seek more hand variants to check
                 for c in 2..=14 {
                     if c == 11 {
                         continue;
@@ -98,21 +87,12 @@ impl Hand {
                     let mut h = hand;
                     h.0[idx] = c;
 
-                    // println!("    Saving {h:?}");
                     queue.push_back(h);
                 }
             } else {
-                let k = hand.kind_p1();
-                if best_kind < k {
-                    // println!("    {hand:?} (k={k}) is BETTER than best={best:?} (k={best_kind}), SAVING!");
-                    best = hand;
-                    best_kind = k;
-                } else {
-                    // println!("    {hand:?} (k={k}) is WORSE  than best={best:?} (k={best_kind})");
-                }
+                // Otherwise record this and continue
+                best_kind = best_kind.max(hand.kind_p1());
             }
-            // println!("    Queue has {} hands", queue.len());
-            // println!();
         }
 
         best_kind
@@ -335,7 +315,7 @@ QQQJA 483
         #[case] kind: u8,
         #[case] hand: &str,
     ) {
-        let mut hand = Hand::new(hand.as_bytes().try_into().unwrap());
+        let hand = Hand::new(hand.as_bytes().try_into().unwrap());
         assert_eq!(kind, fn_kind(hand));
     }
 
