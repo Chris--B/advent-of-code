@@ -1,5 +1,24 @@
 use crate::prelude::*;
 
+fn parse(input: &'_ str) -> (&str, HashMap<&str, [&str; 2]>) {
+    let mut lines = input.lines();
+
+    let directions = lines.next().unwrap().trim();
+    let mut map: HashMap<&str, [&str; 2]> = HashMap::new();
+
+    for node in lines.skip(1) {
+        // Example line:
+        //      AAA = (BBB, BBB)
+        let here = &node[..][..3];
+        let left = &node[7..][..3];
+        let right = &node[12..][..3];
+
+        map.insert(here, [left, right]);
+    }
+
+    (directions, map)
+}
+
 fn walk<'a>(
     directions: &'a str,
     map: &'a HashMap<&'a str, [&'a str; 2]>,
@@ -21,20 +40,7 @@ fn walk<'a>(
 // Part1 ========================================================================
 #[aoc(day8, part1)]
 pub fn part1(input: &str) -> i64 {
-    let mut lines = input.lines();
-
-    let directions = lines.next().unwrap().trim();
-    let mut map: HashMap<&str, [&str; 2]> = HashMap::new();
-
-    for node in lines.skip(1) {
-        // Example line:
-        //      AAA = (BBB, BBB)
-        let here = &node[..][..3];
-        let left = &node[7..][..3];
-        let right = &node[12..][..3];
-
-        map.insert(here, [left, right]);
-    }
+    let (directions, map) = parse(input);
 
     walk(directions, &map, "AAA")
 }
@@ -42,24 +48,11 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day8, part2)]
 pub fn part2(input: &str) -> i64 {
-    let mut lines = input.lines();
-
-    let directions = lines.next().unwrap().trim();
-    let mut map: HashMap<&str, [&str; 2]> = HashMap::new();
-
-    for node in lines.skip(1) {
-        // Example line:
-        //      AAA = (BBB, BBB)
-        let here = &node[..][..3];
-        let left = &node[7..][..3];
-        let right = &node[12..][..3];
-
-        map.insert(here, [left, right]);
-    }
+    let (directions, map) = parse(input);
 
     map.keys()
-        .filter(|k| k.ends_with('A'))
-        .map(|h| walk(directions, &map, h))
+        .filter(|k: _| k.ends_with('A'))
+        .map(|h: _| walk(directions, &map, h))
         .reduce(|acc, s| acc.lcm(&s))
         .unwrap()
 }
