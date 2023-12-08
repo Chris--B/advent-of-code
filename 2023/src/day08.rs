@@ -58,6 +58,42 @@ pub fn part1(input: &str) -> i64 {
 pub fn part2(input: &str) -> i64 {
     let (directions, map) = parse(input);
 
+    if input.lines().count() > 20 && log_enabled!(Info) {
+        let filename = "./input.dot";
+        info!(
+            "Writing out dot file to {filename} w/ {} nodes. Use graphviz to render:\n\tdot -Tpng {filename} -o out.png ",
+            map.len() * 2
+        );
+
+        let mut lines: Vec<String> = vec![
+            "digraph world {".into(),                               // .
+            "".into(),                                              // .
+            "    rank = same;".into(),                              // .
+            "    node [fillcolor=white, style=\"filled\"];".into(), //.
+            "".into(),                                              // .
+        ];
+
+        for (from, [right, left]) in &map {
+            let from = std::str::from_utf8(from).unwrap();
+            let right = std::str::from_utf8(right).unwrap();
+            let left = std::str::from_utf8(left).unwrap();
+
+            if from == "AAA" {
+                lines.push(format!("    \"{from}\" [shape=hexagon, fillcolor=red];"));
+                info!("{}", lines.last().unwrap());
+            } else if from.ends_with('A') || from.ends_with('Z') {
+                lines.push(format!(
+                    "    \"{from}\" [shape=hexagon, fillcolor=\"#d9e7ee\"];"
+                ));
+                info!("{}", lines.last().unwrap());
+            }
+            lines.push(format!("    \"{from}\" -> {{ \"{left}\"; \"{right}\"; }}"));
+        }
+        lines.push("}".into());
+
+        std::fs::write(filename, lines.join("\n")).unwrap();
+    }
+
     // Walk all ghost 'simultaneously'
     map.keys()
         .filter(|k| k.ends_with(&[b'A']))
