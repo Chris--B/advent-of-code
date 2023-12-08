@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
-fn parse(s: &str) -> HashMap<(i64, i64), char> {
-    let mut grid = HashMap::new();
+fn parse(s: &str) -> fnv::FnvHashMap<(i64, i64), char> {
+    let mut grid = fnv::FnvHashMap::default();
 
     for (y, line) in s.lines().enumerate() {
         let y = y as i64;
@@ -90,7 +90,7 @@ pub fn part1(input: &str) -> i64 {
     let mut sum = 0;
 
     'nums_loop: for (x, y, num, n) in nums {
-        let mut to_check = HashSet::new();
+        let mut to_check = fnv::FnvHashSet::default();
         for x in x..(x + n) {
             for dy in [-1, 0, 1] {
                 for dx in [-1, 0, 1] {
@@ -171,10 +171,10 @@ pub fn part2(input: &str) -> i64 {
     }
     assert!(!nums.is_empty());
 
-    let mut next_to_nums = HashMap::new();
+    let mut next_to_nums = fnv::FnvHashMap::default();
 
     'nums_loop: for (x, y, num, n) in nums.iter().copied() {
-        let mut to_check = HashSet::new();
+        let mut to_check = fnv::FnvHashSet::default();
         for x in x..(x + n) {
             for dy in [-1, 0, 1] {
                 for dx in [-1, 0, 1] {
