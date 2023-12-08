@@ -1,40 +1,47 @@
 use crate::prelude::*;
 
-fn parse(input: &'_ str) -> (&str, HashMap<&str, [&str; 2]>) {
-    let mut lines = input.lines();
+type Node = [u8; 3];
+type NodeMap = HashMap<Node, [Node; 2]>;
 
-    let directions = lines.next().unwrap().trim();
-    let mut map: HashMap<&str, [&str; 2]> = HashMap::new();
+fn parse(input: &str) -> (&[u8], NodeMap) {
+    let (directions, input) = input.split_once('\n').unwrap();
 
-    for node in lines.skip(1) {
+    const LINE_LEN: usize = 17;
+    let n_lines = input.len() / LINE_LEN;
+    let input = &input.as_bytes()[1..];
+
+    let mut map = HashMap::with_capacity(n_lines);
+    for i in 0..n_lines {
+        let line: &[u8] = &input[(i * LINE_LEN)..];
+
         // Example line:
         //      AAA = (BBB, BBB)
-        let here = &node[..][..3];
-        let left = &node[7..][..3];
-        let right = &node[12..][..3];
+        //     ^      ^    ^
+        //     0      7    12
+        let here: Node = [line[0], line[1], line[2]];
+        let left: Node = [line[7], line[8], line[9]];
+        let right: Node = [line[12], line[13], line[14]];
 
         map.insert(here, [left, right]);
     }
 
-    (directions, map)
+    (directions.as_bytes(), map)
 }
 
-fn walk<'a>(
-    directions: &'a str,
-    map: &'a HashMap<&'a str, [&'a str; 2]>,
-    mut here: &'a str,
-) -> i64 {
-    for (steps, d) in directions.chars().cycle().enumerate() {
-        if here.ends_with('Z') {
+fn walk<'a>(directions: &'a [u8], map: &'a NodeMap, mut here: &'a Node) -> i64 {
+    for (steps, d) in directions.iter().cycle().enumerate() {
+        if here.ends_with(&[b'Z']) {
             return steps as i64;
         }
+
         match d {
-            'L' => here = map[here][0],
-            'R' => here = map[here][1],
+            b'L' => here = &map[here][0],
+            b'R' => here = &map[here][1],
             _ => unreachable!("{steps}, {d}"),
         }
     }
-    unreachable!()
+
+    0
 }
 
 // Part1 ========================================================================
@@ -42,7 +49,7 @@ fn walk<'a>(
 pub fn part1(input: &str) -> i64 {
     let (directions, map) = parse(input);
 
-    walk(directions, &map, "AAA")
+    walk(directions, &map, b"AAA")
 }
 
 // Part2 ========================================================================
@@ -50,11 +57,12 @@ pub fn part1(input: &str) -> i64 {
 pub fn part2(input: &str) -> i64 {
     let (directions, map) = parse(input);
 
+    // Walk all ghost 'simultaneously'
     map.keys()
-        .filter(|k: _| k.ends_with('A'))
-        .map(|h: _| walk(directions, &map, h))
+        .filter(|k| k.ends_with(&[b'A']))
+        .map(|h| walk(directions, &map, h))
         .reduce(|acc, s| acc.lcm(&s))
-        .unwrap()
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -64,7 +72,7 @@ mod test {
     use pretty_assertions::{assert_eq, assert_ne};
     use rstest::*;
 
-    const EXAMPLE_INPUT: &str = r"
+    const EXAMPLE_INPUT_P1: &str = r"
 LLR
 
 AAA = (BBB, BBB)
@@ -73,7 +81,7 @@ ZZZ = (ZZZ, ZZZ)
 ";
 
     #[rstest]
-    #[case::given(6, EXAMPLE_INPUT)]
+    #[case::given(6, EXAMPLE_INPUT_P1)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
@@ -86,7 +94,7 @@ ZZZ = (ZZZ, ZZZ)
         assert_eq!(p(input), expected);
     }
 
-    const EXAMPLE_INPUT_2: &str = r"
+    const EXAMPLE_INPUT_P2: &str = r"
 LR
 
 11A = (11B, XXX)
@@ -100,7 +108,7 @@ XXX = (XXX, XXX)
 ";
 
     #[rstest]
-    #[case::given(6, EXAMPLE_INPUT_2)]
+    #[case::given(6, EXAMPLE_INPUT_P2)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
