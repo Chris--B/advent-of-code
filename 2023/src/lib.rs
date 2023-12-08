@@ -75,7 +75,7 @@ mod prelude {
     pub use num::Integer;
     pub use scan_fmt::scan_fmt;
 
-    pub use std::collections::{HashMap, HashSet, VecDeque};
+    pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
 
     pub use crate::fast_parse_u32;

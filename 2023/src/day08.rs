@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 type Node = [u8; 3];
-type NodeMap = HashMap<Node, [Node; 2]>;
+type NodeMap = fnv::FnvHashMap<Node, [Node; 2]>;
 
 fn parse(input: &str) -> (&[u8], NodeMap) {
     let (directions, input) = input.split_once('\n').unwrap();
@@ -10,7 +10,7 @@ fn parse(input: &str) -> (&[u8], NodeMap) {
     let n_lines = input.len() / LINE_LEN;
     let input = &input.as_bytes()[1..];
 
-    let mut map = HashMap::with_capacity(n_lines);
+    let mut map = fnv::FnvHashMap::with_capacity_and_hasher(n_lines, Default::default());
     for i in 0..n_lines {
         let line: &[u8] = &input[(i * LINE_LEN)..];
 
@@ -31,6 +31,7 @@ fn parse(input: &str) -> (&[u8], NodeMap) {
 fn walk<'a>(directions: &'a [u8], map: &'a NodeMap, mut here: &'a Node) -> i64 {
     for (steps, d) in directions.iter().cycle().enumerate() {
         if here.ends_with(&[b'Z']) {
+            // dbg!(steps);
             return steps as i64;
         }
 

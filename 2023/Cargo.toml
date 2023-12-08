@@ -30,6 +30,7 @@ lazy_static = "1"
 num = "0.4"
 scan_fmt = "0.2"
 smallvec = "1"
+fnv = "1"
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]
