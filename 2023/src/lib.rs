@@ -72,6 +72,7 @@ mod prelude {
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::Complex;
+    pub use num::Integer;
     pub use scan_fmt::scan_fmt;
 
     pub use std::collections::{HashMap, HashSet, VecDeque};
