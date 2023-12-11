@@ -11,6 +11,8 @@ fn parse(input: &str) -> Vec<(i64, i64)> {
         }
     }
 
+    info!("parsed {} galaxies", galaxies.len());
+
     galaxies
 }
 

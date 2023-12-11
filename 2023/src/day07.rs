@@ -173,7 +173,7 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-#[aoc(day7, part2, v1)]
+// #[aoc(day7, part2, v1)]
 pub fn part2(input: &str) -> i64 {
     let mut hands = parse(input);
 
