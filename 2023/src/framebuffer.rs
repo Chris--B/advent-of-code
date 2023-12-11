@@ -262,16 +262,21 @@ where
 
 /// Ascii Art - assume display is 1 character per
 impl<T> Framebuffer<T> {
-    pub fn print(&self, func: impl Fn(i32, i32, &T) -> char) {
+    pub fn print<U>(&self, func: impl Fn(i32, i32, &T) -> U)
+    where
+        U: std::fmt::Display,
+    {
         self.print_range_with(self.range_x(), self.range_y(), func)
     }
 
-    pub fn print_range_with(
+    pub fn print_range_with<U>(
         &self,
         xs: Range<i32>,
         ys: Range<i32>,
-        func: impl Fn(i32, i32, &T) -> char,
-    ) {
+        func: impl Fn(i32, i32, &T) -> U,
+    ) where
+        U: std::fmt::Display,
+    {
         for y in ys.rev() {
             for x in xs.clone() {
                 print!("{}", func(x, y, &self[(x, y)]));

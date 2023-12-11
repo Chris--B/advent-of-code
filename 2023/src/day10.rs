@@ -176,6 +176,10 @@ impl PipeMap {
         }
     }
 
+    fn count_tiles(&self) -> usize {
+        self.map.range_y().count() * self.map.range_x().count()
+    }
+
     fn pretty_print_pipes(&self) {
         let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&self.map);
 
@@ -195,7 +199,7 @@ impl PipeMap {
                     // 'F' is a 90-degree bend connecting south and east.
                     'F' => '┏',
                     // '.' is ground; there is no pipe in this tile.
-                    '.' => ' ',
+                    '.' => '.',
                     _ => unreachable!(),
                 };
                 debug_map[(x, y)] = c;
@@ -257,46 +261,160 @@ pub fn part1(input: &str) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day10, part2)]
+#[allow(unused)]
 pub fn part2(input: &str) -> i64 {
     let mut pipes = PipeMap::from_str(input);
-    let mut queue: VecDeque<((i64, i64), usize)> = [(pipes.start, 0)].into();
-    let mut max_dist = 0;
+    let mut seen: HashSet<(i64, i64)> = HashSet::new();
 
-    let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&pipes.map);
+    // There are four types of tiles in our map how:
+    //      #1. Ground, reachable from the edges.                               Not a candidate for the nest.
+    //      #2. Pipes, *only in the loop*.                                      Not a candidate for the nest.
+    //      #3. Ground, surrounded by pipes, but reachable via "squeezing".     Not a candidate for the nest.
+    //      #4. Ground, surrounded by pipes, NOT reachable via "squeeing".      Candidate for the nest!
+    //  We need to count the number of type 4 tiles. We'll do this by counting types #1, #2 and #3, then complementing.
+    let mut candidate_tiles = pipes.count_tiles();
 
-    while let Some((here, dist)) = queue.pop_front() {
-        assert!(queue.len() < input.len(), "oh no.");
-        max_dist = max_dist.max(dist);
+    // Big Ol' Loop to count #2, "pipes"
+    // We do this first so further things can ignore the whole "ground tile" thing and just use `seen`
+    {
+        let mut queue: VecDeque<((i64, i64))> = [(pipes.start)].into();
 
-        let (x, y) = here;
-        let pipe_here = pipes.map[here];
-        if pipe_here.seen {
-            continue;
-        }
+        while let Some(here) = queue.pop_front() {
+            assert!(queue.len() < input.len(), "oh no.");
 
-        for (dx, dy, cardinal) in [
-            (1, 0, East),  // East is +x
-            (-1, 0, West), // West is -x
-            (0, 1, Norð),  // Norð is +y
-            (0, -1, Souð), // Souð is -y
-        ] {
-            let there = (x + dx, y + dy);
-            let pipe_there = pipes.map[there];
-
-            if pipe_here.connects_with(pipe_there, cardinal) && !pipe_there.seen {
-                queue.push_back((there, dist + 1));
+            let (x, y) = here;
+            let pipe_here = pipes.map[here];
+            if pipe_here.seen {
+                continue;
             }
-        }
 
-        // Mark 'here' as 'seen' now that we have checked all the neighboring pipes
-        pipes.map[(x, y)].seen = true;
+            for (dx, dy, cardinal) in [
+                (1, 0, East),  // East is +x
+                (-1, 0, West), // West is -x
+                (0, 1, Norð),  // Norð is +y
+                (0, -1, Souð), // Souð is -y
+            ] {
+                let there = (x + dx, y + dy);
+                let pipe_there = pipes.map[there];
+
+                if pipe_here.connects_with(pipe_there, cardinal) && !pipe_there.seen {
+                    queue.push_back(there);
+                }
+            }
+
+            // Mark 'here' as 'seen' now that we have checked all the neighboring pipes
+            pipes.map[(x, y)].seen = true;
+            seen.insert((x, y));
+        }
     }
 
-    // if log_enabled!(Info) {
-    //     pipes.pretty_print_pipes()
-    // }
+    // Flood fill to count #1, "ground reachable from the edges"
+    {
+        let start_x = (pipes.map.range_x().start - 1) as _;
+        let end_x = (pipes.map.range_x().end + 1) as _;
 
-    0
+        let start_y = (pipes.map.range_y().start - 1) as _;
+        let end_y = (pipes.map.range_y().end + 1) as _;
+
+        let xs = start_x..end_x;
+        let ys = start_y..end_y;
+
+        let mut queue: VecDeque<((i64, i64))> = [(start_x, start_y)].into();
+        while let Some((x, y)) = queue.pop_front() {
+            if seen.contains(&(x, y)) {
+                continue;
+            }
+            seen.insert((x, y));
+
+            assert!(queue.len() < pipes.count_tiles());
+
+            // info!(
+            //     "[{:>3}, {candidate_tiles:>3}] Checking ({x}, {y})",
+            //     queue.len()
+            // );
+
+            for (dx, dy, _cardinal) in [
+                (1, 0, East),  // East is +x
+                (-1, 0, West), // West is -x
+                (0, 1, Norð),  // Norð is +y
+                (0, -1, Souð), // Souð is -y
+            ] {
+                let x = (x + dx);
+                let y = (y + dy);
+
+                // Don't reexplore
+                if seen.contains(&(x, y)) {
+                    continue;
+                }
+
+                // Don't explore out of bounds
+                if !xs.contains(&x) || !ys.contains(&y) {
+                    continue;
+                }
+
+                queue.push_back((x, y));
+            }
+
+            // Use the real bounds for this
+            if pipes.map.range_x().contains(&(x as _)) && pipes.map.range_y().contains(&(y as _)) {
+                candidate_tiles -= 1;
+            }
+        }
+    }
+
+    // TODO: Handle squeezing spaces ;_;
+
+    if log_enabled!(Info) {
+        // pipes.map.print(|_x, _y, pipe| pipe.c);
+        // pipes.pretty_print_pipes();
+
+        let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&pipes.map);
+        debug_map.print(|x, y, _c| {
+            match pipes.map[(x, y)].c {
+                // '|' is a vertical pipe connecting north and south.
+                '|' => "┃",
+                // '-' is a horizontal pipe connecting east and west.
+                '-' => "━",
+                // 'L' is a 90-degree bend connecting north and east.
+                'L' => "┗",
+                // 'J' is a 90-degree bend connecting north and west.
+                'J' => "┛",
+                // '7' is a 90-degree bend connecting south and west.
+                '7' => "┓",
+                // 'F' is a 90-degree bend connecting south and east.
+                'F' => "┏",
+                // '.' is ground; there is no pipe in this tile.
+                '.' => {
+                    if seen.contains(&(x as _, y as _)) {
+                        "."
+                    } else {
+                        /*
+                           Black        0;30     Dark Gray     1;30
+                           Red          0;31     Light Red     1;31
+                           Green        0;32     Light Green   1;32
+                           Brown/Orange 0;33     Yellow        1;33
+                           Blue         0;34     Light Blue    1;34
+                           Purple       0;35     Light Purple  1;35
+                           Cyan         0;36     Light Cyan    1;36
+                           Light Gray   0;37     White         1;37
+                        */
+                        "\x1b[0;35m#\x1b[0m"
+                    }
+                }
+                _ => unreachable!(),
+            }
+        });
+
+        //     pipes.pretty_print_pipes()
+    }
+
+    // Sanity bounds on my input
+    if input.len() > 100 * 100 {
+        assert!(candidate_tiles > 512);
+        assert!(candidate_tiles < 14640);
+    }
+
+    candidate_tiles as i64
 }
 
 #[cfg(test)]
@@ -393,7 +511,7 @@ LJ.LJ
         assert_eq!(res, expected);
     }
 
-    const EXAMPLE_INPUT_1_PART2: &str = r"
+    const EXAMPLE_INPUT_PART2_1_NO_SQUEEZING: &str = r"
 ...........
 .S-------7.
 .|F-----7|.
@@ -405,7 +523,7 @@ LJ.LJ
 ...........
 ";
 
-    const EXAMPLE_INPUT_1_POINT_5_PART2: &str = r"
+    const EXAMPLE_INPUT_PART2_1_SQUEEZING: &str = r"
 ..........
 .S------7.
 .|F----7|.
@@ -417,7 +535,7 @@ LJ.LJ
 ..........
 ";
 
-    const EXAMPLE_INPUT_2_PART2: &str = r"
+    const EXAMPLE_INPUT_PART2_2: &str = r"
 .F----7F7F7F7F-7....
 .|F--7||||||||FJ....
 .||.FJ||||||||L7....
@@ -430,7 +548,7 @@ L--J.L7...LJS7F-7L7.
 ....L---J.LJ.LJLJ...
 ";
 
-    const EXAMPLE_INPUT_3_PART2: &str = r"
+    const EXAMPLE_INPUT_PART2_3: &str = r"
 FF7FSF7F7F7F7F7F---7
 L|LJ||||||||||||F--J
 FL-7LJLJ||||||LJL-77
@@ -444,11 +562,10 @@ L7JLJL-JLJLJL--JLJ.L
 ";
 
     #[rstest]
-    #[ignore]
-    #[case::given(4, EXAMPLE_INPUT_1_PART2)]
-    #[case::given(4, EXAMPLE_INPUT_1_POINT_5_PART2)]
-    #[case::given(8, EXAMPLE_INPUT_2_PART2)]
-    #[case::given(8, EXAMPLE_INPUT_3_PART2)]
+    #[case::given(4, EXAMPLE_INPUT_PART2_1_NO_SQUEEZING)]
+    #[case::given(4, EXAMPLE_INPUT_PART2_1_SQUEEZING)]
+    #[case::given(8, EXAMPLE_INPUT_PART2_2)]
+    #[case::given(8, EXAMPLE_INPUT_PART2_3)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
