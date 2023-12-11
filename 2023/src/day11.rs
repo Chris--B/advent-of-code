@@ -1,0 +1,117 @@
+use crate::prelude::*;
+
+fn parse(input: &str) -> Vec<(i64, i64)> {
+    let mut galaxies: Vec<(i64, i64)> = vec![];
+
+    for (y, l) in input.lines().enumerate() {
+        for (x, c) in l.chars().enumerate() {
+            if c != '.' {
+                galaxies.push((x as i64, y as i64));
+            }
+        }
+    }
+
+    galaxies
+}
+
+fn do_with_expansion(galaxies: &[(i64, i64)], expansion: i64) -> i64 {
+    let normal_xs: HashSet<i64> = galaxies.iter().map(|p| p.0).collect();
+    let normal_ys: HashSet<i64> = galaxies.iter().map(|p| p.1).collect();
+
+    let galaxies: Vec<_> = galaxies
+        .iter()
+        .map(|p| {
+            let mut warped_x = 0;
+            for x in 0..p.0 {
+                if !normal_xs.contains(&x) {
+                    warped_x += expansion;
+                } else {
+                    warped_x += 1;
+                }
+            }
+
+            let mut warped_y = 0;
+            for y in 0..p.1 {
+                if !normal_ys.contains(&y) {
+                    warped_y += expansion;
+                } else {
+                    warped_y += 1;
+                }
+            }
+
+            (warped_x, warped_y)
+        })
+        .collect();
+
+    let mut total = 0;
+    for (a, b) in galaxies.iter().cartesian_product(galaxies.iter()) {
+        total += (b.0 - a.0).abs() + (b.1 - a.1).abs();
+    }
+
+    if expansion == 1_000_000 {
+        let r = total / 2;
+        assert!(r > 1016799176, "{r} is too low");
+    }
+
+    total / 2
+}
+
+// Part1 ========================================================================
+#[aoc(day11, part1)]
+pub fn part1(input: &str) -> i64 {
+    let galaxies = parse(input);
+    do_with_expansion(&galaxies, 2)
+}
+
+// Part2 ========================================================================
+#[aoc(day11, part2)]
+pub fn part2(input: &str) -> i64 {
+    let galaxies = parse(input);
+    do_with_expansion(&galaxies, 1_000_000)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[allow(unused_imports)]
+    use pretty_assertions::{assert_eq, assert_ne};
+    use rstest::*;
+
+    const EXAMPLE_INPUT: &str = r"
+...#......
+.......#..
+#.........
+..........
+......#...
+.#........
+.........#
+..........
+.......#..
+#...#.....
+";
+
+    #[rstest]
+    #[case::given(374, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_1(
+        #[notrace]
+        #[values(part1)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
+
+    #[rstest]
+    #[case::given(10, 1030, EXAMPLE_INPUT)]
+    #[case::given(100, 8410, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(#[case] expansion: i64, #[case] expected: i64, #[case] input: &str) {
+        let input = input.trim();
+        let galaxies = parse(input);
+
+        assert_eq!(do_with_expansion(&galaxies, expansion), expected);
+    }
+}

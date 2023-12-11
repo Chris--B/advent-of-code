@@ -4,6 +4,7 @@
 #![allow(clippy::identity_op)]
 #![warn(clippy::overly_complex_bool_expr)]
 #![allow(clippy::single_element_loop)]
+#![warn(clippy::if_same_then_else)]
 
 use aoc_runner_derive::aoc_lib;
 
@@ -18,7 +19,7 @@ pub mod day08;
 pub mod day08_buf;
 pub mod day09;
 pub mod day10;
-// pub mod day11;
+pub mod day11;
 // pub mod day12;
 // pub mod day13;
 // pub mod day14;
@@ -80,6 +81,7 @@ mod prelude {
     pub use num::Complex;
     pub use num::Integer;
     pub use scan_fmt::scan_fmt;
+    pub use ultraviolet::IVec2;
 
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
