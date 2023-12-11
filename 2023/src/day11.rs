@@ -17,15 +17,20 @@ fn parse(input: &str) -> Vec<(i64, i64)> {
 }
 
 fn do_with_expansion(galaxies: &[(i64, i64)], expansion: i64) -> i64 {
-    let normal_xs: HashSet<i64> = galaxies.iter().map(|p| p.0).collect();
-    let normal_ys: HashSet<i64> = galaxies.iter().map(|p| p.1).collect();
+    let mut is_expanded_x = [true; 200];
+    let mut is_expanded_y = [true; 200];
+
+    for (x, y) in galaxies {
+        is_expanded_x[*x as usize] = false;
+        is_expanded_y[*y as usize] = false;
+    }
 
     let galaxies: Vec<_> = galaxies
         .iter()
         .map(|p| {
             let mut warped_x = 0;
             for x in 0..p.0 {
-                if !normal_xs.contains(&x) {
+                if is_expanded_x[x as usize] {
                     warped_x += expansion;
                 } else {
                     warped_x += 1;
@@ -34,7 +39,7 @@ fn do_with_expansion(galaxies: &[(i64, i64)], expansion: i64) -> i64 {
 
             let mut warped_y = 0;
             for y in 0..p.1 {
-                if !normal_ys.contains(&y) {
+                if is_expanded_y[y as usize] {
                     warped_y += expansion;
                 } else {
                     warped_y += 1;
