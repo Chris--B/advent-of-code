@@ -21,7 +21,7 @@ use std::ops::{Index, IndexMut};
 */
 const LOCAL_SIZE: usize = 1024;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Framebuffer<T> {
     /// Backing storage of pixel data
     buf: SmallVec<[T; LOCAL_SIZE]>,

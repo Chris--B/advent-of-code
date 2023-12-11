@@ -45,13 +45,15 @@ struct Pipe {
 
 impl Pipe {
     fn from_char(c: char) -> Self {
+        let seen = false;
         match c {
-            '|' | '-' | 'L' | 'J' | '7' | 'F' | '.' => Self { c, seen: false },
+            '|' | '-' | 'L' | 'J' | '7' | 'F' | '.' => Self { c, seen },
+            ' ' => Self { c: '.', seen },
             _ => unreachable!("Unexpected pipe: '{c}'"),
         }
     }
 
-    fn from_connections(car: Cardinal) -> Self {
+    fn from_cardinals(car: Cardinal) -> Self {
         let c = if car == (Norð | Souð) {
             // '|' is a vertical pipe connecting north and south.
             '|'
@@ -70,11 +72,17 @@ impl Pipe {
         } else if car == (Souð | East) {
             // 'F' is a 90-degree bend connecting south and east.
             'F'
+        } else if car == East || car == West {
+            // Duplicate it into East-West
+            '-'
+        } else if car == Norð || car == Souð {
+            // Duplicate it into North-South
+            '|'
         } else if car == 0 {
             // '.' is ground; there is no pipe in this tile.
             '.'
         } else {
-            unreachable!();
+            unreachable!("Unhandled: {car:?}");
         };
 
         Self::from_char(c)
@@ -104,6 +112,10 @@ impl Pipe {
     fn connects_with(&self, other: Pipe, cardinal: Cardinal) -> bool {
         (self.connections() & other.connections().rev()).contains(cardinal)
     }
+
+    fn cardinals_with(&self, other: Pipe) -> Cardinal {
+        self.connections() & other.connections().rev()
+    }
 }
 
 impl Default for Pipe {
@@ -121,6 +133,7 @@ impl std::fmt::Debug for Pipe {
     }
 }
 
+#[derive(Clone, PartialEq, Eq)]
 struct PipeMap {
     start: (i64, i64),
     map: Framebuffer<Pipe>,
@@ -168,7 +181,7 @@ impl PipeMap {
             cardinal |= (map[(sx + dx, sy + dy)].connections() & dir).rev();
         }
 
-        map[(sx, sy)] = Pipe::from_connections(cardinal);
+        map[(sx, sy)] = Pipe::from_cardinals(cardinal);
 
         Self {
             start: (sx, sy),
@@ -259,12 +272,35 @@ pub fn part1(input: &str) -> i64 {
     max_dist as i64
 }
 
+fn stretch_map(map: Framebuffer<Pipe>) -> Framebuffer<Pipe> {
+    let mut big_map = Framebuffer::new(2 * map.width() as u32, 2 * map.height() as u32);
+
+    for y in map.range_y() {
+        for x in map.range_x() {
+            // NW corner copies verbatim, the rest just need to connect
+            let here = map[(x, y)];
+            let f = |x: i32, y: i32, car: Cardinal| {
+                Pipe::from_cardinals(here.cardinals_with(map[(x, y)]) & car)
+            };
+
+            big_map[(2 * x + 0, 2 * y + 0)] = f(x + 0, y + 0, Norð);
+            big_map[(2 * x + 1, 2 * y + 0)] = f(x + 1, y + 0, East);
+            big_map[(2 * x + 0, 2 * y + 1)] = f(x + 0, y + 1, West);
+            big_map[(2 * x + 1, 2 * y + 1)] = f(x + 1, y + 1, Souð);
+        }
+    }
+
+    big_map
+}
+
 // Part2 ========================================================================
 #[aoc(day10, part2)]
 #[allow(unused)]
 pub fn part2(input: &str) -> i64 {
     let mut pipes = PipeMap::from_str(input);
     let mut seen: HashSet<(i64, i64)> = HashSet::new();
+
+    pipes.map = stretch_map(pipes.map);
 
     // There are four types of tiles in our map how:
     //      #1. Ground, reachable from the edges.                               Not a candidate for the nest.
@@ -362,10 +398,34 @@ pub fn part2(input: &str) -> i64 {
         }
     }
 
-    // TODO: Handle squeezing spaces ;_;
+    // Ground, surrounded by pipes, but squeezable
+    // We'll do this by scaling the entire map and extending each tile with its connectors
+    // e.g. 'J' -> 'J.' and '|' -> '|.'
+    //             '..'            '|.'
 
     if log_enabled!(Info) {
-        // pipes.map.print(|_x, _y, pipe| pipe.c);
+        {
+            let mut pipes = PipeMap::from_str(input);
+            pipes.map.print(|_x, _y, pipe| {
+                match pipe.c {
+                    // '|' is a vertical pipe connecting north and south.
+                    '|' => "┃",
+                    // '-' is a horizontal pipe connecting east and west.
+                    '-' => "━",
+                    // 'L' is a 90-degree bend connecting north and east.
+                    'L' => "┗",
+                    // 'J' is a 90-degree bend connecting north and west.
+                    'J' => "┛",
+                    // '7' is a 90-degree bend connecting south and west.
+                    '7' => "┓",
+                    // 'F' is a 90-degree bend connecting south and east.
+                    'F' => "┏",
+                    // '.' is ground; there is no pipe in this tile.
+                    '.' => ".",
+                    _ => unreachable!(),
+                }
+            });
+        }
         // pipes.pretty_print_pipes();
 
         let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&pipes.map);
@@ -576,5 +636,42 @@ L7JLJL-JLJLJL--JLJ.L
     ) {
         let input = input.trim();
         assert_eq!(p(input), expected);
+    }
+
+    const EXAMPLE_INPUT_PART2_1_SQUEEZING_BIG: &str = r"
+...................
+...................
+..S-------------7..
+..|.............|..
+..|.F---------7.|..
+..|.|.........|.|..
+..|.|.........|.|..
+..|.|.........|.|..
+..|.|.........|.|..
+..|.|.........|.|..
+..|.L---7.F---J.|..
+..|.....|.|.....|..
+..|.....|.|.....|..
+..|.....|.|.....|..
+..L-----J.L-----J..
+...................
+...................
+...................
+";
+
+    #[rstest]
+    #[case(EXAMPLE_INPUT_PART2_1_SQUEEZING, EXAMPLE_INPUT_PART2_1_SQUEEZING_BIG)]
+    fn check_part2_stretch_map(#[case] map: &str, #[case] big_map: &str) {
+        let mut pipes = PipeMap::from_str(map);
+        let big_pipes = PipeMap::from_str(big_map);
+
+        pipes.map = stretch_map(pipes.map);
+
+        pipes.pretty_print_pipes();
+        big_pipes.pretty_print_pipes();
+
+        if pipes != big_pipes {
+            panic!("maps don't match");
+        }
     }
 }
