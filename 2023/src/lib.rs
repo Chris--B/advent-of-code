@@ -3,6 +3,7 @@
 #![allow(clippy::comparison_chain)]
 #![allow(clippy::identity_op)]
 #![warn(clippy::overly_complex_bool_expr)]
+#![allow(clippy::single_element_loop)]
 
 use aoc_runner_derive::aoc_lib;
 

@@ -118,14 +118,6 @@ impl Pipe {
             return other.connects_with(*self, Norð);
         }
 
-        // if cardinal == East {
-        //     self.connections().contains(East) && other.connections().contains(West)
-        // } else if cardinal == Norð {
-        //     self.connections().contains(Norð) && other.connections().contains(Souð)
-        // } else {
-        //     unreachable!()
-        // }
-
         self.connections().contains(cardinal) && other.connections().contains(cardinal.rev())
     }
 }
@@ -155,8 +147,8 @@ impl PipeMap {
     fn from_str(input: &str) -> Self {
         let input = input.trim();
 
-        let width = input.lines().next().unwrap().len() as i64;
-        let height = input.lines().count() as i64;
+        let width = input.lines().next().unwrap().len() as i64 + 1;
+        let height = input.lines().count() as i64 + 1;
 
         let mut map: Framebuffer<Pipe> = Framebuffer::new(width as u32, height as u32);
         let mut start: Option<(i64, i64)> = None;
@@ -294,6 +286,8 @@ fn stretch_map(map: Framebuffer<Pipe>) -> Framebuffer<Pipe> {
             let x2 = 2 * x;
             let y2 = 2 * y;
 
+            assert!(!here.seen);
+
             if here.c == '.' {
                 // expand to all spaces (the default)
                 continue;
@@ -333,6 +327,8 @@ fn stretch_map(map: Framebuffer<Pipe>) -> Framebuffer<Pipe> {
         }
     }
 
+    big_map.set_border_color(Some(Pipe::default()));
+
     big_map
 }
 
@@ -341,7 +337,6 @@ fn stretch_map(map: Framebuffer<Pipe>) -> Framebuffer<Pipe> {
 #[allow(unused)]
 pub fn part2(input: &str) -> i64 {
     let mut pipes = PipeMap::from_str(input);
-    let mut seen: HashSet<(i64, i64)> = HashSet::new();
 
     pipes.map = stretch_map(pipes.map);
 
@@ -351,12 +346,14 @@ pub fn part2(input: &str) -> i64 {
     //      #3. Ground, surrounded by pipes, but reachable via "squeezing".     Not a candidate for the nest.
     //      #4. Ground, surrounded by pipes, NOT reachable via "squeeing".      Candidate for the nest!
     //  We need to count the number of type 4 tiles. We'll do this by counting types #1, #2 and #3, then complementing.
-    let mut candidate_tiles = pipes.count_tiles();
 
     // Big Ol' Loop to count #2, "pipes"
     // We do this first so further things can ignore the whole "ground tile" thing and just use `seen`
+
+    let mut seen_pipes: HashSet<(i64, i64)> = HashSet::new();
     {
-        let mut queue: VecDeque<((i64, i64))> = [(pipes.start)].into();
+        let big_start = (2 * pipes.start.0, 2 * pipes.start.1);
+        let mut queue: VecDeque<((i64, i64))> = [(big_start)].into();
 
         while let Some(here) = queue.pop_front() {
             assert!(queue.len() < input.len(), "oh no.");
@@ -367,6 +364,8 @@ pub fn part2(input: &str) -> i64 {
                 continue;
             }
 
+            // info!("[{:>3}] Checking ({x}, {y}) {pipe_here:?}", queue.len());
+
             for (dx, dy, cardinal) in [
                 (1, 0, East),  // East is +x
                 (-1, 0, West), // West is -x
@@ -376,37 +375,32 @@ pub fn part2(input: &str) -> i64 {
                 let there = (x + dx, y + dy);
                 let pipe_there = pipes.map[there];
 
-                if pipe_here.connects_with(pipe_there, cardinal) && !pipe_there.seen {
+                if pipe_here.connects_with(pipe_there, cardinal) {
                     queue.push_back(there);
                 }
             }
 
             // Mark 'here' as 'seen' now that we have checked all the neighboring pipes
             pipes.map[(x, y)].seen = true;
-            seen.insert((x, y));
+            seen_pipes.insert((x, y));
         }
     }
 
     // Flood fill to count #1, "ground reachable from the edges"
+    let mut seen_ground: HashSet<(i64, i64)> = HashSet::new();
     {
-        let start_x = (pipes.map.range_x().start - 1) as _;
-        let end_x = (pipes.map.range_x().end + 1) as _;
+        let xs = pipes.map.range_x();
+        let ys = pipes.map.range_y();
 
-        let start_y = (pipes.map.range_y().start - 1) as _;
-        let end_y = (pipes.map.range_y().end + 1) as _;
-
-        let xs = start_x..end_x;
-        let ys = start_y..end_y;
-
-        let mut queue: VecDeque<((i64, i64))> = [(start_x, start_y)].into();
+        let mut queue: VecDeque<((i64, i64))> = [(xs.start as _, ys.start as _)].into();
         while let Some((x, y)) = queue.pop_front() {
-            if seen.contains(&(x, y)) {
+            if seen_ground.contains(&(x, y)) || seen_pipes.contains(&(x, y)) {
                 continue;
             }
-            seen.insert((x, y));
+
+            seen_ground.insert((x, y));
 
             assert!(queue.len() < pipes.count_tiles());
-
             // info!(
             //     "[{:>3}, {candidate_tiles:>3}] Checking ({x}, {y})",
             //     queue.len()
@@ -422,24 +416,21 @@ pub fn part2(input: &str) -> i64 {
                 let y = (y + dy);
 
                 // Don't reexplore
-                if seen.contains(&(x, y)) {
+                if seen_ground.contains(&(x, y)) || seen_pipes.contains(&(x, y)) {
                     continue;
                 }
 
                 // Don't explore out of bounds
-                if !xs.contains(&x) || !ys.contains(&y) {
+                if !xs.contains(&(x as _)) || !ys.contains(&(y as _)) {
                     continue;
                 }
 
                 queue.push_back((x, y));
             }
-
-            // Use the real bounds for this
-            if pipes.map.range_x().contains(&(x as _)) && pipes.map.range_y().contains(&(y as _)) {
-                candidate_tiles -= 1;
-            }
         }
     }
+
+    assert_eq!(seen_ground.intersection(&seen_pipes).count(), 0);
 
     // Ground, surrounded by pipes, but squeezable
     // We'll do this by scaling the entire map and extending each tile with its connectors
@@ -447,33 +438,8 @@ pub fn part2(input: &str) -> i64 {
     //             '..'            '|.'
 
     if log_enabled!(Info) {
-        {
-            let mut pipes = PipeMap::from_str(input);
-            pipes.map.print(|_x, _y, pipe| {
-                match pipe.c {
-                    // '|' is a vertical pipe connecting north and south.
-                    '|' => "┃",
-                    // '-' is a horizontal pipe connecting east and west.
-                    '-' => "━",
-                    // 'L' is a 90-degree bend connecting north and east.
-                    'L' => "┗",
-                    // 'J' is a 90-degree bend connecting north and west.
-                    'J' => "┛",
-                    // '7' is a 90-degree bend connecting south and west.
-                    '7' => "┓",
-                    // 'F' is a 90-degree bend connecting south and east.
-                    'F' => "┏",
-                    // '.' is ground; there is no pipe in this tile.
-                    '.' => ".",
-                    _ => unreachable!(),
-                }
-            });
-        }
-        // pipes.pretty_print_pipes();
-
-        let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&pipes.map);
-        debug_map.print(|x, y, _c| {
-            match pipes.map[(x, y)].c {
+        pipes.map.print(|x, y, pipe| {
+            let c = match pipe.c {
                 // '|' is a vertical pipe connecting north and south.
                 '|' => "┃",
                 // '-' is a horizontal pipe connecting east and west.
@@ -487,34 +453,54 @@ pub fn part2(input: &str) -> i64 {
                 // 'F' is a 90-degree bend connecting south and east.
                 'F' => "┏",
                 // '.' is ground; there is no pipe in this tile.
-                '.' => {
-                    if seen.contains(&(x as _, y as _)) {
-                        "."
-                    } else {
-                        /*
-                           Black        0;30     Dark Gray     1;30
-                           Red          0;31     Light Red     1;31
-                           Green        0;32     Light Green   1;32
-                           Brown/Orange 0;33     Yellow        1;33
-                           Blue         0;34     Light Blue    1;34
-                           Purple       0;35     Light Purple  1;35
-                           Cyan         0;36     Light Cyan    1;36
-                           Light Gray   0;37     White         1;37
-                        */
-                        "\x1b[0;35m#\x1b[0m"
-                    }
-                }
+                '.' => "▓",
                 _ => unreachable!(),
+            };
+            /*
+               Black        0;30     Dark Gray     1;30
+               Red          0;31     Light Red     1;31
+               Green        0;32     Light Green   1;32
+               Brown/Orange 0;33     Yellow        1;33
+               Blue         0;34     Light Blue    1;34
+               Purple       0;35     Light Purple  1;35
+               Cyan         0;36     Light Cyan    1;36
+               Light Gray   0;37     White         1;37
+            */
+            // if ((x % 2 == 0) && (y % 2 == 0))
+            //     && (!seen_ground.contains(&(x as _, y as _))
+            //         && !seen_pipes.contains(&(x as _, y as _)))
+            if seen_ground.contains(&(x as _, y as _)) {
+                format!("\x1b[0;33m{c}\x1b[0m")
+            } else if seen_pipes.contains(&(x as _, y as _)) {
+                format!("\x1b[0;36m{c}\x1b[0m")
+            } else if (x % 2 == 0) && (y % 2 == 0) {
+                format!("\x1b[0;31m{c}\x1b[0m")
+            } else {
+                c.to_string()
             }
         });
-
-        //     pipes.pretty_print_pipes()
     }
+
+    let real_seen_count = (seen_ground.union(&seen_pipes))
+        // .iter()
+        .filter(|(x, y)| (x % 2 == 0) && (y % 2 == 0))
+        .count();
+
+    let candidate_tiles = pipes.count_tiles() / 4 - real_seen_count;
+
+    dbg!(pipes.count_tiles() / 4);
+    dbg!(real_seen_count);
+    dbg!(candidate_tiles);
 
     // Sanity bounds on my input
     if input.len() > 100 * 100 {
-        assert!(candidate_tiles > 512);
-        assert!(candidate_tiles < 14640);
+        dbg!(candidate_tiles);
+        assert!(candidate_tiles > 512, "{real_seen_count} is too small");
+        assert!(candidate_tiles < 14640, "{real_seen_count} is too big");
+
+        for wrong in [5754] {
+            assert!(candidate_tiles != wrong, "{wrong} was wrong");
+        }
     }
 
     candidate_tiles as i64
@@ -666,10 +652,10 @@ L7JLJL-JLJLJL--JLJ.L
 ";
 
     #[rstest]
-    #[case::given(4, EXAMPLE_INPUT_PART2_1_NO_SQUEEZING)]
-    #[case::given(4, EXAMPLE_INPUT_PART2_1_SQUEEZING)]
-    #[case::given(8, EXAMPLE_INPUT_PART2_2)]
-    #[case::given(8, EXAMPLE_INPUT_PART2_3)]
+    #[case::given_part2_1_no_squeezing(4, EXAMPLE_INPUT_PART2_1_NO_SQUEEZING)]
+    #[case::given_part2_1_squeezing(4, EXAMPLE_INPUT_PART2_1_SQUEEZING)]
+    #[case::given_part2_2(8, EXAMPLE_INPUT_PART2_2)]
+    #[case::given_part2_3(8, EXAMPLE_INPUT_PART2_3)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
@@ -683,24 +669,25 @@ L7JLJL-JLJLJL--JLJ.L
     }
 
     const EXAMPLE_INPUT_PART2_1_SQUEEZING_BIG: &str = r"
-....................
-....................
-....................
-..S-------------7...
-..|.............|...
-..|.F---------7.|...
-..|.|.........|.|...
-..|.|.........|.|...
-..|.|.........|.|...
-..|.|.........|.|...
-..|.|.........|.|...
-..|.L---7.F---J.|...
-..|.....|.|.....|...
-..|.....|.|.....|...
-..|.....|.|.....|...
-..L-----J.L-----J...
-....................
-....................
+.....................
+.....................
+.....................
+..S-------------7....
+..|.............|....
+..|.F---------7.|....
+..|.|.........|.|....
+..|.|.........|.|....
+..|.|.........|.|....
+..|.|.........|.|....
+..|.|.........|.|....
+..|.L---7.F---J.|....
+..|.....|.|.....|....
+..|.....|.|.....|....
+..|.....|.|.....|....
+..L-----J.L-----J....
+.....................
+.....................
+.....................
 ";
 
     #[rstest]
