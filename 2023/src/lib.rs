@@ -2,6 +2,7 @@
 #![cfg_attr(feature = "simd", feature(stdsimd))]
 #![allow(clippy::comparison_chain)]
 #![allow(clippy::identity_op)]
+#![warn(clippy::overly_complex_bool_expr)]
 
 use aoc_runner_derive::aoc_lib;
 

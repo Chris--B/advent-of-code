@@ -48,7 +48,6 @@ impl Pipe {
         let seen = false;
         match c {
             '|' | '-' | 'L' | 'J' | '7' | 'F' | '.' => Self { c, seen },
-            ' ' => Self { c: '.', seen },
             _ => unreachable!("Unexpected pipe: '{c}'"),
         }
     }
@@ -72,12 +71,6 @@ impl Pipe {
         } else if car == (Souð | East) {
             // 'F' is a 90-degree bend connecting south and east.
             'F'
-        } else if car == East || car == West {
-            // Duplicate it into East-West
-            '-'
-        } else if car == Norð || car == Souð {
-            // Duplicate it into North-South
-            '|'
         } else if car == 0 {
             // '.' is ground; there is no pipe in this tile.
             '.'
@@ -110,11 +103,30 @@ impl Pipe {
     }
 
     fn connects_with(&self, other: Pipe, cardinal: Cardinal) -> bool {
-        (self.connections() & other.connections().rev()).contains(cardinal)
-    }
+        assert!([Norð, Souð, East, West].contains(&cardinal));
 
-    fn cardinals_with(&self, other: Pipe) -> Cardinal {
-        self.connections() & other.connections().rev()
+        // Nothing connects with ground
+        if self.c == '.' || other.c == '.' {
+            return false;
+        }
+
+        if cardinal == West {
+            return other.connects_with(*self, East);
+        }
+
+        if cardinal == Souð {
+            return other.connects_with(*self, Norð);
+        }
+
+        // if cardinal == East {
+        //     self.connections().contains(East) && other.connections().contains(West)
+        // } else if cardinal == Norð {
+        //     self.connections().contains(Norð) && other.connections().contains(Souð)
+        // } else {
+        //     unreachable!()
+        // }
+
+        self.connections().contains(cardinal) && other.connections().contains(cardinal.rev())
     }
 }
 
@@ -279,14 +291,45 @@ fn stretch_map(map: Framebuffer<Pipe>) -> Framebuffer<Pipe> {
         for x in map.range_x() {
             // NW corner copies verbatim, the rest just need to connect
             let here = map[(x, y)];
-            let f = |x: i32, y: i32, car: Cardinal| {
-                Pipe::from_cardinals(here.cardinals_with(map[(x, y)]) & car)
-            };
+            let x2 = 2 * x;
+            let y2 = 2 * y;
 
-            big_map[(2 * x + 0, 2 * y + 0)] = f(x + 0, y + 0, Norð);
-            big_map[(2 * x + 1, 2 * y + 0)] = f(x + 1, y + 0, East);
-            big_map[(2 * x + 0, 2 * y + 1)] = f(x + 0, y + 1, West);
-            big_map[(2 * x + 1, 2 * y + 1)] = f(x + 1, y + 1, Souð);
+            if here.c == '.' {
+                // expand to all spaces (the default)
+                continue;
+            }
+
+            // Consider this box:
+            //      +---+---+
+            //      | 4 | 2 |
+            //      +---+---+
+            //      | 3 | 1 |
+            //      +---+---+
+            // When upscaling:
+            //      - 1 is 'here', verbatim
+            //      - 2 is '|' if 'here' already connects to the North
+            //      - 3 is '-' if 'here' already connects to the West
+            //      - 4 is always '.', this is why stretching solves the problem!
+
+            // Box '1'
+            big_map[(x2, y2)] = here;
+            // big_map[(x2, y2)] = Pipe::from_char('1');
+
+            // Box '2'
+            if here.connects_with(map[(x, y + 1)], Norð) {
+                big_map[(x2, y2 + 1)] = Pipe::from_char('|');
+            } else {
+                // big_map[(x2, y2 + 1)] = Pipe::from_char('2');
+            }
+
+            // Box '3'
+            if here.connects_with(map[(x + 1, y)], East) {
+                big_map[(x2 + 1, y2)] = Pipe::from_char('-');
+            } else {
+                // big_map[(x2 + 1, y2)] = Pipe::from_char('3');
+            }
+
+            // big_map[(x2 + 1, y2 + 1)] = Pipe::from_char('4');
         }
     }
 
@@ -505,8 +548,9 @@ mod test {
     #[case('-', '-', Norð)]
     #[case('-', '-', Souð)]
     #[case('L', '-', West)]
+    #[case('-', 'L', East)]
     #[trace]
-    fn check_doesnt_connect_with(#[case] a: char, #[case] b: char, #[case] cardinal: Cardinal) {
+    fn check_doesnt_connects_with(#[case] a: char, #[case] b: char, #[case] cardinal: Cardinal) {
         let a = Pipe::from_char(a);
         let b = Pipe::from_char(b);
         assert!(!a.connects_with(b, cardinal));
@@ -639,39 +683,54 @@ L7JLJL-JLJLJL--JLJ.L
     }
 
     const EXAMPLE_INPUT_PART2_1_SQUEEZING_BIG: &str = r"
-...................
-...................
-..S-------------7..
-..|.............|..
-..|.F---------7.|..
-..|.|.........|.|..
-..|.|.........|.|..
-..|.|.........|.|..
-..|.|.........|.|..
-..|.|.........|.|..
-..|.L---7.F---J.|..
-..|.....|.|.....|..
-..|.....|.|.....|..
-..|.....|.|.....|..
-..L-----J.L-----J..
-...................
-...................
-...................
+....................
+....................
+....................
+..S-------------7...
+..|.............|...
+..|.F---------7.|...
+..|.|.........|.|...
+..|.|.........|.|...
+..|.|.........|.|...
+..|.|.........|.|...
+..|.|.........|.|...
+..|.L---7.F---J.|...
+..|.....|.|.....|...
+..|.....|.|.....|...
+..|.....|.|.....|...
+..L-----J.L-----J...
+....................
+....................
 ";
 
     #[rstest]
     #[case(EXAMPLE_INPUT_PART2_1_SQUEEZING, EXAMPLE_INPUT_PART2_1_SQUEEZING_BIG)]
     fn check_part2_stretch_map(#[case] map: &str, #[case] big_map: &str) {
         let mut pipes = PipeMap::from_str(map);
-        let big_pipes = PipeMap::from_str(big_map);
+
+        pipes.pretty_print_pipes();
 
         pipes.map = stretch_map(pipes.map);
 
         pipes.pretty_print_pipes();
+
+        let big_pipes = PipeMap::from_str(big_map);
         big_pipes.pretty_print_pipes();
 
-        if pipes != big_pipes {
-            panic!("maps don't match");
+        assert_eq!(pipes.map.range_x(), big_pipes.map.range_x());
+        assert_eq!(pipes.map.range_y(), big_pipes.map.range_y());
+
+        let mut a = String::new();
+        let mut b = String::new();
+        for y in pipes.map.range_y().rev() {
+            for x in pipes.map.range_x() {
+                a.push(pipes.map[(x, y)].c);
+                b.push(big_pipes.map[(x, y)].c);
+            }
+            a.push('\n');
+            b.push('\n');
         }
+
+        assert_eq!(a, b);
     }
 }
