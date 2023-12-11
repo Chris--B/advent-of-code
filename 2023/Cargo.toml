@@ -31,6 +31,9 @@ num = "0.4"
 scan_fmt = "0.2"
 smallvec = "1"
 fnv = "1"
+image = "0.24"
+ultraviolet = { version = "0.9", features = ["int"] }
+bitmask-enum = "2"
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]

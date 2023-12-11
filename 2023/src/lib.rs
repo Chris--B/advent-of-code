@@ -15,7 +15,7 @@ pub mod day07;
 pub mod day08;
 pub mod day08_buf;
 pub mod day09;
-// pub mod day10;
+pub mod day10;
 // pub mod day11;
 // pub mod day12;
 // pub mod day13;
@@ -31,6 +31,8 @@ pub mod day09;
 // pub mod day23;
 // pub mod day24;
 // pub mod day25;
+
+mod framebuffer;
 
 aoc_lib! { year = 2023 }
 
@@ -70,6 +72,7 @@ mod prelude {
 
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
+    pub use bitmask_enum::bitmask;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::Complex;
