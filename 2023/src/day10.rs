@@ -175,6 +175,35 @@ impl PipeMap {
             map,
         }
     }
+
+    fn pretty_print_pipes(&self) {
+        let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&self.map);
+
+        for y in debug_map.range_y() {
+            for x in debug_map.range_x() {
+                let c = match self.map[(x, y)].c {
+                    // '|' is a vertical pipe connecting north and south.
+                    '|' => '┃',
+                    // '-' is a horizontal pipe connecting east and west.
+                    '-' => '━',
+                    // 'L' is a 90-degree bend connecting north and east.
+                    'L' => '┗',
+                    // 'J' is a 90-degree bend connecting north and west.
+                    'J' => '┛',
+                    // '7' is a 90-degree bend connecting south and west.
+                    '7' => '┓',
+                    // 'F' is a 90-degree bend connecting south and east.
+                    'F' => '┏',
+                    // '.' is ground; there is no pipe in this tile.
+                    '.' => ' ',
+                    _ => unreachable!(),
+                };
+                debug_map[(x, y)] = c;
+            }
+        }
+
+        debug_map.print(|_x, _y, c| *c);
+    }
 }
 
 // Part1 ========================================================================
@@ -211,7 +240,6 @@ pub fn part1(input: &str) -> i64 {
             let pipe_there = pipes.map[there];
 
             if pipe_here.connects_with(pipe_there, cardinal) && !pipe_there.seen {
-                // debug!("here ({pipe_here:?}) connects with {pipe_there:?}");
                 queue.push_back((there, dist + 1));
             }
         }
@@ -221,11 +249,7 @@ pub fn part1(input: &str) -> i64 {
     }
 
     if log_enabled!(Info) {
-        debug_map.print(|_x, _y, d| match d {
-            0 => '.',
-            0..=9 => (*d as u8 + b'0') as char,
-            _ => '@',
-        });
+        pipes.pretty_print_pipes()
     }
 
     max_dist as i64
@@ -233,8 +257,46 @@ pub fn part1(input: &str) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day10, part2)]
-pub fn part2(_input: &str) -> i64 {
-    unimplemented!();
+pub fn part2(input: &str) -> i64 {
+    let mut pipes = PipeMap::from_str(input);
+    let mut queue: VecDeque<((i64, i64), usize)> = [(pipes.start, 0)].into();
+    let mut max_dist = 0;
+
+    let mut debug_map: Framebuffer<char> = Framebuffer::new_matching_size(&pipes.map);
+
+    while let Some((here, dist)) = queue.pop_front() {
+        assert!(queue.len() < input.len(), "oh no.");
+        max_dist = max_dist.max(dist);
+
+        let (x, y) = here;
+        let pipe_here = pipes.map[here];
+        if pipe_here.seen {
+            continue;
+        }
+
+        for (dx, dy, cardinal) in [
+            (1, 0, East),  // East is +x
+            (-1, 0, West), // West is -x
+            (0, 1, Norð),  // Norð is +y
+            (0, -1, Souð), // Souð is -y
+        ] {
+            let there = (x + dx, y + dy);
+            let pipe_there = pipes.map[there];
+
+            if pipe_here.connects_with(pipe_there, cardinal) && !pipe_there.seen {
+                queue.push_back((there, dist + 1));
+            }
+        }
+
+        // Mark 'here' as 'seen' now that we have checked all the neighboring pipes
+        pipes.map[(x, y)].seen = true;
+    }
+
+    // if log_enabled!(Info) {
+    //     pipes.pretty_print_pipes()
+    // }
+
+    0
 }
 
 #[cfg(test)]
@@ -331,9 +393,62 @@ LJ.LJ
         assert_eq!(res, expected);
     }
 
+    const EXAMPLE_INPUT_1_PART2: &str = r"
+...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........
+";
+
+    const EXAMPLE_INPUT_1_POINT_5_PART2: &str = r"
+..........
+.S------7.
+.|F----7|.
+.||....||.
+.||....||.
+.|L-7F-J|.
+.|..||..|.
+.L--JL--J.
+..........
+";
+
+    const EXAMPLE_INPUT_2_PART2: &str = r"
+.F----7F7F7F7F-7....
+.|F--7||||||||FJ....
+.||.FJ||||||||L7....
+FJL7L7LJLJ||LJ.L-7..
+L--J.L7...LJS7F-7L7.
+....F-J..F7FJ|L7L7L7
+....L7.F7||L7|.L7L7|
+.....|FJLJ|FJ|F7|.LJ
+....FJL-7.||.||||...
+....L---J.LJ.LJLJ...
+";
+
+    const EXAMPLE_INPUT_3_PART2: &str = r"
+FF7FSF7F7F7F7F7F---7
+L|LJ||||||||||||F--J
+FL-7LJLJ||||||LJL-77
+F--JF--7||LJLJ7F7FJ-
+L---JF-JLJ.||-FJLJJ7
+|F|F-JF---7F7-L7L|7|
+|FFJF7L7F-JF7|JL---7
+7-L-JL7||F7|L7F-7F7|
+L.L7LFJ|||||FJL7||LJ
+L7JLJL-JLJLJL--JLJ.L
+";
+
     #[rstest]
     #[ignore]
-    #[case::given(999_999, EXAMPLE_INPUT_1_JUST_LOOP)]
+    #[case::given(4, EXAMPLE_INPUT_1_PART2)]
+    #[case::given(4, EXAMPLE_INPUT_1_POINT_5_PART2)]
+    #[case::given(8, EXAMPLE_INPUT_2_PART2)]
+    #[case::given(8, EXAMPLE_INPUT_3_PART2)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
