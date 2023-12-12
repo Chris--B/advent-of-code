@@ -7,13 +7,17 @@ use crate::prelude::*;
 // Part1 ========================================================================
 #[aoc(dayN, part1)]
 pub fn part1(input: &str) -> i64 {
-    unimplemented!();
+    #![allow(unused)]
+
+    0
 }
 
 // Part2 ========================================================================
 #[aoc(dayN, part2)]
 pub fn part2(input: &str) -> i64 {
-    unimplemented!();
+    #![allow(unused)]
+
+    0
 }
 
 #[cfg(test)]
@@ -41,17 +45,18 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[ignore]
+    #[rstest]
+    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[trace]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
