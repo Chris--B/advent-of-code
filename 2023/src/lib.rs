@@ -21,7 +21,7 @@ pub mod day09;
 pub mod day10;
 pub mod day11;
 // pub mod day12;
-// pub mod day13;
+pub mod day13;
 // pub mod day14;
 // pub mod day15;
 // pub mod day16;
@@ -89,6 +89,7 @@ mod prelude {
     pub use crate::fast_parse_u32;
     pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
+    pub use crate::framebuffer::Framebuffer;
 }
 
 pub fn fast_parse_u8(input: &[u8]) -> u32 {
