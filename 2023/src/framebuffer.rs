@@ -281,6 +281,7 @@ impl<T> Framebuffer<T> {
             for x in xs.clone() {
                 print!("{}", func(x, y, &self[(x, y)]));
             }
+            print!("{y:>2} ");
             println!();
         }
         println!();
