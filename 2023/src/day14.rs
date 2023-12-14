@@ -25,7 +25,6 @@ pub fn part1(input: &str) -> i64 {
     let mut load = 0;
 
     let dim = dim as i32;
-    dbg!(dim);
     for y in (1..=dim).rev() {
         for x in platform.range_x() {
             if platform[(x, y)] == 'O' {
@@ -55,9 +54,85 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day14, part2)]
 pub fn part2(input: &str) -> i64 {
-    #![allow(unused)]
+    let dim = if cfg!(test) { 10 } else { 100 };
+    let mut platform = Framebuffer::new(dim + 1, dim + 1);
+    platform.clear('.');
+    platform.set_border_color(Some('#'));
 
-    0
+    let mut rocks = vec![];
+    let n_lines = input.lines().count();
+    for (y, line) in input.lines().enumerate() {
+        let y = n_lines - y;
+        for (x, c) in line.chars().enumerate() {
+            if c == '#' || c == 'O' {
+                platform[(x, y)] = c;
+
+                if c == 'O' {
+                    rocks.push((x as i32, y as i32));
+                }
+            }
+        }
+    }
+
+    if log_enabled!(Info) {
+        platform.print(|_x, _y, c| *c);
+    }
+
+    // const TIMES: usize = 1_000;
+    // const TIMES: usize = 1_000_000;
+    const TIMES: usize = 1_000_000_000;
+    let bar = indicatif::ProgressBar::new(TIMES as _);
+
+    for (i, dir) in [
+        (0, 1),  // north
+        (-1, 0), // west
+        (0, -1), // south
+        (1, 0),  // east
+    ]
+    .iter()
+    .cycle()
+    .take(TIMES)
+    .enumerate()
+    {
+        if i % 1024 == 0 {
+            bar.inc(1024);
+        }
+
+        for (x, y) in rocks.iter().copied() {
+            if platform[(x, y)] == 'O' {
+                let mut xx = x;
+                let mut yy = y;
+
+                // While we can, roll <dir>
+                while platform[(xx + dir.0, yy + dir.1)] == '.' {
+                    xx += dir.0;
+                    yy += dir.1;
+                }
+
+                if (x != xx) || (y != yy) {
+                    platform[(x, y)] = '.';
+                    platform[(xx, yy)] = 'O';
+                }
+            }
+        }
+    }
+    bar.finish();
+
+    if log_enabled!(Info) {
+        platform.print(|_x, _y, c| *c);
+    }
+
+    let mut load = 0;
+
+    for y in platform.range_y() {
+        for x in platform.range_x() {
+            if platform[(x, y)] == 'O' {
+                load += y as i64;
+            }
+        }
+    }
+
+    load
 }
 
 #[cfg(test)]
@@ -94,9 +169,8 @@ O.#..O.#.#
         assert_eq!(p(input), expected);
     }
 
-    #[ignore]
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[case::given(64, EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
