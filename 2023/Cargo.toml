@@ -14,6 +14,10 @@ path = "src/main.rs"
 name = "aoc23"
 path = "src/lib.rs"
 
+[features]
+default = []
+broken = []
+
 [dependencies]
 aoc-runner = "*"
 aoc-runner-derive = "*"

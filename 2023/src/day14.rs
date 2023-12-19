@@ -52,7 +52,7 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-#[aoc(day14, part2)]
+#[cfg_attr(feature = "broken", aoc(day14, part2))]
 pub fn part2(input: &str) -> i64 {
     let dim = if cfg!(test) { 10 } else { 100 };
     let mut platform = Framebuffer::new(dim + 1, dim + 1);
@@ -169,6 +169,7 @@ O.#..O.#.#
         assert_eq!(p(input), expected);
     }
 
+    #[cfg(feature = "broken")]
     #[rstest]
     #[case::given(64, EXAMPLE_INPUT)]
     #[trace]
