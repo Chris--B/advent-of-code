@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::prelude::*;
 
 // Each day:
@@ -7,16 +9,12 @@ use crate::prelude::*;
 // Part1 ========================================================================
 #[aoc(dayN, part1)]
 pub fn part1(input: &str) -> i64 {
-    #![allow(unused)]
-
     0
 }
 
 // Part2 ========================================================================
 #[aoc(dayN, part2)]
 pub fn part2(input: &str) -> i64 {
-    #![allow(unused)]
-
     0
 }
 
