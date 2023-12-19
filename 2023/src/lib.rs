@@ -81,6 +81,7 @@ mod prelude {
     pub use num::Complex;
     pub use num::Integer;
     pub use scan_fmt::scan_fmt;
+    pub use smallvec::{smallvec, SmallVec};
     pub use ultraviolet::IVec2;
 
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
