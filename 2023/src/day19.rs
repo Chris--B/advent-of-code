@@ -2,6 +2,8 @@
 use crate::prelude::*;
 
 type Part = [i64; 4];
+type PartRange = [std::ops::RangeInclusive<i64>; 4];
+
 const X: usize = 0;
 const M: usize = 1;
 const A: usize = 2;
@@ -148,11 +150,121 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
+fn apply_workflow_to_range<'a>(
+    mut part: PartRange,
+    workflow: &[(usize, Op, &'a str)],
+    ranges: &mut HashMap<&'a str, Vec<PartRange>>,
+) {
+    'workflow: for (idx, op, target) in workflow {
+        let idx = *idx;
+        info!("    {op:>10?} -> \"{target}\"");
+
+        // Take the range, and split it according to op
+        match op {
+            Jump => {
+                ranges.entry(*target).or_default().push(part.clone());
+                return;
+            }
+            Gt(n) => {
+                if part[idx].contains(n) {
+                    let (start, end) = part[idx].clone().into_inner();
+
+                    // For the part that this rule affects, save it to the map
+                    part[idx] = (*n + 1)..=end;
+                    ranges.entry(*target).or_default().push(part.clone());
+
+                    // For the rest, replace it and continue
+                    part[idx] = start..=*n;
+                } else {
+                    // The whole range will follow the same rule, use start I guess
+                    if part[idx].start() > n {
+                        part[idx] = part[idx].clone();
+                        ranges.entry(*target).or_default().push(part.clone());
+                    }
+                }
+            }
+            Lt(n) => {
+                if part[idx].contains(n) {
+                    let (start, end) = part[idx].clone().into_inner();
+
+                    // For the part that this rule affects, save it to the map
+                    part[idx] = start..=(*n - 1);
+                    ranges.entry(*target).or_default().push(part.clone());
+
+                    // For the rest, replace it and continue
+                    part[idx] = *n..=end;
+                } else {
+                    // The whole range will follow the same rule, use start I guess
+                    if part[idx].start() < n {
+                        part[idx] = part[idx].clone();
+                        ranges.entry(*target).or_default().push(part.clone());
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[aoc(day19, part2)]
 pub fn part2(input: &str) -> i64 {
-    #![allow(unused)]
+    let lines = input.lines().collect_vec();
+    let empty_line = lines.iter().position(|l| l.is_empty()).unwrap();
+    let (workflow_lines, part_lines) = lines.split_at(empty_line);
 
-    0
+    info!("Processing {} workflows", workflow_lines.len());
+    info!("Processing {} parts", part_lines.len());
+
+    let workflows: HashMap<&str, Vec<Rule>> = workflow_lines
+        .iter()
+        .map(|line| parse_workflow_entry(line))
+        .collect();
+    let mut parts = part_lines.iter().map(|line| parse_part(line)).collect_vec();
+
+    let mut ranges: HashMap<&str, Vec<PartRange>> =
+        [("in", vec![[1..=4000, 1..=4000, 1..=4000, 1..=4000]])]
+            .into_iter()
+            .collect();
+
+    let mut queue = VecDeque::new();
+    queue.push_front("in");
+
+    while let Some(lbl) = queue.pop_front() {
+        info!("[\"{lbl}\"]");
+
+        // Skip terminal states, we want to pool things here
+        if lbl == "A" || lbl == "R" {
+            continue;
+        }
+
+        // Clear the list, so we don't double process anything.
+        // We need to be careful not to borrow into `ranges`, so we can mutate it below
+        let mut lbl_ranges = vec![];
+        std::mem::swap(&mut lbl_ranges, ranges.get_mut(lbl).unwrap());
+
+        for range in lbl_ranges {
+            // Apply this workflow to our range
+            apply_workflow_to_range(range, &workflows[lbl], &mut ranges);
+
+            // And then queue up anything that was affected
+            for (_idx, _op, target) in &workflows[lbl] {
+                if let Some(rs) = ranges.get(target) {
+                    // TODO: Maybe make queue a set, we don't care about ordering much but we do care about this lookup.
+                    if !rs.is_empty() && !queue.contains(target) {
+                        info!("[\"{lbl}\"] Enqueueing {target}");
+                        queue.push_back(target);
+                    }
+                }
+            }
+        }
+
+        info!("[\"{lbl}\"] queue={queue:?}");
+    }
+
+    ranges["A"]
+        .iter()
+        .cloned()
+        .map(|[a, b, c, d]| (a.count() * b.count() * c.count() * d.count()) as i64)
+        .sum()
 }
 
 #[cfg(test)]
@@ -217,7 +329,6 @@ hdj{m>838:A,pv}
         assert_eq!(p(input), expected);
     }
 
-    #[ignore]
     #[rstest]
     #[case::given(167_409_079_868_000, EXAMPLE_INPUT)]
     #[trace]
