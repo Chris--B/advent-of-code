@@ -10,6 +10,8 @@ if [ "$1" ]; then
     cargo test --lib --quiet
     cargo aoc
 
+    neato target/day25.dot -Tsvg -o day25.svg;
+
     exit 0
 fi
 

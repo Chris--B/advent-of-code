@@ -12,6 +12,8 @@ out.*
 
 # Visualizations
 **/viz/
+*.svg
+*.png
 
 # Perf/Debug trace files
 *.trace
