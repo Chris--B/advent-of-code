@@ -44,7 +44,6 @@ aoc_lib! { year = 2023 }
 #[ctor::ctor]
 fn init_logging() {
     use env_logger::{Builder, Env};
-    use prelude::*;
 
     let mut env = Env::default();
     if cfg!(test) || cfg!(debug_assert) {
