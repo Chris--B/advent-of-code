@@ -20,6 +20,12 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
+    info!(
+        "Parsed graph with {} vertices and {} edges",
+        graph.keys().count(),
+        graph.values().map(Vec::len).sum::<usize>()
+    );
+
     if cfg!(test) {
         save_adj_matrix(&graph);
     }
@@ -30,6 +36,46 @@ pub fn part1(input: &str) -> i64 {
     } else {
         [("kkp", "vtv"), ("jll", "lnf"), ("cmj", "qhd")]
     };
+
+    if cfg!(test) {
+        let mut keys = graph.keys().copied().collect_vec();
+        keys.sort();
+
+        use std::fmt::Write;
+        let mut buf = String::new();
+
+        writeln!(buf, "digraph {{");
+        writeln!(buf, "    rank=same;");
+        writeln!(buf, "    edge [dir=none]");
+        writeln!(buf, "    node [style=filled]");
+
+        for (a, bs) in keys.iter().map(|k| (*k, &graph[k])) {
+            for b in bs {
+                if *b < a {
+                    continue;
+                }
+                if cuts.contains(&(a, b)) || cuts.contains(&(b, a)) {
+                    // writeln!(buf, "    {a} [fillcolor=red]");
+                    // writeln!(buf, "    {b} [fillcolor=red]");
+                    writeln!(buf, "    {a} -> {b} [color=red]");
+                } else {
+                    writeln!(buf, "    {a} -> {b}");
+                }
+            }
+        }
+        writeln!(buf, "}}");
+
+        // eprintln!("{buf}");
+        std::fs::write(
+            if cfg!(test) {
+                "/Users/chris/code/me/advent-of-code/2023/target/day25_test.dot"
+            } else {
+                "/Users/chris/code/me/advent-of-code/2023/target/day25.dot"
+            },
+            buf,
+        )
+        .unwrap();
+    }
 
     for (a, b) in cuts {
         rm_elem(graph.get_mut(a).unwrap(), b);
@@ -50,31 +96,6 @@ pub fn part1(input: &str) -> i64 {
         for next in &graph[node] {
             queue.push_back(next);
         }
-    }
-
-    if true {
-        use std::fmt::Write;
-        let mut buf = String::new();
-
-        writeln!(buf, "digraph {{");
-        writeln!(buf, "    rank=same;");
-        for (a, bs) in &graph {
-            for b in bs {
-                writeln!(buf, "    {a} -> {b}");
-            }
-        }
-        writeln!(buf, "}}");
-
-        // eprintln!("{buf}");
-        std::fs::write(
-            if cfg!(test) {
-                "/Users/chris/code/me/advent-of-code/2023/target/day25_test.dot"
-            } else {
-                "/Users/chris/code/me/advent-of-code/2023/target/day25.dot"
-            },
-            buf,
-        )
-        .unwrap();
     }
 
     (seen.len() * (graph.len() - seen.len())) as i64
