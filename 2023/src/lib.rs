@@ -62,12 +62,6 @@ fn init_logging() {
         .format_target(false)
         .format_indent(Some(4))
         .init();
-
-    trace!("Hello");
-    debug!("Hello");
-    info!("Hello");
-    warn!("Hello");
-    error!("Hello");
 }
 
 #[allow(unused_imports)]
