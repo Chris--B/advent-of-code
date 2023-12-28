@@ -92,6 +92,27 @@ where
             border_color: None,
         }
     }
+
+    pub fn parse_grid(input: &str, f: impl Fn(char) -> T) -> Self {
+        debug_assert!(
+            !input.is_empty(),
+            "Parsing a grid from an empty string is probably not on purpose."
+        );
+
+        let width = input.lines().next().map(str::len).unwrap_or_default();
+        let height = input.lines().count();
+
+        let mut grid = Framebuffer::new(width as u32, height as u32);
+
+        for (y, line) in input.lines().enumerate() {
+            let y = height - y - 1;
+            for (x, c) in line.chars().enumerate() {
+                grid[(x, y)] = f(c);
+            }
+        }
+
+        grid
+    }
 }
 
 /// Construction Methods
@@ -278,13 +299,22 @@ impl<T> Framebuffer<T> {
         U: std::fmt::Display,
     {
         for y in ys.rev() {
+            print!("{y:>2} ");
             for x in xs.clone() {
                 print!("{}", func(x, y, &self[(x, y)]));
             }
-            print!("{y:>2} ");
             println!();
         }
         println!();
+    }
+}
+
+impl<T> Framebuffer<T>
+where
+    T: std::fmt::Display,
+{
+    pub fn just_print(&self) {
+        self.print_range_with(self.range_x(), self.range_y(), |_, _, t| t.to_string())
     }
 }
 
