@@ -1,41 +1,6 @@
 #![allow(non_upper_case_globals)]
 
-use crate::{framebuffer::Framebuffer, prelude::*};
-
-#[bitmask(u8)]
-#[bitmask_config(vec_debug)]
-enum Cardinal {
-    Norð,
-    Souð,
-    East,
-    West,
-}
-
-impl Cardinal {
-    fn rev(&self) -> Self {
-        let mut r = Cardinal::none();
-
-        if self.contains(Norð) {
-            r |= Souð;
-        }
-        if self.contains(Souð) {
-            r |= Norð;
-        }
-        if self.contains(East) {
-            r |= West;
-        }
-        if self.contains(West) {
-            r |= East;
-        }
-
-        r
-    }
-}
-
-const Norð: Cardinal = Cardinal::Norð;
-const Souð: Cardinal = Cardinal::Souð;
-const East: Cardinal = Cardinal::East;
-const West: Cardinal = Cardinal::West;
+use crate::prelude::*;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 struct Pipe {

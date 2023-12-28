@@ -63,9 +63,8 @@ fn init_logging() {
         .init();
 }
 
-#[allow(unused_imports)]
+#[allow(unused_imports, non_upper_case_globals)]
 mod prelude {
-
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use bitmask_enum::bitmask;
@@ -80,10 +79,70 @@ mod prelude {
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
 
+    pub use crate::framebuffer::Framebuffer;
+    pub use crate::Cardinal;
+    pub const Norð: Cardinal = Cardinal::Norð;
+    pub const Souð: Cardinal = Cardinal::Souð;
+    pub const East: Cardinal = Cardinal::East;
+    pub const West: Cardinal = Cardinal::West;
+
     pub use crate::fast_parse_u32;
     pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
-    pub use crate::framebuffer::Framebuffer;
+}
+
+use prelude::*;
+
+#[bitmask(u8)]
+#[bitmask_config(vec_debug)]
+pub enum Cardinal {
+    Norð,
+    Souð,
+    East,
+    West,
+}
+
+impl Cardinal {
+    pub const ALL_NO_DIAG: [Cardinal; 4] = [Norð, Souð, East, West];
+
+    pub fn rev(&self) -> Self {
+        let mut r = Cardinal::none();
+
+        if self.contains(Norð) {
+            r |= Souð;
+        }
+        if self.contains(Souð) {
+            r |= Norð;
+        }
+        if self.contains(East) {
+            r |= West;
+        }
+        if self.contains(West) {
+            r |= East;
+        }
+
+        r
+    }
+}
+impl From<Cardinal> for IVec2 {
+    fn from(val: Cardinal) -> Self {
+        let mut r = IVec2::zero();
+
+        if val.contains(Norð) {
+            r += IVec2::new(0, 1);
+        }
+        if val.contains(Souð) {
+            r += IVec2::new(0, -1);
+        }
+        if val.contains(East) {
+            r += IVec2::new(1, 0);
+        }
+        if val.contains(West) {
+            r += IVec2::new(-1, 0);
+        }
+
+        r
+    }
 }
 
 pub fn fast_parse_u8(input: &[u8]) -> u32 {
