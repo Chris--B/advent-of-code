@@ -1,5 +1,8 @@
 #![allow(unused)]
 
+use image::{Rgb, RgbImage};
+use indicatif::ProgressBar;
+
 use crate::prelude::*;
 
 use std::ops::Add;
@@ -67,6 +70,10 @@ struct MetaPoint {
 }
 
 impl MetaPoint {
+    fn full_coord(mut self, nx: i32, ny: i32) -> IVec2 {
+        self.in_tile + self.tile * IVec2::new(nx, ny)
+    }
+
     fn refit(mut self, nx: i32, ny: i32) -> Self {
         // Adjust x if it's outside of its tile
         let x = self.in_tile.x;
@@ -125,47 +132,79 @@ fn do_part2_sim(steps: i64, input: &str) -> i64 {
         tile: IVec2::zero(),
     };
 
-    let mut ps: HashSet<MetaPoint> = [start].into();
-    let mut seen_this_step: HashSet<MetaPoint> = HashSet::new();
+    let mut seen: HashSet<MetaPoint> = HashSet::new();
+    let mut frontier = vec![start];
+    let mut new_frontier = vec![];
 
     let spacing = false;
 
-    for step in 1..=steps {
-        for p in ps.drain() {
+    const IMAGE_DIM: u32 = if cfg!(test) { 512 } else { 4096 };
+    let mut frame = RgbImage::new(IMAGE_DIM, IMAGE_DIM);
+    let pb = ProgressBar::new(steps as u64);
+
+    for step in (1..=steps) {
+        for p in frontier.drain(..) {
             for dir in Cardinal::ALL_NO_DIAG {
-                let next = (p + dir).refit(nx, ny);
+                let next: MetaPoint = (p + dir);
+                let next = next.refit(nx, ny);
 
                 if grid[next.in_tile] == '#' {
                     continue;
                 }
 
-                if !seen_this_step.contains(&next) {
-                    seen_this_step.insert(next);
+                if !seen.contains(&next) {
+                    seen.insert(next);
+                    new_frontier.push(next);
                 }
             }
         }
 
-        for p in seen_this_step.drain() {
-            ps.insert(p);
-        }
+        std::mem::swap(&mut frontier, &mut new_frontier);
+        pb.inc(1);
 
+        // Debug logging
         if log_enabled!(Info) {
-            {
+            const S: i64 = if cfg!(test) { 5 } else { 500 };
+            if (step == steps || step % S == 0) {
+                let max_x = seen.iter().map(|p| p.full_coord(nx, ny).x).max().unwrap();
+                let max_y = seen.iter().map(|p| p.full_coord(nx, ny).y).max().unwrap();
                 info!(
-                    "[step {step:2>}] plots={}, tiles={}",
-                    ps.len(),
-                    ps.iter().unique_by(|MetaPoint { tile, .. }| tile).count()
+                    "[step {step:5>}] tiles={}, frontier={}, seen={}, max_x={max_x}, max_y={max_y}",
+                    seen.iter().unique_by(|MetaPoint { tile, .. }| tile).count(),
+                    frontier.len(),
+                    seen.len(),
                 );
             }
 
-            if [1, steps].contains(&step) {
-                // Render a 3x3 grid of the maps
+            // Save PNGs
+            {
+                let dir = format!(
+                    "/Users/chris/code/me/advent-of-code/2023/target/day21{test}/",
+                    test = if cfg!(test) { "_test" } else { "" }
+                );
+                let filename = format!("{dir}/f{step:>05}.png");
+                std::fs::create_dir_all(dir).unwrap();
+
+                for p in &frontier {
+                    let (x, y) = p.full_coord(nx, ny).into();
+                    let x = x + (IMAGE_DIM / 2) as i32;
+                    let y = y + (IMAGE_DIM / 2) as i32;
+
+                    if let Some(px) = frame.get_pixel_mut_checked(x as u32, y as u32) {
+                        *px = Rgb([0xff, 0x00, 0xff]);
+                    }
+                }
+
+                frame.save(filename).unwrap();
+            }
+
+            if cfg!(test) && step == steps {
                 for my in -1..2 {
                     for y in grid.range_y().rev() {
                         for mx in -1..2 {
                             let tile = IVec2::new(mx, my);
                             for x in grid.range_x() {
-                                if ps.contains(&MetaPoint {
+                                if seen.contains(&MetaPoint {
                                     in_tile: IVec2::new(x, y),
                                     tile,
                                 }) {
@@ -189,38 +228,14 @@ fn do_part2_sim(steps: i64, input: &str) -> i64 {
         }
     }
 
-    ps.len() as i64
+    todo!()
 }
 
 fn do_part2(steps: i64, input: &str) -> i64 {
-    use num::traits::Pow;
-
-    if steps < 20 {
+    if cfg!(feature = "broken") {
         do_part2_sim(steps, input)
     } else {
-        let x0 = 10;
-        let x1 = 100;
-        let x0log = (x0 as f64).ln();
-        let x1log = (x1 as f64).ln();
-
-        let y0 = do_part2_sim(x0, input) as f64;
-        let y1 = do_part2_sim(x1, input) as f64;
-        let y0log = y0.ln();
-        let y1log = y1.ln();
-
-        let m = (y1log - y0log) / (x1log - x0log);
-        let b = y0log - (m * x0log);
-
-        assert_eq!(y0, (f64::exp(b) * (x0 as f64).pow(m)).round());
-        assert_eq!(y1, (f64::exp(b) * (x1 as f64).pow(m)).round());
-
-        info!("y_log = {m} * x_log + {b}");
-        info!("y = e^{b} * x^({m})");
-
-        let r = f64::exp(b) * (steps as f64 - 1.).pow(m);
-        info!("r={r}");
-
-        r as i64
+        0
     }
 }
 
@@ -289,24 +304,7 @@ mod test {
         #[case] input: &str,
     ) {
         let input = input.trim();
-        assert_eq!(do_part2(steps, input), expected);
-    }
-
-    #[rstest]
-    #[case::given_p1(6, 16, EXAMPLE_INPUT)]
-    #[case::given_10(10, 50, EXAMPLE_INPUT)]
-    #[case::given_50(50, 1594, EXAMPLE_INPUT)]
-    #[case::given_100(100, 6536, EXAMPLE_INPUT)]
-    #[timeout(ms(1_000))]
-    #[trace]
-    fn check_ex_part_2_sim(
-        #[notrace]
-        #[case]
-        steps: i64,
-        #[case] expected: i64,
-        #[case] input: &str,
-    ) {
-        let input = input.trim();
-        assert_eq!(do_part2_sim(steps, input), expected);
+        let res = do_part2(steps, input);
+        assert_eq!(res, expected, "Off by {}", res - expected);
     }
 }

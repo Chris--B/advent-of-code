@@ -68,6 +68,7 @@ mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use bitmask_enum::bitmask;
+    pub use indicatif::ProgressIterator;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::Complex;
