@@ -232,11 +232,7 @@ fn do_part2_sim(steps: i64, input: &str) -> i64 {
 }
 
 fn do_part2(steps: i64, input: &str) -> i64 {
-    if cfg!(feature = "broken") {
-        do_part2_sim(steps, input)
-    } else {
-        0
-    }
+    do_part2_sim(steps, input)
 }
 
 #[aoc(day21, part2)]
