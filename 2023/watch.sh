@@ -7,7 +7,7 @@ if [ "$1" ]; then
 
     cargo clippy --tests
     cargo fmt
-    cargo test --lib --quiet
+    cargo test --lib day12
     cargo aoc
 
     # neato target/day25.dot -Tsvg -o day25.svg;
