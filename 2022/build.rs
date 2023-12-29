@@ -1,6 +1,7 @@
-use swift_rs::build;
+use swift_rs::SwiftLinker;
 
 fn main() {
-    build::link_swift();
-    build::link_swift_package("ApplePlatform", "./ApplePlatform/");
+    SwiftLinker::new("10.15") // Match Package.swift
+        .with_package("ApplePlatform", "./ApplePlatform/")
+        .link();
 }

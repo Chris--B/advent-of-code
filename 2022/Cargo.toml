@@ -53,7 +53,7 @@ ultraviolet = { version = "0.9", features = ["int"] }
 swift-bridge = "0.1"
 
 [target.'cfg(target_os = "macos")'.build-dependencies]
-# swift-rs = { version = "0.3.0", features = ["build"] }
+swift-rs = { version = "1", features = ["build"] }
 swift-bridge-build = "0.1"
 
 
