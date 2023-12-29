@@ -30,14 +30,17 @@ pub fn part1(input: &str) -> i64 {
             if platform[(x, y)] == 'O' {
                 let mut yy = y;
 
+                // Remove the rolling boulder
+                platform[(x, yy)] = '.';
+
                 // While we can, roll north
                 while platform[(x, yy + 1)] == '.' {
                     // info!("Rolling 'O' ({x}, {y}) up 1");
-                    platform[(x, yy)] = '.';
-                    platform[(x, yy + 1)] = 'O';
-
                     yy += 1;
                 }
+
+                // And place it where it stops rolling
+                platform[(x, yy)] = 'O';
 
                 load += yy as i64;
             }
