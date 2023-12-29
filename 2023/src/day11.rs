@@ -63,6 +63,7 @@ fn do_with_expansion(galaxies: &mut [(i64, i64)], expansion: i64) -> i64 {
 
 // Part1 ========================================================================
 #[aoc(day11, part1)]
+#[no_mangle]
 pub fn part1(input: &str) -> i64 {
     let mut galaxies = parse(input);
     do_with_expansion(&mut galaxies, 2)

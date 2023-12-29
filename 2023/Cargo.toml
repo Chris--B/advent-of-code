@@ -16,6 +16,8 @@ path = "src/lib.rs"
 
 [features]
 default = []
+nightly = []
+simd = ["core_simd", "nightly"]
 broken = []
 
 [dependencies]
@@ -39,6 +41,8 @@ image = "0.24"
 ultraviolet = { version = "0.9", features = ["int"] }
 bitmask-enum = "2"
 indicatif = "0.17"
+
+core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]

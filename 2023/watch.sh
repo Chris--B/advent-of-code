@@ -7,7 +7,7 @@ if [ "$1" ]; then
 
     cargo clippy --tests
     cargo fmt
-    cargo test --lib --quiet
+    cargo test --lib --quiet day11
     cargo aoc
 
     # neato target/day25.dot -Tsvg -o day25.svg;
@@ -16,4 +16,5 @@ if [ "$1" ]; then
 fi
 
 set -xe
+cargo doc --document-private-items
 cargo watch -c -s "sh ./watch.sh doit"
