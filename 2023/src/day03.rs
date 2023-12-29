@@ -1,3 +1,4 @@
+#![allow(unused)]
 use crate::prelude::*;
 
 fn parse(s: &str) -> fnv::FnvHashMap<(i64, i64), char> {
@@ -205,6 +206,78 @@ pub fn part2(input: &str) -> i64 {
         .sum()
 }
 
+#[aoc(day3, part2, asterisk_first)]
+fn part2_asterisk_first(s: &str) -> i64 {
+    let mut grid: HashMap<(i64, i64), char> = HashMap::new();
+    let mut gear_coords = HashSet::new();
+
+    let mut nums: Vec<i64> = vec![];
+    // let mut coords_to_num = HashMap::new();
+
+    // +1 for \n
+    let w = s.lines().next().unwrap().len() + 1;
+
+    for (y, line) in s.lines().enumerate() {
+        let y = y as i64;
+        let mut num_start = None;
+
+        for (i, c) in line.chars().enumerate() {
+            let idx = (y as usize) * w + i;
+            assert_eq!(s.as_bytes()[idx] as char, c);
+
+            let mut needs_save_num = false;
+
+            let x: i64 = i as i64;
+            match c {
+                '0'..='9' => {
+                    grid.insert((x, y), c);
+                    if num_start.is_none() {
+                        num_start = Some(idx);
+                    }
+                }
+                '*' => {
+                    grid.insert((x, y), '*');
+                    gear_coords.insert((x, y));
+                    needs_save_num = num_start.is_some();
+                }
+                _ => {
+                    needs_save_num = num_start.is_some();
+                }
+            };
+
+            if needs_save_num {
+                let start = num_start.take().unwrap();
+                let num_digits = idx - start;
+                nums.push(s[start..idx].parse().unwrap());
+
+                let x0: usize = x as usize - num_digits;
+                let x1: usize = x as usize;
+                for x in x0..=x1 {
+                    // dbg!((x, y));
+                    // dbg!(grid[&(x as i64, y)]);
+                }
+            }
+        }
+
+        if let Some(start) = num_start.take() {
+            dbg!(&s[start..]);
+        }
+    }
+
+    dbg!(nums);
+
+    for (x, y) in &gear_coords {
+        // Check the border for nums
+        for dy in [-1, 0, 1] {
+            for dx in [-1, 0, 1] {
+                //
+            }
+        }
+    }
+
+    0
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -254,7 +327,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_asterisk_first)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
