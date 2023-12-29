@@ -6,6 +6,9 @@
 #![allow(clippy::single_element_loop)]
 #![warn(clippy::if_same_then_else)]
 
+use std::mem::MaybeUninit;
+use std::str::FromStr;
+
 use aoc_runner_derive::aoc_lib;
 
 pub mod day01;
@@ -31,7 +34,7 @@ pub mod day19;
 // pub mod day20;
 #[cfg(feature = "broken")]
 pub mod day21;
-// pub mod day22;
+pub mod day22;
 // pub mod day23;
 // pub mod day24;
 pub mod day25;
@@ -76,7 +79,7 @@ mod prelude {
     pub use num::Integer;
     pub use scan_fmt::scan_fmt;
     pub use smallvec::{smallvec, SmallVec};
-    pub use ultraviolet::IVec2;
+    pub use ultraviolet::{IVec2, IVec3};
 
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
@@ -91,6 +94,7 @@ mod prelude {
     pub use crate::fast_parse_u32;
     pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
+    pub use crate::parse_list;
 }
 
 use prelude::*;
@@ -199,4 +203,55 @@ where
     }
 
     digits.into_iter().sum()
+}
+
+// TODO: Use Pattern when it's stable, https://doc.rust-lang.org/std/str/pattern/index.html
+pub fn parse_list<const N: usize, T>(s: &str, pattern: &str) -> [T; N]
+where
+    T: FromStr + Copy + Sized,
+    <T as std::str::FromStr>::Err: std::fmt::Debug,
+{
+    let ty_name = std::any::type_name::<T>();
+    let mut list: [MaybeUninit<T>; N] = unsafe { MaybeUninit::uninit().assume_init() };
+
+    let mut iter = s.split(pattern).enumerate();
+    for (i, t_s) in (&mut iter).take(N) {
+        list[i] = match t_s.parse() {
+            Ok(t) => MaybeUninit::new(t),
+            Err(e) => {
+                error!("While splitting \"{s}\" by \"{pattern}\", failed to parse {i}th elem \"{t_s}\" as {ty_name}: {e:?}");
+                unreachable!()
+            }
+        };
+    }
+
+    let rem = iter.count();
+    if rem != 0 {
+        error!(
+            str=s,
+            pattern=pattern;
+                "Trying to parse exactly {N} values of {ty_name}, but found {rem} more!",
+
+        );
+    }
+
+    unsafe { std::mem::transmute_copy::<_, [T; N]>(&list) }
+}
+
+#[cfg(test)]
+mod util_tests {
+    use crate::parse_list;
+
+    #[test]
+    fn check_parse_list() {
+        {
+            let a: [i32; 1] = parse_list("10", ",");
+            assert_eq!(a, [10]);
+        }
+
+        {
+            let a: [i32; 3] = parse_list("10-100000-1", "-");
+            assert_eq!(a, [10, 100000, 1]);
+        }
+    }
 }
