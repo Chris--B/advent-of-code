@@ -28,7 +28,7 @@ pub mod day13;
 pub mod day14;
 pub mod day15;
 // pub mod day16;
-// pub mod day17;
+pub mod day17;
 // pub mod day18;
 pub mod day19;
 // pub mod day20;
@@ -81,7 +81,7 @@ mod prelude {
     pub use smallvec::{smallvec, SmallVec};
     pub use ultraviolet::{IVec2, IVec3};
 
-    pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+    pub use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
 
     pub use crate::framebuffer::Framebuffer;

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-day=22
+day=17
 
 if [ "$1" ]; then
     set -xe
@@ -9,11 +9,18 @@ if [ "$1" ]; then
 
     cargo clippy --tests
     cargo fmt
-    cargo test --lib --quiet day$day -- --nocapture
-    cargo aoc --day $day
-    cargo doc --document-private-items
+    # cargo test --lib --quiet day$day -- --nocapture
 
-    # neato target/day25.dot -Tsvg -o day25.svg;
+    set +e
+    trash    target/day17_test/
+    cargo test --release --lib --quiet day17 -- --nocapture || true
+
+    trash day17_test.mp4
+    ffmpeg -pattern_type glob -framerate 10/1 -i 'target/day17_test/*.png' -c:v libx264 -r 30 -pix_fmt yuv420p day17_test.mp4
+    open day17_test.mp4
+
+    # cargo aoc --day $day
+    # cargo doc --document-private-items
 
     exit 0
 fi
