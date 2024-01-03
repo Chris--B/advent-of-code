@@ -96,19 +96,27 @@ fn parse(input: &str) -> (Vec<Brick>, Framebuffer<Vec<usize>>) {
     let mut grid: Framebuffer<Vec<usize>> = Framebuffer::new(max_x + 1, max_y + 1);
     for (bid, brick) in bricks.iter().enumerate() {
         for cube in brick.cubes() {
-            grid[cube.xy()].push(bid);
-            // TODO: binary search insert?
-            grid[cube.xy()].sort_by_key(|id| bricks[*id].0.z);
+            let mut cell = &mut grid[cube.xy()];
+            // When bricks extend Up, we can end up with duplicate entries. So we'll check the last one to rule that out.
+            if cell.last() != Some(&bid) {
+                grid[cube.xy()].push(bid);
+            }
         }
+    }
+
+    // TODO: binary search insert instead?
+    for cell in grid.flatten_mut() {
+        cell.sort_by_key(|id| bricks[*id].0.z);
     }
 
     (bricks, grid)
 }
 
-fn simulate_falling(grid: &mut Framebuffer<Vec<usize>>, bricks: &mut [Brick]) {
-    let mut i = 0;
+fn simulate_falling(grid: &mut Framebuffer<Vec<usize>>, bricks: &mut [Brick]) -> usize {
+    let mut iters_to_fall = 0;
+
     loop {
-        i += 1;
+        iters_to_fall += 1;
         let mut updated = 0;
 
         for brick_id in 0..bricks.len() {
@@ -145,7 +153,7 @@ fn simulate_falling(grid: &mut Framebuffer<Vec<usize>>, bricks: &mut [Brick]) {
         }
     }
 
-    info!("Took {i} iters to stablize");
+    iters_to_fall
 }
 
 // Part1 ========================================================================
@@ -211,6 +219,7 @@ pub fn part2(input: &str) -> i64 {
     let (mut bricks, mut grid) = parse(input);
     info!("Found {} bricks", bricks.len());
 
+    info!("Running sim to settle");
     simulate_falling(&mut grid, &mut bricks);
 
     let mut count = 0;
@@ -218,12 +227,16 @@ pub fn part2(input: &str) -> i64 {
     for brick_id in 0..bricks.len() {
         let mut b = bricks.clone();
         let mut g = grid.clone();
-        for xy_cell in g.flatten_mut() {
+
+        for (x, y) in g.iter_coords() {
+            let xy_cell = &mut g[(x, y)];
             if let Some(idx) = xy_cell.iter().position(|i| *i == brick_id) {
+                info!("[({x}, {y})] Removing {brick_id} from cell: {xy_cell:?}");
                 xy_cell.remove(idx);
             }
         }
 
+        // info!("Running sim for brick_id={brick_id}");
         simulate_falling(&mut g, &mut b);
 
         for i in 0..bricks.len() {
@@ -231,11 +244,8 @@ pub fn part2(input: &str) -> i64 {
                 count += 1;
             }
         }
-    }
 
-    if !cfg!(test) {
-        assert!(count > 67473, "count={count}");
-        assert!(count < 1447209, "count={count}");
+        info!("Removing Brick{brick_id} would cause {count} bricks to fall");
     }
 
     count
@@ -258,8 +268,19 @@ mod test {
 1,1,8~1,1,9
 ";
 
+    const EXAMPLE_INPUT_REV: &str = r"
+1,1,8~1,1,9
+0,1,6~2,1,6
+2,0,5~2,2,5
+0,0,4~0,2,4
+0,2,3~2,2,3
+0,0,2~2,0,2
+1,0,1~1,2,1
+";
+
     #[rstest]
     #[case::given(5, EXAMPLE_INPUT)]
+    #[case::rev(5, EXAMPLE_INPUT_REV)]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
@@ -274,6 +295,7 @@ mod test {
 
     #[rstest]
     #[case::given(7, EXAMPLE_INPUT)]
+    #[case::rev(7, EXAMPLE_INPUT_REV)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
