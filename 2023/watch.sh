@@ -12,8 +12,9 @@ if [ "$1" ]; then
     # cargo test --lib --quiet day$day -- --nocapture
 
     set +e
+    mkdir -p target/day17_test/
     trash    target/day17_test/
-    cargo test --release --lib --quiet day17 -- --nocapture || true
+    cargo test --release --lib day17 -- --nocapture || true
 
     trash day17_test.mp4
     ffmpeg -pattern_type glob -framerate 10/1 -i 'target/day17_test/*.png' -c:v libx264 -r 30 -pix_fmt yuv420p day17_test.mp4
