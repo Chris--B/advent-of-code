@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Brick(IVec3, IVec3);
 
 impl Brick {
@@ -70,8 +70,8 @@ impl Iterator for CubeIter {
 
 impl ExactSizeIterator for CubeIter {}
 
-fn parse(input: &str) -> Vec<Brick> {
-    input
+fn parse(input: &str) -> (Vec<Brick>, Framebuffer<Vec<usize>>) {
+    let bricks = input
         .lines()
         .map(|l| {
             let (a, b) = l.split_once('~').unwrap();
@@ -80,14 +80,7 @@ fn parse(input: &str) -> Vec<Brick> {
 
             Brick(a.into(), b.into())
         })
-        .collect_vec()
-}
-
-// Part1 ========================================================================
-#[aoc(day22, part1)]
-pub fn part1(input: &str) -> i64 {
-    let mut bricks = parse(input);
-    info!("Found {} bricks", bricks.len());
+        .collect_vec();
 
     let max_x = bricks
         .iter()
@@ -109,7 +102,10 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
-    // Let all bricks fall
+    (bricks, grid)
+}
+
+fn simulate_falling(grid: &mut Framebuffer<Vec<usize>>, bricks: &mut [Brick]) {
     let mut i = 0;
     loop {
         i += 1;
@@ -148,7 +144,17 @@ pub fn part1(input: &str) -> i64 {
             break;
         }
     }
+
     info!("Took {i} iters to stablize");
+}
+
+// Part1 ========================================================================
+#[aoc(day22, part1)]
+pub fn part1(input: &str) -> i64 {
+    let (mut bricks, mut grid) = parse(input);
+    info!("Found {} bricks", bricks.len());
+
+    simulate_falling(&mut grid, &mut bricks);
 
     // Now find which bricks are holding something up
     let mut bricks_supported_by = vec![vec![]; bricks.len()];
@@ -179,14 +185,14 @@ pub fn part1(input: &str) -> i64 {
 
     #[allow(clippy::needless_range_loop)]
     'bricks: for brick_id in 0..bricks.len() {
-        info!("{brick_id}");
+        // info!("{brick_id}");
 
         for other_id in &bricks_supported_by[brick_id] {
             if brick_id == *other_id {
                 continue;
             }
 
-            info!("    {other_id} -> {:?}", bricks_supporting[*other_id]);
+            // info!("    {other_id} -> {:?}", bricks_supporting[*other_id]);
             if bricks_supporting[*other_id].len() <= 1 {
                 // brick_id is integral and cannot be disintegrated.
                 continue 'bricks;
@@ -202,7 +208,37 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day22, part2)]
 pub fn part2(input: &str) -> i64 {
-    0
+    let (mut bricks, mut grid) = parse(input);
+    info!("Found {} bricks", bricks.len());
+
+    simulate_falling(&mut grid, &mut bricks);
+
+    let mut count = 0;
+
+    for brick_id in 0..bricks.len() {
+        let mut b = bricks.clone();
+        let mut g = grid.clone();
+        for xy_cell in g.flatten_mut() {
+            if let Some(idx) = xy_cell.iter().position(|i| *i == brick_id) {
+                xy_cell.remove(idx);
+            }
+        }
+
+        simulate_falling(&mut g, &mut b);
+
+        for i in 0..bricks.len() {
+            if bricks[i] != b[i] {
+                count += 1;
+            }
+        }
+    }
+
+    if !cfg!(test) {
+        assert!(count > 67473, "count={count}");
+        assert!(count < 1447209, "count={count}");
+    }
+
+    count
 }
 
 #[cfg(test)]
@@ -236,9 +272,8 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    #[ignore]
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[case::given(7, EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
