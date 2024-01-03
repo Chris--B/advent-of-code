@@ -279,10 +279,6 @@ mod test {
         assert_eq!(do_part1(steps, input), expected);
     }
 
-    fn ms(ms: u32) -> Duration {
-        Duration::from_millis(ms.into())
-    }
-
     #[rstest]
     #[case::given_10(10, 50, EXAMPLE_INPUT)]
     #[case::given_50(50, 1594, EXAMPLE_INPUT)]

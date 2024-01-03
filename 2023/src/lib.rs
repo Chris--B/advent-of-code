@@ -94,6 +94,7 @@ mod prelude {
     pub use crate::fast_parse_u32;
     pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
+    pub use crate::ms;
     pub use crate::parse_list;
 }
 
@@ -149,6 +150,10 @@ impl From<Cardinal> for IVec2 {
 
         r
     }
+}
+
+pub fn ms(ms: u32) -> std::time::Duration {
+    std::time::Duration::from_millis(ms.into())
 }
 
 pub fn fast_parse_u8(input: &[u8]) -> u32 {

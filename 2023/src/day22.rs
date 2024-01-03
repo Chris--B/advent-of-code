@@ -282,6 +282,7 @@ mod test {
     #[case::given(5, EXAMPLE_INPUT)]
     #[case::rev(5, EXAMPLE_INPUT_REV)]
     #[trace]
+    #[timeout(ms(1_000))]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -297,6 +298,7 @@ mod test {
     #[case::given(7, EXAMPLE_INPUT)]
     #[case::rev(7, EXAMPLE_INPUT_REV)]
     #[trace]
+    #[timeout(ms(1_000))]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
