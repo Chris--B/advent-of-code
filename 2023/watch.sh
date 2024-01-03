@@ -1,5 +1,7 @@
 #!/bin/bash
 
+day=22
+
 if [ "$1" ]; then
     set -xe
 
@@ -7,8 +9,9 @@ if [ "$1" ]; then
 
     cargo clippy --tests
     cargo fmt
-    cargo test --lib --quiet
-    cargo aoc
+    cargo test --lib --quiet day$day -- --nocapture
+    cargo aoc --day $day
+    cargo doc --document-private-items
 
     # neato target/day25.dot -Tsvg -o day25.svg;
 
