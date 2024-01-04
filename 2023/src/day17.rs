@@ -80,45 +80,26 @@ pub fn part1(input: &str) -> i64 {
     let heat_loss_map: Framebuffer<u8> = parse(input);
     let mut state_map: Framebuffer<Option<Path>> = Framebuffer::new_matching_size(&heat_loss_map);
 
-    // let start = PATH_START;
+    // We parse the map "upside down", so start is always (0, 0) and goal is always at the top right
+    let start = PATH_START;
     let goal = IVec2::new(
         heat_loss_map.width() as i32 - 1,
         heat_loss_map.height() as i32 - 1,
     );
 
-    // info!("Navigating from {start:?} to {goal:?}");
-    // state_map[start] = Some(Path {
-    //     heat_loss_so_far: 0,
-    //     history: vec![],
-    //     dir_history: vec![],
-    //     goal,
-    // });
+    info!("Navigating from {start:?} to {goal:?}");
+    let start_state = Path {
+        heat_loss_so_far: 0,
+        history: vec![], // don't include the starting cell in history or heat loss
+        dir_history: vec![],
+        goal,
+    };
+    state_map[start] = Some(start_state.clone());
 
     let mut queue: PriorityQueue<Path, _> = PriorityQueue::new();
-    // queue.push(
-    //     state_map[start].as_ref().unwrap().clone(),
-    //     state_map[start].as_ref().unwrap().priority(),
-    // );
+    queue.push(start_state.clone(), start_state.priority());
 
-    {
-        let history = vec![
-            // todo
-        ];
-        let dir_history = vec![Cardinal::Norð; history.len()];
-
-        let heat_loss_so_far = history.iter().map(|xy| heat_loss_map[*xy] as i64).sum();
-
-        let known_good = Path {
-            heat_loss_so_far,
-            history,
-            dir_history,
-            goal,
-        };
-        let p = known_good.priority();
-        queue.push(known_good.clone(), p);
-        state_map[known_good.pos()] = Some(known_good.clone());
-    }
-
+    // For saving search history
     let mut search_order: Vec<Path> = vec![];
 
     while let Some((cur_path, _priority)) = queue.pop() {
@@ -128,13 +109,9 @@ pub fn part1(input: &str) -> i64 {
         );
         search_order.push(cur_path.clone());
 
-        for (a, b) in cur_path.history.iter().copied().tuple_windows() {
-            let [a, b] = (a - b).as_array();
-            // assert_eq!(a.abs() + b.abs(), 1);
-        }
-
         if cur_path.pos() == goal {
-            break;
+            // Stop exploring this path if we find a goal, but keep searching
+            continue;
         }
 
         for dir in [Souð, East, West, Norð] {
@@ -148,7 +125,7 @@ pub fn part1(input: &str) -> i64 {
                 .count();
 
             if steps_since_turn >= 3 && cur_path.dir_history.len() >= 3 {
-                // assert_eq!(3, steps_since_turn);
+                assert_eq!(3, steps_since_turn);
                 // We cannot continue in this straight line. We MUST turn, so don't explore this direction.
                 continue;
             }
@@ -173,12 +150,6 @@ pub fn part1(input: &str) -> i64 {
 
             let mut history = Vec::from_iter(cur_path.history.iter().copied().chain([pos]));
             let mut dir_history = Vec::from_iter(cur_path.dir_history.iter().copied().chain([dir]));
-
-            for (a, b) in history.iter().copied().tuple_windows() {
-                let [a, b] = (a - b).as_array();
-                assert_eq!(a.abs() + b.abs(), 1);
-            }
-
             let mut next_path = Path {
                 heat_loss_so_far,
                 history,
@@ -186,9 +157,8 @@ pub fn part1(input: &str) -> i64 {
                 goal,
             };
 
-            state_map[pos] = Some(next_path.clone());
-            let p = next_path.priority();
-            queue.push(next_path, p);
+            queue.push(next_path.clone(), next_path.priority());
+            state_map[pos] = Some(next_path);
         }
     }
 
@@ -213,29 +183,33 @@ pub fn part1(input: &str) -> i64 {
             .sum()
     );
 
-    assert!(
-        final_state.heat_loss_so_far < 1363,
-        "final_state.heat_loss_so_far={}",
-        final_state.heat_loss_so_far
-    );
-
-    heat_loss_map.print(|x, y, c| {
-        if let Some(idx) = final_state
-            .history
-            .iter()
-            .position(|p| [x, y] == p.as_array())
-        {
-            match final_state.dir_history[idx] {
-                Cardinal::Norð => 'v',
-                Cardinal::Souð => '^',
-                Cardinal::East => '>',
-                Cardinal::West => '<',
-                _ => unreachable!(),
+    if cfg!(test) {
+        // Print a map to mimic the example (note you need to reverse the y lines)
+        heat_loss_map.print(|x, y, c| {
+            if let Some(idx) = final_state
+                .history
+                .iter()
+                .position(|p| [x, y] == p.as_array())
+            {
+                match final_state.dir_history[idx] {
+                    Cardinal::Norð => 'v',
+                    Cardinal::Souð => '^',
+                    Cardinal::East => '>',
+                    Cardinal::West => '<',
+                    _ => unreachable!(),
+                }
+            } else {
+                (*c + b'0') as char
             }
-        } else {
-            (*c + b'0') as char
-        }
-    });
+        });
+    } else {
+        // Sanity check against known wrong-answers
+        assert!(
+            final_state.heat_loss_so_far < 939,
+            "final_state.heat_loss_so_far={}",
+            final_state.heat_loss_so_far
+        );
+    }
 
     final_state.heat_loss_so_far
 }
@@ -249,7 +223,7 @@ fn save_search_history(
 ) {
     use indicatif::ProgressIterator;
 
-    let n = 20;
+    let n = 200;
     if search_order.len() > n {
         warn!(
             "Search history is {} long. Skipping some frames.",
