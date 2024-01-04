@@ -302,7 +302,7 @@ fn save_search_history(
     let dir_name = if cfg!(test) {
         "target/day17_test"
     } else {
-        "taget/day17"
+        "target/day17"
     };
     std::fs::create_dir_all(dir_name).unwrap();
 
