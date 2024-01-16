@@ -95,8 +95,10 @@ mod prelude {
     pub use crate::fast_parse_u32;
     pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
+    pub use crate::left_90;
     pub use crate::ms;
     pub use crate::parse_list;
+    pub use crate::right_90;
 }
 
 use prelude::*;
@@ -244,9 +246,22 @@ where
     unsafe { std::mem::transmute_copy::<_, [T; N]>(&list) }
 }
 
+pub fn right_90(v: IVec2) -> IVec2 {
+    // IVec2::new(-v.y, v.x)
+    IVec2::new(v.y, -v.x)
+}
+
+pub fn left_90(v: IVec2) -> IVec2 {
+    // IVec2::new(v.y, -v.x)
+    IVec2::new(-v.y, v.x)
+}
+
 #[cfg(test)]
 mod util_tests {
-    use crate::parse_list;
+    use super::*;
+    #[allow(unused_imports)]
+    use pretty_assertions::{assert_eq, assert_ne};
+    use rstest::*;
 
     #[test]
     fn check_parse_list() {
@@ -259,5 +274,55 @@ mod util_tests {
             let a: [i32; 3] = parse_list("10-100000-1", "-");
             assert_eq!(a, [10, 100000, 1]);
         }
+    }
+
+    #[rstest]
+    #[case::pos_x((1, 0), (0, 1))]
+    #[case::neg_x((-1, 0), (0, -1))]
+    #[case::pos_y((0, 1), (-1, 0))]
+    #[case::neg_y((0, -1), (1, 0))]
+    #[trace]
+    fn check_left(#[case] v: (i32, i32), #[case] expected: (i32, i32)) {
+        let v: IVec2 = v.into();
+        let expected: IVec2 = expected.into();
+
+        assert_eq!(left_90(v), expected);
+    }
+
+    #[rstest]
+    #[case::pos_x((1, 0), (0, -1))]
+    #[case::neg_x((-1, 0), (0, 1))]
+    #[case::pos_y((0, 1), (1, 0))]
+    #[case::neg_y((0, -1), (-1, 0))]
+    fn check_right(#[case] v: (i32, i32), #[case] expected: (i32, i32)) {
+        let v: IVec2 = v.into();
+        let expected: IVec2 = expected.into();
+
+        assert_eq!(right_90(v), expected);
+    }
+
+    #[rstest]
+    #[case((1, 0))]
+    #[case((0, 1))]
+    #[case((-1, 0))]
+    #[case((0, -1))]
+    fn check_leftright(#[case] v: (i32, i32)) {
+        let v: IVec2 = v.into();
+
+        // Double back cancels out
+        assert_eq!(left_90(right_90(v)), v,);
+        assert_eq!(right_90(left_90(v)), v,);
+
+        // Two turns is facing backwards
+        assert_eq!(right_90(right_90(v)), left_90(left_90(v)),);
+        assert_eq!(left_90(left_90(v)), right_90(right_90(v)),);
+
+        // Three turns could have been one
+        assert_eq!(right_90(right_90(right_90(v))), left_90(v),);
+        assert_eq!(left_90(left_90(left_90(v))), right_90(v),);
+
+        // Four turns returns you to where you started
+        assert_eq!(right_90(right_90(right_90(right_90(v)))), v);
+        assert_eq!(left_90(left_90(left_90(left_90(v)))), v);
     }
 }
