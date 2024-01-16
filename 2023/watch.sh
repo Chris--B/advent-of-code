@@ -9,9 +9,7 @@ if [ "$1" ]; then
 
     cargo clippy --tests
     cargo fmt
-    # cargo test --lib --quiet day$day -- --nocapture
-
-    cargo test --release --lib day17 -- --nocapture || true
+    cargo test --lib --quiet day$day -- --nocapture
 
     # set +e
     # trash day17_test.mp4

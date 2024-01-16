@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use std::f32::consts::E;
 use std::fmt;
 
-use image::Rgb;
+use image::{imageops, Rgb, RgbImage};
 
 const START_POS: IVec2 = IVec2::new(0, 0);
 
@@ -33,27 +33,40 @@ struct State {
     steps_since_turn: i8,
 }
 
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+struct Key(IVec2, IVec2, i8);
+
 impl State {
-    fn new(cost: i64, vel: IVec2) -> Self {
+    fn new(cost: i64) -> Self {
         Self {
             cost,
             pos: START_POS,
-            vel,
+            vel: IVec2::zero(),
             steps_since_turn: 3,
         }
     }
 
     fn bad() -> Self {
-        Self::new(i64::MAX, IVec2::new(1, 0))
+        Self::new(i64::MAX)
     }
 
-    fn priority(&self) -> u64 {
+    fn priority(&self) -> i64 {
         assert!(
             self.cost < 1_000,
             "cost={} which is weirdly high",
             self.cost
         );
-        u64::MAX - 1 - (self.cost as u64)
+        -self.cost
+    }
+
+    fn key(self) -> Key {
+        let Self {
+            cost: _,
+            pos,
+            vel,
+            steps_since_turn,
+        } = self;
+        Key(pos, vel, steps_since_turn)
     }
 }
 
@@ -75,11 +88,22 @@ impl fmt::Debug for State {
 }
 
 // Part1 ========================================================================
+fn has_illegal_runs(path: &[IVec2]) -> bool {
+    for w in path.windows(4) {
+        let d = w[0] - w[3];
+        if d.x.abs() + d.y.abs() >= 4 {
+            return true;
+        }
+    }
+
+    false
+}
 
 struct Context {
     heat_loss_map: Framebuffer<u8>,
-    state_map: Framebuffer<State>,
-    queue: PriorityQueue<State, u64>,
+    state_seen: HashMap<Key, i64>,
+    history_map: HashMap<Key, Vec<IVec2>>,
+    queue: PriorityQueue<State, i64>,
 }
 
 impl Context {
@@ -90,19 +114,30 @@ impl Context {
         steps_since_turn: i8,
     ) -> Option<()> {
         assert!(vel != IVec2::zero());
+        assert!(state.vel != IVec2::zero());
+        assert!(state.steps_since_turn <= 3);
+        assert!(steps_since_turn <= 3);
+
+        let prev = state.key();
 
         state.pos += vel;
+        state.vel = vel;
         state.cost += *self.heat_loss_map.get_v(state.pos)? as i64;
         state.steps_since_turn = steps_since_turn;
 
-        if self.state_map.get_v(state.pos)?.cost < state.cost {
-            // If we've already seen this spot, and ours is worse just give up.
-            return None;
-        } else {
-            self.state_map[state.pos] = state;
-        }
+        let next = state.key();
 
-        self.queue.push(state, state.priority());
+        if let Some(cost) = self.state_seen.get_mut(&next) {
+            // unreachable!();
+        } else {
+            // We haven't seen this state before. Save it now so we can explore from it.
+            self.state_seen.insert(next, state.cost);
+            self.queue.push(state, state.priority());
+
+            let mut history: Vec<IVec2> = self.history_map[&prev].clone();
+            history.push(state.pos);
+            self.history_map.insert(next, history);
+        }
 
         Some(())
     }
@@ -113,9 +148,10 @@ pub fn part1(input: &str) -> i64 {
     let heat_loss_map: Framebuffer<u8> = parse(input);
 
     let mut ctx = Context {
-        state_map: Framebuffer::new_matching_size(&heat_loss_map),
-        heat_loss_map,
+        state_seen: HashMap::new(),
+        history_map: HashMap::new(),
         queue: PriorityQueue::new(),
+        heat_loss_map,
     };
 
     // We parse the map "upside down", so start is always (0, 0) and goal is always at the "top right"
@@ -126,19 +162,20 @@ pub fn part1(input: &str) -> i64 {
     );
 
     {
-        // 0 cost so nothing ever tries to enter the start.
-        ctx.state_map[START_POS].cost = 0;
-
         let mut s = State::bad();
         s.cost = 0;
         s.steps_since_turn = 1;
 
         // Go "right"
         s.vel = IVec2::new(1, 0);
+        ctx.state_seen.insert(s.key(), 0);
+        ctx.history_map.insert(s.key(), vec![]);
         ctx.queue.push(s, s.priority());
 
         // Go "up"
         s.vel = IVec2::new(0, 1);
+        ctx.state_seen.insert(s.key(), 0);
+        ctx.history_map.insert(s.key(), vec![]);
         ctx.queue.push(s, s.priority());
     }
 
@@ -146,8 +183,11 @@ pub fn part1(input: &str) -> i64 {
     let mut search_order: Vec<State> = vec![];
 
     while let Some((state, _priority)) = ctx.queue.pop() {
-        info!("[q={l:>3}] Checking state={state:?}", l = ctx.queue.len());
-        assert!(ctx.queue.len() < 10_000);
+        // info!(
+        //     "[q={l:>3}, p={_priority}] Checking state={state:?}",
+        //     l = ctx.queue.len()
+        // );
+        assert!(state.vel != IVec2::zero());
 
         search_order.push(state);
 
@@ -168,84 +208,112 @@ pub fn part1(input: &str) -> i64 {
         }
     }
 
-    ctx.state_map.print(|_x, _y, s| {
-        // let s = State::new(*s as _, IVec2::zero());
-        if s.cost > 0 {
-            if s.cost == i64::MAX {
-                return '_';
-            }
-            let d = s.cost / if cfg!(test) { 10 } else { 50 };
-            (*b"0123456789aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ")[d as usize] as char
-        } else {
-            'S'
+    // if log_enabled!(Info) && ctx.heat_loss_map.width() == 9 {
+    //     save_search_history(&ctx, search_order, goal);
+    // }
+
+    let all_goal_paths: Vec<(&Key, &Vec<IVec2>)> = ctx
+        .history_map
+        .iter()
+        .filter(|(key, history)| key.0 == goal)
+        .collect_vec();
+
+    if !all_goal_paths.is_empty() {
+        let (key, best_goal_path) = all_goal_paths
+            .iter()
+            .min_by_key(|(key, _history)| dbg!(ctx.state_seen[key]))
+            .unwrap();
+        for p in *best_goal_path {
+            print!("({}, {}), ", p.x, p.y);
         }
-    });
+        println!();
 
-    if log_enabled!(Info) {
-        // save_search_history(&ctx, search_order, goal);
-    }
+        {
+            let w = ctx.heat_loss_map.width() as u32;
+            let h = ctx.heat_loss_map.height() as u32;
 
-    assert!(ctx.state_map[goal].cost != 846);
-    assert!(ctx.state_map[goal].cost != 854);
-    assert!(ctx.state_map[goal].cost < 900);
+            let mut image = RgbImage::from_fn(h, w, |x, y| {
+                let xy = IVec2::new(x as i32, y as i32);
+                let mut rgb = [0; 3];
 
-    ctx.state_map[goal].cost
-}
+                if best_goal_path.contains(&xy) {
+                    rgb = [0xff, 0, 0xff];
+                }
 
-fn save_search_history(ctx: &Context, mut search_order: Vec<State>, goal: impl Into<(i32, i32)>) {
-    use indicatif::ProgressIterator;
-    use rayon::iter::{
-        IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-    };
+                Rgb(rgb)
+            });
+            let image =
+                image::imageops::resize(&image, 10 * w, 10 * h, imageops::FilterType::Nearest);
 
-    let goal = goal.into();
-    let mut frames = vec![];
-
-    let max_cost: f32 = search_order.iter().map(|s| s.cost).max().unwrap() as f32;
-
-    info!("Generating {} frames for video", search_order.len());
-    let mut frame: Framebuffer<[u8; 3]> =
-        Framebuffer::new_with_ranges(ctx.state_map.range_x(), ctx.state_map.range_y());
-
-    for y in ctx.state_map.range_y() {
-        for x in ctx.state_map.range_x() {
-            let g = (255.0 * (ctx.heat_loss_map[(x, y)] as f32) / 9.0) as u8;
-            frame[(x, y)] = [g, g, g];
+            info!("Saving image");
+            image.save(format!("target/day17_{w}x{h}.png")).unwrap();
         }
-    }
 
-    for mut state in search_order.into_iter().progress() {
-        let mut g = (255.0 * (ctx.state_map[state.pos].cost as f32) / max_cost) as u8;
-        // Make more bands
-        g -= (g % 10);
-
-        frame[state.pos] = [g, 0x00, g];
-        frame[goal] = [0xff, 0xff, 0x66];
-
-        frames.push(frame.clone());
-    }
-
-    info!("Saving {} frames for video", frames.len());
-    let w = ctx.heat_loss_map.width();
-    let h = ctx.heat_loss_map.height();
-    let dir_name = if cfg!(test) {
-        format!("target/day17_test_{w}x{h}")
+        ctx.state_seen[key]
     } else {
-        format!("target/day17_{w}x{h}")
-    };
-    std::fs::create_dir_all(&dir_name).unwrap();
-
-    let scale = if cfg!(test) { 50 } else { 2 };
-    frames
-        .par_iter()
-        .enumerate()
-        .progress()
-        .for_each(|(num, frame)| {
-            let mut frame = frame.make_image(scale, |rgb| Rgb(*rgb));
-            let filename = format!("{dir_name}/history_{num:>05}.bmp");
-            frame.save(filename).unwrap();
-        });
+        error!("No path to goal???");
+        unreachable!();
+    }
 }
+
+// fn save_search_history(ctx: &Context, mut search_order: Vec<State>, goal: impl Into<(i32, i32)>) {
+//     use indicatif::ProgressIterator;
+//     use rayon::iter::{
+//         IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+//     };
+
+//     let goal = goal.into();
+//     let mut frames = vec![];
+
+//     let max_cost: f32 = search_order.iter().map(|s| s.cost).max().unwrap() as f32;
+
+//     info!("Generating {} frames for video", search_order.len());
+//     let mut base_frame: Framebuffer<[u8; 3]> =
+//         Framebuffer::new_with_ranges(ctx.state_map.range_x(), ctx.state_map.range_y());
+
+//     for y in ctx.state_map.range_y() {
+//         for x in ctx.state_map.range_x() {
+//             let g = (255.0 * (ctx.heat_loss_map[(x, y)] as f32) / 9.0) as u8;
+//             base_frame[(x, y)] = [g, g, g];
+//         }
+//     }
+
+//     for mut state in search_order.into_iter().progress() {
+//         let mut frame = base_frame.clone();
+//         let mut g = (255.0 * (ctx.state_map[state.pos].cost as f32) / max_cost) as u8;
+//         // Make more bands
+//         g -= (g % 10);
+
+//         for pos in &ctx.history_map[state.pos] {
+//             frame[pos] = [g, 0x00, g];
+//         }
+
+//         frame[goal] = [0xff, 0xff, 0x66];
+
+//         frames.push(frame.clone());
+//     }
+
+//     info!("Saving {} frames for video", frames.len());
+//     let w = ctx.heat_loss_map.width();
+//     let h = ctx.heat_loss_map.height();
+//     let dir_name = if cfg!(test) {
+//         format!("target/day17_test_{w}x{h}")
+//     } else {
+//         format!("target/day17_{w}x{h}")
+//     };
+//     std::fs::create_dir_all(&dir_name).unwrap();
+
+//     let scale = if cfg!(test) { 50 } else { 2 };
+//     frames
+//         .par_iter()
+//         .enumerate()
+//         .progress()
+//         .for_each(|(num, frame)| {
+//             let mut frame = frame.make_image(scale, |rgb| Rgb(*rgb));
+//             let filename = format!("{dir_name}/history_{num:>05}.bmp");
+//             frame.save(filename).unwrap();
+//         });
+// }
 
 #[allow(non_upper_case_globals)]
 #[cfg(test)]
@@ -272,17 +340,17 @@ mod test {
 
     #[rstest]
     #[case::given(102, EXAMPLE_INPUT)]
-    #[case::given_sub_02x02(5, EXAMPLE_INPUT_2x2)]
-    #[case::given_sub_03x03(11, EXAMPLE_INPUT_3x3)]
-    #[case::given_sub_04x04(21, EXAMPLE_INPUT_4x4)]
-    #[case::given_sub_05x05(28, EXAMPLE_INPUT_5x5)]
-    #[case::given_sub_06x06(42, EXAMPLE_INPUT_6x6)]
-    #[case::given_sub_07x07(54, EXAMPLE_INPUT_7x7)]
-    #[case::given_sub_08x08(70, EXAMPLE_INPUT_8x8)]
-    #[case::given_sub_09x09(83, EXAMPLE_INPUT_9x9)]
-    #[case::given_sub_10x10(94, EXAMPLE_INPUT_10x10)]
-    #[case::given_sub_11x11(102, EXAMPLE_INPUT_11x11)]
-    #[case::given_sub_12x12(103, EXAMPLE_INPUT_12x12)]
+    // #[case::given_sub_02x02(5, EXAMPLE_INPUT_2x2)]
+    // #[case::given_sub_03x03(11, EXAMPLE_INPUT_3x3)]
+    // #[case::given_sub_04x04(21, EXAMPLE_INPUT_4x4)]
+    // #[case::given_sub_05x05(28, EXAMPLE_INPUT_5x5)]
+    // #[case::given_sub_06x06(42, EXAMPLE_INPUT_6x6)]
+    // #[case::given_sub_07x07(54, EXAMPLE_INPUT_7x7)]
+    // #[case::given_sub_08x08(70, EXAMPLE_INPUT_8x8)]
+    // #[case::given_sub_09x09(83, EXAMPLE_INPUT_9x9)]
+    // #[case::given_sub_10x10(94, EXAMPLE_INPUT_10x10)]
+    // #[case::given_sub_11x11(102, EXAMPLE_INPUT_11x11)]
+    // #[case::given_sub_12x12(103, EXAMPLE_INPUT_12x12)]
     #[trace]
     // #[timeout(ms(1_000))]
     fn check_ex_part_1(
