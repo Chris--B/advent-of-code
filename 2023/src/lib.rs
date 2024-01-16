@@ -1,9 +1,11 @@
 #![cfg_attr(feature = "simd", feature(portable_simd))]
 #![cfg_attr(feature = "simd", feature(stdsimd))]
-#![allow(clippy::comparison_chain)]
-#![allow(clippy::identity_op)]
-#![warn(clippy::overly_complex_bool_expr)]
-#![allow(clippy::single_element_loop)]
+#![allow(
+    clippy::comparison_chain,
+    clippy::identity_op,
+    clippy::single_element_loop,
+    clippy::overly_complex_bool_expr
+)]
 #![warn(clippy::if_same_then_else)]
 
 use std::mem::MaybeUninit;
@@ -72,7 +74,7 @@ mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use bitmask_enum::bitmask;
-    pub use indicatif::ProgressIterator;
+    pub use indicatif::{ParallelProgressIterator, ProgressIterator};
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::Complex;

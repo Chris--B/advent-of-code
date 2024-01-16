@@ -64,6 +64,7 @@ dependencies = [
  "num",
  "pretty_assertions",
  "priority-queue",
+ "rayon",
  "rstest",
  "scan_fmt",
  "smallvec",
@@ -372,6 +373,7 @@ dependencies = [
  "instant",
  "number_prefix",
  "portable-atomic",
+ "rayon",
  "unicode-width",
 ]
 

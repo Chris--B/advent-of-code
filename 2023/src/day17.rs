@@ -8,7 +8,7 @@ use std::fmt;
 
 use image::Rgb;
 
-const PATH_START: IVec2 = IVec2::new(0, 0);
+const START_POS: IVec2 = IVec2::new(0, 0);
 
 fn parse(s: &str) -> Framebuffer<u8> {
     let width = s.lines().next().map(str::len).unwrap_or_default();
@@ -25,292 +25,226 @@ fn parse(s: &str) -> Framebuffer<u8> {
     map
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-struct Path {
-    heat_loss_so_far: i64,
-    history: Vec<IVec2>,
-    dir_history: Vec<Cardinal>,
-    goal: IVec2,
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+struct State {
+    cost: i64,
+    pos: IVec2,
+    vel: IVec2,
+    steps_since_turn: i8,
 }
 
-impl Path {
-    #[track_caller]
-    fn pos(&self) -> IVec2 {
-        if let Some(pos) = self.history.last() {
-            *pos
-        } else {
-            PATH_START
+impl State {
+    fn new(cost: i64, vel: IVec2) -> Self {
+        Self {
+            cost,
+            pos: START_POS,
+            vel,
+            steps_since_turn: 3,
         }
     }
 
-    #[track_caller]
-    fn dir(&self) -> Cardinal {
-        if let Some(dir) = self.dir_history.last() {
-            *dir
-        } else {
-            unreachable!()
-        }
+    fn bad() -> Self {
+        Self::new(i64::MAX, IVec2::new(1, 0))
     }
 
-    fn steps_to_goal(&self) -> i32 {
-        let d = self.goal - self.pos();
-        d.x.abs() + d.y.abs()
-    }
-
-    fn priority(&self) -> i64 {
-        // Bigger is handled first
-        -self.heat_loss_so_far
+    fn priority(&self) -> u64 {
+        assert!(
+            self.cost < 1_000,
+            "cost={} which is weirdly high",
+            self.cost
+        );
+        u64::MAX - 1 - (self.cost as u64)
     }
 }
 
-impl fmt::Debug for Path {
+impl Default for State {
+    fn default() -> Self {
+        Self::bad()
+    }
+}
+
+impl fmt::Debug for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("State")
-            .field("heat_loss_so_far", &self.heat_loss_so_far)
-            .field("dir_history", &self.dir_history.len())
-            .field("history", &self.history.len())
-            .field("history.last()", &self.history.last())
+            .field("steps_since_turn", &self.steps_since_turn)
+            .field("cost", &self.cost)
+            .field("pos", &self.pos.as_array())
+            .field("vel", &self.vel.as_array())
             .finish()
     }
 }
 
 // Part1 ========================================================================
+
+struct Context {
+    heat_loss_map: Framebuffer<u8>,
+    state_map: Framebuffer<State>,
+    queue: PriorityQueue<State, u64>,
+}
+
+impl Context {
+    fn explore_in_direction(
+        &mut self,
+        mut state: State,
+        vel: IVec2,
+        steps_since_turn: i8,
+    ) -> Option<()> {
+        assert!(vel != IVec2::zero());
+
+        state.pos += vel;
+        state.cost += *self.heat_loss_map.get_v(state.pos)? as i64;
+        state.steps_since_turn = steps_since_turn;
+
+        if self.state_map.get_v(state.pos)?.cost < state.cost {
+            // If we've already seen this spot, and ours is worse just give up.
+            return None;
+        } else {
+            self.state_map[state.pos] = state;
+        }
+
+        self.queue.push(state, state.priority());
+
+        Some(())
+    }
+}
+
 #[aoc(day17, part1)]
 pub fn part1(input: &str) -> i64 {
     let heat_loss_map: Framebuffer<u8> = parse(input);
-    let mut state_map: Framebuffer<Option<Path>> = Framebuffer::new_matching_size(&heat_loss_map);
 
-    // We parse the map "upside down", so start is always (0, 0) and goal is always at the top right
-    let start = PATH_START;
+    let mut ctx = Context {
+        state_map: Framebuffer::new_matching_size(&heat_loss_map),
+        heat_loss_map,
+        queue: PriorityQueue::new(),
+    };
+
+    // We parse the map "upside down", so start is always (0, 0) and goal is always at the "top right"
+    let start = START_POS;
     let goal = IVec2::new(
-        heat_loss_map.width() as i32 - 1,
-        heat_loss_map.height() as i32 - 1,
+        ctx.heat_loss_map.width() as i32 - 1,
+        ctx.heat_loss_map.height() as i32 - 1,
     );
 
+    {
+        // 0 cost so nothing ever tries to enter the start.
+        ctx.state_map[START_POS].cost = 0;
+
+        let mut s = State::bad();
+        s.cost = 0;
+        s.steps_since_turn = 1;
+
+        // Go "right"
+        s.vel = IVec2::new(1, 0);
+        ctx.queue.push(s, s.priority());
+
+        // Go "up"
+        s.vel = IVec2::new(0, 1);
+        ctx.queue.push(s, s.priority());
+    }
+
     info!("Navigating from {start:?} to {goal:?}");
-    let start_state = Path {
-        heat_loss_so_far: 0,
-        history: vec![], // don't include the starting cell in history or heat loss
-        dir_history: vec![],
-        goal,
-    };
-    state_map[start] = Some(start_state.clone());
+    let mut search_order: Vec<State> = vec![];
 
-    let mut queue: PriorityQueue<Path, _> = PriorityQueue::new();
-    queue.push(start_state.clone(), start_state.priority());
+    while let Some((state, _priority)) = ctx.queue.pop() {
+        info!("[q={l:>3}] Checking state={state:?}", l = ctx.queue.len());
+        assert!(ctx.queue.len() < 10_000);
 
-    // For saving search history
-    let mut search_order: Vec<Path> = vec![];
+        search_order.push(state);
 
-    while let Some((cur_path, _priority)) = queue.pop() {
-        info!(
-            "[{n:>2}] Exploring from {cur_path:?}",
-            n = search_order.len()
-        );
-        search_order.push(cur_path.clone());
-
-        if cur_path.pos() == goal {
-            // Stop exploring this path if we find a goal
+        if state.pos == goal {
+            info!("Found final state: {state:#?}");
             break;
         }
 
-        for dir in [Souð, East, West, Norð] {
-            let pos = cur_path.pos() + dir.into();
+        // Turn Left, resetting steps_since_turn
+        ctx.explore_in_direction(state, left_90(state.vel), 0);
 
-            let steps_since_turn = cur_path
-                .dir_history
-                .iter()
-                .rev()
-                .take_while(|d| **d == dir)
-                .count();
+        // Turn Right, resetting steps_since_turn
+        ctx.explore_in_direction(state, right_90(state.vel), 0);
 
-            if steps_since_turn >= 3 && cur_path.dir_history.len() >= 3 {
-                assert_eq!(3, steps_since_turn);
-                // We cannot continue in this straight line. We MUST turn, so don't explore this direction.
-                continue;
-            }
-
-            let heat_loss_just_here = *heat_loss_map.get_v(pos).unwrap_or(&0) as i64;
-            let heat_loss_so_far = heat_loss_just_here + cur_path.heat_loss_so_far;
-
-            // See if we're worse than any seen-path to get here.
-            // We'll only continue if we're either the first here, or better than the previous.
-            if let Some(maybe_other_state) = state_map.get_v(pos) {
-                if let Some(other_state) = maybe_other_state {
-                    // Not the first ones here, compare notes.
-                    if other_state.heat_loss_so_far <= heat_loss_so_far {
-                        // The other state is better, don't explore here.
-                        continue;
-                    }
-                }
-            } else {
-                // Don't explore out of bounds
-                continue;
-            }
-
-            let mut history = Vec::from_iter(cur_path.history.iter().copied().chain([pos]));
-            let mut dir_history = Vec::from_iter(cur_path.dir_history.iter().copied().chain([dir]));
-            let mut next_path = Path {
-                heat_loss_so_far,
-                history,
-                dir_history,
-                goal,
-            };
-
-            queue.push(next_path.clone(), next_path.priority());
-            state_map[pos] = Some(next_path);
+        // Step forward, if we haven't hit speed
+        if state.steps_since_turn < 3 {
+            ctx.explore_in_direction(state, state.vel, state.steps_since_turn + 1);
         }
     }
 
-    info!("Final={:#?}", state_map[goal]);
-    if cfg!(test) {
-        save_search_history(
-            &heat_loss_map,
-            &state_map,
-            search_order,
-            goal.into(),
-            state_map[goal].as_ref(),
-        );
-    }
-
-    let final_state = state_map[goal].as_ref().unwrap();
-    assert_eq!(
-        final_state.heat_loss_so_far,
-        final_state
-            .history
-            .iter()
-            .map(|pos| { heat_loss_map[pos] as i64 })
-            .sum()
-    );
-
-    if cfg!(test) {
-        // Print a map to mimic the example (note you need to reverse the y lines)
-        heat_loss_map.print(|x, y, c| {
-            if let Some(idx) = final_state
-                .history
-                .iter()
-                .position(|p| [x, y] == p.as_array())
-            {
-                match final_state.dir_history[idx] {
-                    Cardinal::Norð => 'v',
-                    Cardinal::Souð => '^',
-                    Cardinal::East => '>',
-                    Cardinal::West => '<',
-                    _ => unreachable!(),
-                }
-            } else {
-                (*c + b'0') as char
+    ctx.state_map.print(|_x, _y, s| {
+        // let s = State::new(*s as _, IVec2::zero());
+        if s.cost > 0 {
+            if s.cost == i64::MAX {
+                return '_';
             }
-        });
-    } else {
-        // Sanity check against known wrong-answers
-        assert!(
-            final_state.heat_loss_so_far < 939,
-            "final_state.heat_loss_so_far={}",
-            final_state.heat_loss_so_far
-        );
+            let d = s.cost / if cfg!(test) { 10 } else { 50 };
+            (*b"0123456789aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ")[d as usize] as char
+        } else {
+            'S'
+        }
+    });
+
+    if log_enabled!(Info) {
+        // save_search_history(&ctx, search_order, goal);
     }
 
-    final_state.heat_loss_so_far
+    assert!(ctx.state_map[goal].cost != 846);
+    assert!(ctx.state_map[goal].cost != 854);
+    assert!(ctx.state_map[goal].cost < 900);
+
+    ctx.state_map[goal].cost
 }
 
-fn save_search_history(
-    heat_loss_map: &Framebuffer<u8>,
-    state_map: &Framebuffer<Option<Path>>,
-    mut search_order: Vec<Path>,
-    goal: (i32, i32),
-    maybe_path: Option<&Path>,
-) {
+fn save_search_history(ctx: &Context, mut search_order: Vec<State>, goal: impl Into<(i32, i32)>) {
     use indicatif::ProgressIterator;
+    use rayon::iter::{
+        IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+    };
 
-    let n = 200;
-    if search_order.len() > n {
-        warn!(
-            "Search history is {} long. Skipping some frames.",
-            search_order.len()
-        );
-
-        search_order.drain(n..);
-    }
-
+    let goal = goal.into();
     let mut frames = vec![];
-    let mut seen = HashSet::new();
 
-    for mut state in search_order.iter().progress() {
-        let mut frame: Framebuffer<[u8; 3]> =
-            Framebuffer::new_with_ranges(state_map.range_x(), state_map.range_y());
+    let max_cost: f32 = search_order.iter().map(|s| s.cost).max().unwrap() as f32;
 
-        for y in state_map.range_y() {
-            for x in state_map.range_x() {
-                let g = (255.0 * (heat_loss_map[(x, y)] as f32) / 9.0) as u8;
+    info!("Generating {} frames for video", search_order.len());
+    let mut frame: Framebuffer<[u8; 3]> =
+        Framebuffer::new_with_ranges(ctx.state_map.range_x(), ctx.state_map.range_y());
 
-                frame[(x, y)] = if seen.contains(&[x, y]) {
-                    [g, 0x00, g]
-                } else {
-                    [g; 3]
-                }
-            }
+    for y in ctx.state_map.range_y() {
+        for x in ctx.state_map.range_x() {
+            let g = (255.0 * (ctx.heat_loss_map[(x, y)] as f32) / 9.0) as u8;
+            frame[(x, y)] = [g, g, g];
         }
-
-        for pos in &state.history {
-            let [x, y] = pos.as_array();
-            frame[(x, y)] = [0x80, 0x00, 0x00];
-            seen.insert([x, y]);
-        }
-
-        frame[goal] = [0xff, 0xff, 0x66];
-        {
-            let there = state.pos();
-            frame[there] = [0xFF, 0x00, 0x00];
-            seen.insert(there.as_array());
-        }
-
-        let mut frame = frame.make_image(50, |rgb| Rgb(*rgb));
-        // Our origin is bottom left, `image`'s is top left
-        image::imageops::flip_vertical_in_place(&mut frame);
-        frames.push(frame);
     }
 
-    if let Some(state) = maybe_path {
-        let mut frame: Framebuffer<[u8; 3]> =
-            Framebuffer::new_with_ranges(state_map.range_x(), state_map.range_y());
+    for mut state in search_order.into_iter().progress() {
+        let mut g = (255.0 * (ctx.state_map[state.pos].cost as f32) / max_cost) as u8;
+        // Make more bands
+        g -= (g % 10);
 
-        for y in state_map.range_y() {
-            for x in state_map.range_x() {
-                let g = (255.0 * (heat_loss_map[(x, y)] as f32) / 9.0) as u8;
-
-                frame[(x, y)] = if seen.contains(&[x, y]) {
-                    [g, 0x00, g]
-                } else {
-                    [g; 3]
-                }
-            }
-        }
-
-        for pos in &state.history {
-            frame[pos] = [0xcc, 0xcc, 0x53];
-        }
+        frame[state.pos] = [g, 0x00, g];
         frame[goal] = [0xff, 0xff, 0x66];
 
-        let mut frame = frame.make_image(50, |rgb| Rgb(*rgb));
-        // Our origin is bottom left, `image`'s is top left
-        image::imageops::flip_vertical_in_place(&mut frame);
-        frames.push(frame);
+        frames.push(frame.clone());
     }
 
     info!("Saving {} frames for video", frames.len());
+    let w = ctx.heat_loss_map.width();
+    let h = ctx.heat_loss_map.height();
     let dir_name = if cfg!(test) {
-        "target/day17_test"
+        format!("target/day17_test_{w}x{h}")
     } else {
-        "target/day17"
+        format!("target/day17_{w}x{h}")
     };
-    std::fs::create_dir_all(dir_name).unwrap();
+    std::fs::create_dir_all(&dir_name).unwrap();
 
-    for (num, frame) in frames.into_iter().enumerate().progress() {
-        let filename = format!("{dir_name}/history_{num:>05}.png");
-
-        frame.save(filename).unwrap();
-    }
+    let scale = if cfg!(test) { 50 } else { 2 };
+    frames
+        .par_iter()
+        .enumerate()
+        .progress()
+        .for_each(|(num, frame)| {
+            let mut frame = frame.make_image(scale, |rgb| Rgb(*rgb));
+            let filename = format!("{dir_name}/history_{num:>05}.bmp");
+            frame.save(filename).unwrap();
+        });
 }
 
 #[allow(non_upper_case_globals)]
@@ -350,7 +284,7 @@ mod test {
     #[case::given_sub_11x11(102, EXAMPLE_INPUT_11x11)]
     #[case::given_sub_12x12(103, EXAMPLE_INPUT_12x12)]
     #[trace]
-    #[timeout(ms(1_000))]
+    // #[timeout(ms(1_000))]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]

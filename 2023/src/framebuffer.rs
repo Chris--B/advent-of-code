@@ -298,8 +298,9 @@ impl<T> Framebuffer<T> {
     ) where
         U: std::fmt::Display,
     {
+        let n_digits = ((ys.end as f32).log10() + 1.5) as usize;
         for y in ys.rev() {
-            print!("{y:>2} ");
+            print!("{y:>n_digits$} ");
             for x in xs.clone() {
                 print!("{}", func(x, y, &self[(x, y)]));
             }
