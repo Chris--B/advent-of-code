@@ -110,8 +110,8 @@ pub fn part1(input: &str) -> i64 {
         search_order.push(cur_path.clone());
 
         if cur_path.pos() == goal {
-            // Stop exploring this path if we find a goal, but keep searching
-            continue;
+            // Stop exploring this path if we find a goal
+            break;
         }
 
         for dir in [Souð, East, West, Norð] {
@@ -313,6 +313,7 @@ fn save_search_history(
     }
 }
 
+#[allow(non_upper_case_globals)]
 #[cfg(test)]
 mod test {
     use super::*;
@@ -337,8 +338,19 @@ mod test {
 
     #[rstest]
     #[case::given(102, EXAMPLE_INPUT)]
+    #[case::given_sub_02x02(5, EXAMPLE_INPUT_2x2)]
+    #[case::given_sub_03x03(11, EXAMPLE_INPUT_3x3)]
+    #[case::given_sub_04x04(21, EXAMPLE_INPUT_4x4)]
+    #[case::given_sub_05x05(28, EXAMPLE_INPUT_5x5)]
+    #[case::given_sub_06x06(42, EXAMPLE_INPUT_6x6)]
+    #[case::given_sub_07x07(54, EXAMPLE_INPUT_7x7)]
+    #[case::given_sub_08x08(70, EXAMPLE_INPUT_8x8)]
+    #[case::given_sub_09x09(83, EXAMPLE_INPUT_9x9)]
+    #[case::given_sub_10x10(94, EXAMPLE_INPUT_10x10)]
+    #[case::given_sub_11x11(102, EXAMPLE_INPUT_11x11)]
+    #[case::given_sub_12x12(103, EXAMPLE_INPUT_12x12)]
     #[trace]
-    // #[timeout(ms(10_000))]
+    #[timeout(ms(1_000))]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -349,6 +361,127 @@ mod test {
         let input = input.trim();
         assert_eq!(p(input), expected);
     }
+
+    // EXAMPLE_INPUT, but only the lower 2x2 square
+    const EXAMPLE_INPUT_2x2: &str = r"
+24
+32
+";
+
+    // EXAMPLE_INPUT, but only the lower 3x3 square
+    const EXAMPLE_INPUT_3x3: &str = r"
+241
+321
+325
+";
+
+    // EXAMPLE_INPUT, but only the lower 4x4 square
+    const EXAMPLE_INPUT_4x4: &str = r"
+2413
+3215
+3255
+3446
+";
+
+    // EXAMPLE_INPUT, but only the lower 5x5 square
+    const EXAMPLE_INPUT_5x5: &str = r"
+24134
+32154
+32552
+34465
+45466
+";
+
+    // EXAMPLE_INPUT, but only the lower 6x6 square
+    const EXAMPLE_INPUT_6x6: &str = r"
+241343
+321545
+325524
+344658
+454665
+143859
+";
+
+    // EXAMPLE_INPUT, but only the lower 7x7 square
+    const EXAMPLE_INPUT_7x7: &str = r"
+2413432
+3215453
+3255245
+3446585
+4546657
+1438598
+4457876
+";
+
+    // EXAMPLE_INPUT, but only the lower 8x8 square
+    const EXAMPLE_INPUT_8x8: &str = r"
+24134323
+32154535
+32552456
+34465858
+45466578
+14385987
+44578769
+36378779
+";
+
+    // EXAMPLE_INPUT, but only the lower 9x9 square
+    const EXAMPLE_INPUT_9x9: &str = r"
+241343231
+321545353
+325524565
+344658584
+454665786
+143859879
+445787698
+363787797
+465496798
+";
+
+    // EXAMPLE_INPUT, but only the lower 10x10 square
+    const EXAMPLE_INPUT_10x10: &str = r"
+2413432311
+3215453535
+3255245654
+3446585845
+4546657867
+1438598798
+4457876987
+3637877979
+4654967986
+4564679986
+";
+
+    // EXAMPLE_INPUT, but only the lower 11x11 square
+    const EXAMPLE_INPUT_11x11: &str = r"
+24134323113
+32154535356
+32552456542
+34465858454
+45466578675
+14385987984
+44578769877
+36378779796
+46549679868
+45646799864
+12246868655
+";
+
+    // EXAMPLE_INPUT, but only the lower 12x12 square
+    const EXAMPLE_INPUT_12x12: &str = r"
+241343231132
+321545353562
+325524565425
+344658584545
+454665786753
+143859879845
+445787698776
+363787797965
+465496798688
+456467998645
+122468686556
+254654888773
+";
 
     // #[ignore]
     // #[rstest]
