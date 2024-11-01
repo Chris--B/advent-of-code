@@ -358,7 +358,7 @@ impl PerElf {
     }
 }
 
-fn run_sim_nohash(elves: &mut Vec<IVec2>, stop_round: Option<u16>) -> i32 {
+fn run_sim_nohash(elves: &mut [IVec2], stop_round: Option<u16>) -> i32 {
     const Q: [[IVec2; 3]; 4] = [
         [DIR_N, DIR_NE, DIR_NW],
         [DIR_S, DIR_SE, DIR_SW],

@@ -273,7 +273,7 @@ pub fn part2(blueprints: &[Blueprint]) -> usize {
         .product()
 }
 
-#[cfg(test_nope_too_slow)]
+#[cfg(test)]
 mod test {
     use super::*;
     #[allow(unused_imports)]
@@ -303,6 +303,7 @@ Blueprint 28: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsi
     #[case::blueprint_2(12, EXAMPLE_INPUT_BP2)]
     #[case::problem(13, PROBLEM_INPUT)]
     #[trace]
+    #[timeout(LONG_TIMEOUT)]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -318,6 +319,7 @@ Blueprint 28: Each ore robot costs 4 ore. Each clay robot costs 3 ore. Each obsi
     #[case::blueprint_1(56, EXAMPLE_INPUT_BP1)]
     #[case::blueprint_2(62, EXAMPLE_INPUT_BP2)]
     #[trace]
+    #[timeout(LONG_TIMEOUT)]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]

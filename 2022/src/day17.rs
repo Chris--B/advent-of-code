@@ -5,7 +5,7 @@ type Row = u8;
 
 #[inline(always)]
 fn print_board(rows: &[Row]) {
-    if !cfg!(feature = "not_quiet") || rows.len() > 25 {
+    if !cfg!(debug_assertions) || rows.len() > 25 {
         return;
     }
 
@@ -105,7 +105,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
             rows.push(0);
         }
 
-        if cfg!(feature = "not_quiet") {
+        if cfg!(debug_assertions) {
             println!("A rock begins falling:");
             let mut rows = rows.clone();
             add_shape(&mut rows, x, y, &shape);
@@ -130,7 +130,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                     x = (x - 1).clamp(0, 7 - sx);
                 }
 
-                if cfg!(feature = "not_quiet") {
+                if cfg!(debug_assertions) {
                     print!("({x}, {y}) Jet of gas pushes rock ");
                     if jet == b'<' {
                         print!("left");
@@ -163,7 +163,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                     x = old_x;
                 }
 
-                if cfg!(feature = "not_quiet") {
+                if cfg!(debug_assertions) {
                     if x == old_x {
                         print!(", but nothing happens");
                     } else {
@@ -172,7 +172,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                     println!();
                 }
 
-                if cfg!(feature = "not_quiet") {
+                if cfg!(debug_assertions) {
                     let mut rows = rows.clone();
                     add_shape(&mut rows, x, y, &shape);
                     print_board(&rows);
@@ -202,7 +202,7 @@ fn run_sim(input: &[u8], times: usize) -> i64 {
                 // Rock falls 1 unit
                 y -= 1;
 
-                if cfg!(feature = "not_quiet") {
+                if cfg!(debug_assertions) {
                     println!("Rock falls 1 unit:");
                     let mut rows = rows.clone();
                     add_shape(&mut rows, x, y, &shape[..sy]);

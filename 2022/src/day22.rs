@@ -16,6 +16,7 @@ const CUBE_SIDE: i32 = if cfg!(test) { 4 } else { 50 };
 /// # Starting position
 /// From the problem description:
 /// > You begin the path in the leftmost open tile of the top row of tiles.
+///
 /// Note that this is differnet between example and problem!
 const START_X: i32 = if cfg!(test) { 2 * CUBE_SIDE } else { 50 } + 1;
 

@@ -1,6 +1,6 @@
 #![cfg_attr(feature = "simd", feature(portable_simd))]
 #![cfg_attr(feature = "simd", feature(stdsimd))]
-#![allow(clippy::comparison_chain)]
+#![allow(clippy::comparison_chain, clippy::missing_transmute_annotations)]
 
 use aoc_runner_derive::aoc_lib;
 
@@ -38,13 +38,13 @@ aoc_lib! { year = 2022 }
 
 // Run this function when the binary is loaded. This typically happens BEFORE MAIN.
 // This is a BAD IDEA, but cargo-aoc doesn't give us hooks anywhere else. So it's this or lazy-init in EVERY solution 😬.
-#[ctor::ctor]
-fn init_logging() {
+// #[ctor::ctor]
+pub fn init_logging() {
     use env_logger::{Builder, Env};
     use prelude::*;
 
     let mut env = Env::default();
-    if cfg!(test) || cfg!(debug_assert) {
+    if cfg!(test) || cfg!(debug_assertions) {
         // Debug and test builds should log MORE
         env = env.default_filter_or("debug");
     } else {
@@ -67,11 +67,15 @@ fn init_logging() {
     error!("Hello");
 }
 
-mod prelude {
+pub mod prelude {
     pub use crate::framebuffer::Framebuffer;
+    pub use crate::init_logging;
     pub use crate::vec::VecExt;
 
     pub use aoc_runner_derive::{aoc, aoc_generator};
+
+    pub const EZ_TIMEOUT: Duration = Duration::from_millis(1_000);
+    pub const LONG_TIMEOUT: Duration = Duration::from_millis(5_000);
 
     pub use derive_more::*;
     pub use either::*;
@@ -85,6 +89,26 @@ mod prelude {
 
     pub use std::collections::{HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
+    use std::time::Duration;
+
+    pub fn force_dword_align_str(s: &str) -> &'static str {
+        let l = s.as_bytes().len();
+
+        let mut v = vec![0_u32; 4 * l];
+        unsafe {
+            std::ptr::copy(s.as_bytes().as_ptr(), v.as_mut_ptr() as *mut u8, l);
+        }
+
+        let boxed: &'static [u32] = Box::leak(v.into_boxed_slice());
+        let aligned_s: &str = unsafe {
+            let bytes = std::slice::from_raw_parts(boxed.as_ptr() as *const u8, l);
+            std::str::from_utf8(bytes).unwrap()
+        };
+
+        assert_eq!(s, aligned_s);
+
+        aligned_s
+    }
 
     pub fn sign(x: i32) -> i32 {
         use std::cmp::Ordering::*;
@@ -96,7 +120,6 @@ mod prelude {
         }
     }
 
-    #[allow(dead_code)]
     #[inline(always)]
     pub fn find_exactly_one<T, I, P>(iter: I, p: P) -> T
     where

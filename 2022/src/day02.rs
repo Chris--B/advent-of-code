@@ -62,13 +62,15 @@ pub fn part1_as_bytes(input: &str) -> i64 {
 
 #[aoc(day2, part1, as_u32)]
 pub fn part1_as_u32(input: &str) -> i64 {
-    let bytes = input.trim_start().as_bytes();
-    debug_assert_eq!(bytes.len() % 4, 0);
+    debug_assert_eq!(input, input.trim_start());
+    let bytes = input.as_bytes();
+    // debug_assert_eq!(bytes.len() % 4, 0);
 
     let words: &[u32] = unsafe {
         let ptr: *const u32 = bytes.as_ptr() as _;
         let len = bytes.len() / 4;
 
+        println!("ptr={}", ptr as usize);
         std::slice::from_raw_parts(ptr, len)
     };
 
@@ -143,8 +145,9 @@ pub fn part1_as_u32(input: &str) -> i64 {
 #[cfg(target_feature = "neon")]
 #[aoc(day2, part1, simd)]
 pub fn part1_as_simd(input: &str) -> i64 {
-    let bytes = input.trim_start().as_bytes();
-    debug_assert_eq!(bytes.len() % 4, 0);
+    debug_assert_eq!(input, input.trim_start());
+    let bytes = input.as_bytes();
+    // debug_assert_eq!(bytes.len() % 4, 0);
 
     let words: &[u32] = unsafe {
         let ptr: *const u32 = bytes.as_ptr() as _;
@@ -392,6 +395,7 @@ pub fn part2_as_u32(input: &str) -> i64 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
     use rstest::*;
 
     const EXAMPLE_INPUT: &str = r"
@@ -412,9 +416,6 @@ A Y
 B X
 C Z
 ";
-    // AX
-    // BY
-    // CZ
 
     // Only enable this test if we're using simd
     #[cfg(target_feature = "neon")]
@@ -422,6 +423,7 @@ C Z
     #[case::given(15, EXAMPLE_INPUT)]
     #[case::long_given(3*15, LONG_EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(EZ_TIMEOUT)]
     fn check_ex_part_1_simd(
         #[notrace]
         #[values(part1_as_simd)]
@@ -429,7 +431,8 @@ C Z
         #[case] expected: i64,
         #[case] input: &str,
     ) {
-        let input = input.trim_start();
+        let input = force_dword_align_str(input.trim_start());
+
         assert_eq!(p(input), expected);
     }
 
@@ -437,6 +440,7 @@ C Z
     #[case::given(15, EXAMPLE_INPUT)]
     #[case::long_given(3*15, LONG_EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(EZ_TIMEOUT)]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1, part1_as_bytes, part1_as_u32)]
@@ -444,13 +448,15 @@ C Z
         #[case] expected: i64,
         #[case] input: &str,
     ) {
-        let input = input.trim_start();
+        let input = force_dword_align_str(input.trim_start());
+
         assert_eq!(p(input), expected);
     }
 
     #[rstest]
     #[case::given(12, EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(EZ_TIMEOUT)]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2, part2_as_bytes, part2_as_u32)]
@@ -458,7 +464,8 @@ C Z
         #[case] expected: i64,
         #[case] input: &str,
     ) {
-        let input = input.trim_start();
+        let input = force_dword_align_str(input.trim_start());
+
         assert_eq!(p(input), expected);
     }
 }
