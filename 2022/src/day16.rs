@@ -34,13 +34,49 @@ impl Valve {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+struct Tunnel {
+    dest: Name,
+    minutes: u32,
+}
+
+impl Tunnel {
+    fn new_with_dest(dest: Name) -> Self {
+        Self { dest, minutes: 1 }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Day16 {
     // Whether a valve is open or not
     valves: HashMap<Name, Valve>,
 
     // Connections between tunnels
-    tunnels: HashMap<Name, Vec<Name>>,
+    tunnels: HashMap<Name, Vec<Tunnel>>,
+}
+
+impl Day16 {
+    fn print(&self) {
+        if cfg!(debug_assertions) {
+            println!();
+            info!(
+                "Loaded {n_tunnels} tunnels between {n_valves} valves",
+                n_valves = self.valves.len(),
+                n_tunnels = self.tunnels.values().map(|ts| ts.len()).sum::<usize>(),
+            );
+
+            let mut names: Vec<_> = self.valves.keys().collect();
+            names.sort();
+
+            for name in &names {
+                println!("{name:?}: {}", self.valves[name].rate);
+            }
+            for name in &names {
+                println!("{name:?} -> {:?}", &self.tunnels[name]);
+            }
+            println!();
+        }
+    }
 }
 
 fn parse(s: &str) -> Day16 {
@@ -49,12 +85,12 @@ fn parse(s: &str) -> Day16 {
 
     for line in s.lines() {
         // Example:
-        //      Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
+        //      "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB"
 
         // Skip "Valve "
         let line = &line[6..];
 
-        // Parse valve
+        // Parse valve name
         let valve_name = Name::new(line);
 
         // Skip "AA has flow rate="
@@ -65,29 +101,94 @@ fn parse(s: &str) -> Day16 {
         // Skip " tunnels lead to valves "
         // OR   " tunnels lead to valve "
         let tunnel_text = &line[23..].trim();
-        let these_tunnels: Vec<Name> = tunnel_text.split(", ").map(Name::new).collect();
+        let these_tunnels: Vec<Tunnel> = tunnel_text
+            .split(", ")
+            .map(Name::new)
+            .map(Tunnel::new_with_dest)
+            .collect();
 
         valves.insert(valve_name, Valve::new(rate));
         tunnels.insert(valve_name, these_tunnels);
     }
 
-    info!(
-        "Loaded {n_tunnels} tunnels between {n_valves} valves",
-        n_valves = valves.len(),
-        n_tunnels = tunnels.len(),
-    );
-
     Day16 { valves, tunnels }
+}
+
+// Starting valve name
+const AA: Name = Name(['A', 'A']);
+
+// Remove Valves with a flow rate of 0, and instead link things directly
+fn simplify_tunnels(day: Day16) -> Day16 {
+    let mut new = Day16 {
+        valves: day
+            .valves
+            .iter()
+            .filter_map(|(&name, &valve)| {
+                if valve.rate != 0 || name == AA {
+                    Some((name, valve))
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        tunnels: HashMap::new(),
+    };
+
+    // Find all valves that can be reached in either 1 step, or any number of steps across 0-rate valves
+    for &name in day.valves.keys() {
+        let mut seen = HashSet::new();
+        let mut queue: Vec<(Name, u32)> = vec![(name, 0)];
+
+        while let Some((next, mut minutes)) = queue.pop() {
+            // TODO: Might need to check if this is a faster path than what we last saw
+            if seen.contains(&next) {
+                continue;
+            }
+            seen.insert(next);
+
+            // Visiting any valve cost time
+            minutes += 1;
+
+            // See which valves are reachable from here at all
+            let mut tunnels = vec![];
+            for tunnel in &day.tunnels[&next] {
+                let dest = tunnel.dest;
+                let cost = day.valves[&tunnel.dest].rate;
+
+                // If the dest has a rate of 0, we need to continue exploring it. This means enqueueing it:
+                if cost == 0 {
+                    queue.push((tunnel.dest, minutes));
+                } else if dest != name {
+                    // This is a terminus, so let's mark this tunnel as reachable
+                    tunnels.push(Tunnel { dest, minutes });
+                }
+            }
+
+            tunnels.sort_by_key(|t| t.dest);
+            if tunnels.len() > 1 {
+                for (&a, &b) in std::iter::zip(&tunnels, &tunnels[1..]) {
+                    assert_ne!(a.dest, b.dest, "{:?} shows up twice: {:?}", a.dest, [a, b]);
+                }
+            }
+            new.tunnels.insert(name, tunnels);
+        }
+    }
+
+    new
 }
 
 // Part1 ========================================================================
 #[aoc(day16, part1)]
+#[allow(unreachable_code, unused)]
 pub fn part1(input: &str) -> i64 {
-    const AA: Name = Name(['A', 'A']);
+    init_logging();
 
-    let mut day = parse(input);
-    let mut here = AA;
+    let day = parse(input);
+    let mut day = simplify_tunnels(day);
+    day.print();
 
+    // Start at and open AA
+    let mut here: Name = AA;
     day.valves.get_mut(&here).unwrap().open = true;
 
     // Core idea:
@@ -124,16 +225,16 @@ pub fn part1(input: &str) -> i64 {
         if day.valves[&here].open {
             // Move rooms
             // Who knows what's best, let's just be greedy.
-            let mut options = day.tunnels[&here].clone();
-            options.sort_by_key(|n| {
-                if !day.valves[n].open {
-                    -day.valves[n].rate
+            let mut options: Vec<Tunnel> = day.tunnels[&here].clone();
+            options.sort_by_key(|tunnel| {
+                if !day.valves[&tunnel.dest].open {
+                    -day.valves[&tunnel.dest].rate
                 } else {
                     i32::MAX
                 }
             });
 
-            here = options[0];
+            here = options[0].dest;
             info!("You move to valve {here:?}");
         } else {
             // Open this one
@@ -202,7 +303,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II
                     (JJ, Valve::new(21)),
                 ]
                 .into_iter()
-                .collect(),
+                .collect::<HashMap<Name, Valve>>(),
 
                 tunnels: [
                     (AA, vec![DD, II, BB]),
@@ -217,7 +318,16 @@ Valve JJ has flow rate=21; tunnel leads to valve II
                     (JJ, vec![II]),
                 ]
                 .into_iter()
-                .collect(),
+                .map(|(name, tunnel_names)| {
+                    (
+                        name,
+                        tunnel_names
+                            .into_iter()
+                            .map(Tunnel::new_with_dest)
+                            .collect_vec(),
+                    )
+                })
+                .collect::<HashMap<Name, Vec<Tunnel>>>(),
             }
         );
     }
@@ -225,6 +335,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II
     #[rstest]
     #[case::given(1651, EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(EZ_TIMEOUT)]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -239,6 +350,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II
     // #[rstest]
     // #[case::given(999_999, EXAMPLE_INPUT)]
     // #[trace]
+    // #[timeout(EZ_TIMEOUT)]
     // fn check_ex_part_2(
     //     #[notrace]
     //     #[values(part2)]
