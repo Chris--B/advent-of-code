@@ -1,43 +1,40 @@
+#![allow(unreachable_code, unused)]
+
 use crate::prelude::*;
 
 use std::fmt;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Name([char; 2]);
+pub struct Name([char; 2]);
 
 impl Name {
     fn new(s: &str) -> Self {
         Self(iter_to_array(s.chars().take(2)))
     }
-
-    fn as_string(&self) -> String {
-        self.0.iter().collect()
-    }
 }
 
 impl fmt::Debug for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\"{}{}\"", self.0[0], self.0[1])
+        write!(f, "{}{}", self.0[0], self.0[1])
     }
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-struct Valve {
-    open: bool,
-    rate: i32,
+pub struct Valve {
+    rate: i64,
 }
 
 impl Valve {
-    fn new(rate: i32) -> Self {
+    fn new(rate: i64) -> Self {
         // "All of the valves begin **closed**"
-        Self { rate, open: false }
+        Self { rate }
     }
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-struct Tunnel {
+pub struct Tunnel {
     dest: Name,
-    minutes: u32,
+    minutes: u8,
 }
 
 impl Tunnel {
@@ -47,7 +44,7 @@ impl Tunnel {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Day16 {
+pub struct Day16 {
     // Whether a valve is open or not
     valves: HashMap<Name, Valve>,
 
@@ -56,7 +53,7 @@ struct Day16 {
 }
 
 impl Day16 {
-    fn print(&self) {
+    pub fn print(&self) {
         if cfg!(debug_assertions) {
             println!();
             info!(
@@ -77,9 +74,24 @@ impl Day16 {
             println!();
         }
     }
+
+    pub fn print_dot(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
+        writeln!(w, "digraph G {{")?;
+
+        for (name, tunnels) in &self.tunnels {
+            writeln!(w, "    # {name:?}")?;
+            for Tunnel { dest, .. } in tunnels {
+                writeln!(w, "    {name:?} -> {dest:?};",)?;
+            }
+            writeln!(w)?;
+        }
+
+        writeln!(w, "}}")?;
+        Ok(())
+    }
 }
 
-fn parse(s: &str) -> Day16 {
+pub fn parse(s: &str) -> Day16 {
     let mut valves = HashMap::new();
     let mut tunnels = HashMap::new();
 
@@ -96,7 +108,7 @@ fn parse(s: &str) -> Day16 {
         // Skip "AA has flow rate="
         let line = &line[17..];
         let [rate_text, line] = iter_to_array(line.split(';'));
-        let rate: i32 = rate_text.parse().unwrap();
+        let rate = rate_text.parse().unwrap();
 
         // Skip " tunnels lead to valves "
         // OR   " tunnels lead to valve "
@@ -115,10 +127,10 @@ fn parse(s: &str) -> Day16 {
 }
 
 // Starting valve name
-const AA: Name = Name(['A', 'A']);
+pub const AA: Name = Name(['A', 'A']);
 
 // Remove Valves with a flow rate of 0, and instead link things directly
-fn simplify_tunnels(day: Day16) -> Day16 {
+pub fn simplify_tunnels(day: Day16) -> Day16 {
     let mut new = Day16 {
         valves: day
             .valves
@@ -137,7 +149,7 @@ fn simplify_tunnels(day: Day16) -> Day16 {
     // Find all valves that can be reached in either 1 step, or any number of steps across 0-rate valves
     for &name in day.valves.keys() {
         let mut seen = HashSet::new();
-        let mut queue: Vec<(Name, u32)> = vec![(name, 0)];
+        let mut queue: Vec<(Name, u8)> = vec![(name, 0)];
 
         while let Some((next, mut minutes)) = queue.pop() {
             // TODO: Might need to check if this is a faster path than what we last saw
@@ -145,6 +157,7 @@ fn simplify_tunnels(day: Day16) -> Day16 {
                 continue;
             }
             seen.insert(next);
+            dbg!(next);
 
             // Visiting any valve cost time
             minutes += 1;
@@ -155,12 +168,23 @@ fn simplify_tunnels(day: Day16) -> Day16 {
                 let dest = tunnel.dest;
                 let cost = day.valves[&tunnel.dest].rate;
 
+                if name == AA {
+                    println!("dest={dest:?}, minutes={minutes}");
+                }
+
                 // If the dest has a rate of 0, we need to continue exploring it. This means enqueueing it:
                 if cost == 0 {
                     queue.push((tunnel.dest, minutes));
                 } else if dest != name {
+                    if name == AA {
+                        println!("terminating at {dest:?}, {tunnels:?}");
+                    }
                     // This is a terminus, so let's mark this tunnel as reachable
                     tunnels.push(Tunnel { dest, minutes });
+                }
+
+                if name == AA {
+                    println!();
                 }
             }
 
@@ -175,77 +199,228 @@ fn simplify_tunnels(day: Day16) -> Day16 {
     }
 
     new
+    // day
 }
 
 // Part1 ========================================================================
 #[aoc(day16, part1)]
-#[allow(unreachable_code, unused)]
+
 pub fn part1(input: &str) -> i64 {
     init_logging();
 
     let day = parse(input);
+    day.print();
     let mut day = simplify_tunnels(day);
     day.print();
 
-    // Start at and open AA
-    let mut here: Name = AA;
-    day.valves.get_mut(&here).unwrap().open = true;
-
-    // Core idea:
-    //  List all valves by pressure
-    //  Reorder according to tunnel deps (e.g. JJ=20, but we need to go to II first)
-    //  Simulate Move/Open steps (1 min to move, 1 min to open)
-    // ... is this a minimal spanning tree?
-    let mut all_pressure = 0_i32;
-
-    // Run for 30 minutes
-    for m in 1..=30 {
-        info!("== Minute {m} ==");
-
-        let open = day
-            .valves
-            .iter()
-            .filter(|(_name, valve)| valve.open)
-            .filter(|(name, _valve)| **name != AA);
-        if log_enabled!(Info) {
-            if open.clone().count() > 0 {
-                let names: String = open
-                    .clone()
-                    .map(|(name, _valve)| name.as_string())
-                    .join(", ");
-
-                let pressure: i32 = open.clone().map(|(_name, valve)| valve.rate).sum();
-                info!("Valves {names} are open, releasing {pressure} pressure");
-            } else {
-                info!("No valves are open.");
-            }
-        }
-        all_pressure += open.map(|(_name, valve)| valve.rate).sum::<i32>();
-
-        if day.valves[&here].open {
-            // Move rooms
-            // Who knows what's best, let's just be greedy.
-            let mut options: Vec<Tunnel> = day.tunnels[&here].clone();
-            options.sort_by_key(|tunnel| {
-                if !day.valves[&tunnel.dest].open {
-                    -day.valves[&tunnel.dest].rate
-                } else {
-                    i32::MAX
-                }
-            });
-
-            here = options[0].dest;
-            info!("You move to valve {here:?}");
-        } else {
-            // Open this one
-            day.valves.get_mut(&here).unwrap().open = true;
-            info!("You open valve {here:?}");
-        }
-
-        info!("");
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct State {
+        curr: Name,
+        time: u8,
+        opened: HashSet<Name>,
+        total_pressure: i64,
     }
 
-    all_pressure as i64
+    // Start at and open AA
+    let start: Name = AA;
+    let mut opened = HashSet::new();
+    opened.insert(start);
+
+    let mut best = 0;
+
+    let mut queue = vec![State {
+        curr: start,
+        time: 0,
+        opened,
+        total_pressure: 0,
+    }];
+    while let Some(state) = {
+        assert!(queue.len() < 100_000);
+        queue.sort_by_key(|state| -state.total_pressure);
+        queue.pop()
+    } {
+        println!("[{}] Inspecting: {state:?}", queue.len());
+
+        assert!(state.time <= 30);
+        if state.time >= 30 {
+            // println!(
+            //     "[!!!] Found a state at 30 minutes: {} pressure released",
+            //     state.total_pressure
+            // );
+            // return state.total_pressure;
+            best = best.max(state.total_pressure);
+            continue;
+        }
+
+        // Each minute, we can either:
+        //      - Move to a different valve
+        //      - Do nothing
+
+        // Do nothing and see if this makes it any better
+        if true {
+            println!("  + Advancing in place");
+
+            let time = state.time + 1;
+
+            let pressure_delta: i64 = day
+                .valves
+                .iter()
+                .filter(|(n, _v)| state.opened.contains(n))
+                .map(|(_n, v)| v.rate)
+                .sum();
+            println!("    + pressure delta = {pressure_delta}");
+
+            // No point waiting if there's nothing happening?
+            if pressure_delta != 0 {
+                let total_pressure = state.total_pressure + pressure_delta;
+                println!("    + total_pressure = {total_pressure}");
+
+                // We didn't move:
+                let opened = state.opened.clone();
+                println!("    + {} opened valves", opened.len());
+                let curr = state.curr;
+
+                let new_state = State {
+                    curr,
+                    time,
+                    opened,
+                    total_pressure,
+                };
+                println!("  + Exploring new state: {new_state:?}");
+                queue.push(new_state);
+            }
+        }
+
+        // We need to take a minute to open a given valve.
+        // After that, we can explore
+        if !state.opened.contains(&state.curr) && day.valves[&state.curr].rate != 0 {
+            println!(
+                "  + Opening valve at {:?}: {:?}",
+                state.curr, &day.valves[&state.curr]
+            );
+
+            let curr = state.curr;
+            let time = state.time + 1;
+
+            let pressure_delta: i64 = day
+                .valves
+                .iter()
+                .filter(|(n, _v)| state.opened.contains(n))
+                .map(|(_n, v)| v.rate)
+                .sum();
+            let total_pressure = state.total_pressure + pressure_delta;
+            println!("    + total_pressure = {total_pressure}");
+
+            let mut opened = state.opened.clone();
+            opened.insert(curr);
+            println!("    + {} opened valves", opened.len());
+
+            let new_state = State {
+                curr,
+                time,
+                opened,
+                total_pressure,
+            };
+            println!("  + Exploring new state: {new_state:?}");
+            queue.push(new_state);
+        } else {
+            // Try moving to each "adjacent" valve
+            for tunnel in &day.tunnels[&state.curr] {
+                println!("  + Advancing towards {tunnel:?}");
+
+                // TODO: sus
+                if state.opened.contains(&tunnel.dest) {
+                    println!("   + Skipping opened valve");
+                    println!();
+                    continue;
+                }
+
+                let curr = tunnel.dest;
+                let time = state.time + tunnel.minutes;
+                if time > 30 {
+                    println!("   + Not enough time to go down {tunnel:?}");
+                    println!();
+                    continue;
+                }
+
+                let pressure_delta: i64 = day
+                    .valves
+                    .iter()
+                    .filter(|(n, _v)| state.opened.contains(n))
+                    .map(|(_n, v)| v.rate)
+                    .sum();
+                let total_pressure = state.total_pressure + pressure_delta;
+                println!("    + total_pressure = {total_pressure}");
+
+                let opened = state.opened.clone();
+                println!("    + {} opened valves", opened.len());
+
+                let new_state = State {
+                    curr,
+                    time,
+                    opened,
+                    total_pressure,
+                };
+                println!("  + Exploring new state: {new_state:?}");
+                queue.push(new_state);
+            }
+        }
+
+        println!();
+    }
+
+    assert_eq!(queue.len(), 0);
+
+    /*
+       // Run for 30 minutes
+       for m in 1..=30 {
+           info!("== Minute {m} ==");
+
+           let open = day
+               .valves
+               .iter()
+               .filter(|(_name, valve)| valve.open)
+               .filter(|(name, _valve)| **name != AA);
+           if log_enabled!(Info) {
+               if open.clone().count() > 0 {
+                   let names: String = open
+                       .clone()
+                       .map(|(name, _valve)| name.as_string())
+                       .join(", ");
+
+                   let pressure: i32 = open.clone().map(|(_name, valve)| valve.rate).sum();
+                   info!("Valves {names} are open, releasing {pressure} pressure");
+               } else {
+                   info!("No valves are open.");
+               }
+           }
+           all_pressure += open.map(|(_name, valve)| valve.rate).sum::<i32>();
+
+           if day.valves[&here].open {
+               // Move rooms
+               // Who knows what's best, let's just be greedy.
+               let mut options: Vec<Tunnel> = day.tunnels[&here].clone();
+               options.sort_by_key(|tunnel| {
+                   if !day.valves[&tunnel.dest].open {
+                       -day.valves[&tunnel.dest].rate
+                   } else {
+                       i32::MAX
+                   }
+               });
+
+               here = options[0].dest;
+               info!("You move to valve {here:?}");
+           } else {
+               // Open this one
+               day.valves.get_mut(&here).unwrap().open = true;
+               info!("You open valve {here:?}");
+           }
+
+           info!("");
+       }
+    */
+
+    best
 }
 
 // Part2 ========================================================================

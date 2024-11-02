@@ -17,6 +17,10 @@ path = "src/heightmap.rs"
 name = "render-day22"
 path = "src/render-day22.rs"
 
+[[bin]]
+name = "render-day16"
+path = "src/render-day16.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "aoc22"

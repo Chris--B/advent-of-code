@@ -73,6 +73,7 @@ pub mod prelude {
 
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
+    pub use std::time::Duration;
     pub const EZ_TIMEOUT: Duration = Duration::from_millis(1_000);
     pub const LONG_TIMEOUT: Duration = Duration::from_millis(5_000);
 
@@ -88,7 +89,6 @@ pub mod prelude {
 
     pub use std::collections::{HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
-    use std::time::Duration;
 
     pub fn force_dword_align_str(s: &str) -> &'static str {
         let l = s.as_bytes().len();
