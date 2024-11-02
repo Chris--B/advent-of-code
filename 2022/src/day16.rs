@@ -133,7 +133,7 @@ impl Graph {
         lines.join("\n")
     }
 
-    fn save_dot(&self, dir: &str, state: Option<&StateP1>) -> std::io::Result<()> {
+    fn save_dot(&self, dir: &str, opened: Option<u64>) -> std::io::Result<()> {
         use std::fs::File;
         use std::io::BufWriter;
         use std::io::Write;
@@ -159,8 +159,8 @@ impl Graph {
             )?;
 
             // Extra per-node stuff
-            if let Some(state) = state {
-                if ((1 << valve) & state.opened) != 0 {
+            if let Some(opened) = opened {
+                if ((1 << valve) & opened) != 0 {
                     writeln!(w, "    {name} [color=blue];")?;
                 }
             }
@@ -234,7 +234,7 @@ impl Graph {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct StateP1 {
+struct State {
     curr: usize,
     opened: u64,
     minute: u8,
@@ -244,35 +244,49 @@ struct StateP1 {
     g: Graph,
 }
 
-impl PartialOrd for StateP1 {
-    fn partial_cmp(&self, other: &StateP1) -> Option<Ordering> {
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &State) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for StateP1 {
+impl Ord for State {
     fn cmp(&self, other: &Self) -> Ordering {
         self.sort_key().cmp(&other.sort_key())
     }
 }
 
-impl fmt::Debug for StateP1 {
+impl fmt::Debug for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let curr = if !cfg!(debug_assertions) {
-            format!("{}", self.curr)
-        } else {
-            format!("{}", self.g.name_of(self.curr))
-        };
+        let curr = { format!("{}", self.g.name_of(self.curr)) };
 
-        let visited_ids = if !cfg!(debug_assertions) {
-            format!("0b{:016b} ({})", self.opened, self.opened.count_ones())
-        } else {
+        let visited_ids = {
             format!(
                 "0b{:016b} ({}) {:?}",
                 self.opened,
                 self.opened.count_ones(),
-                self.g.valves().map(|v| { self.g.name_of(v) }).collect_vec()
+                self.g
+                    .valves_with_mask(self.opened)
+                    .map(|v| { self.g.name_of(v) })
+                    .collect_vec()
             )
+        };
+
+        let history = {
+            let mut hist = vec![];
+            let mut prev: u64 = 0;
+            for (minute, opened) in &self.history {
+                let changed = opened ^ prev;
+                let names = self
+                    .g
+                    .valves_with_mask(changed)
+                    .map(|v| self.g.name_of(v))
+                    .next()
+                    .unwrap();
+                hist.push(format!("[{minute:>2}, {names:?}]"));
+                prev = *opened;
+            }
+            hist.join("; ")
         };
 
         f.debug_struct("State")
@@ -280,13 +294,14 @@ impl fmt::Debug for StateP1 {
             .field("visited_ids", &visited_ids)
             .field("minute", &self.minute)
             .field("pressure", &self.pressure)
+            .field("history", &history)
             .finish()
     }
 }
 
-impl StateP1 {
+impl State {
     fn new(curr: usize, g: &Graph) -> Self {
-        StateP1 {
+        State {
             curr,
 
             opened: 0,
@@ -319,14 +334,15 @@ pub fn part1(input: &str) -> i64 {
 
     const TIME_LIMIT: u8 = 30;
     let g = Graph::new(input);
+    let visit_limit = g.valves().filter(|&v| g.rate_of(v) != 0).count();
 
     let mut queue = BinaryHeap::new();
-    queue.push(StateP1::new(0, &g)); // AA is always 0
+    queue.push(State::new(0, &g)); // AA is always 0
 
     let mut end = vec![];
     while let Some(state) = queue.pop() {
         // info!("[{}] Handling state = {state:?}", queue.len());
-        if state.visit_count() == g.names.len() || state.minute == TIME_LIMIT {
+        if state.visit_count() == visit_limit || state.minute == TIME_LIMIT {
             end.push(state);
             continue;
         }
@@ -357,7 +373,7 @@ pub fn part1(input: &str) -> i64 {
                 history.push((minute, opened));
 
                 // On then next step, this vavle will count
-                let next = StateP1 {
+                let next = State {
                     curr: v,
                     minute,
                     pressure,
@@ -393,11 +409,11 @@ pub fn part1(input: &str) -> i64 {
 
         // This isn't free but also won't change anymore.
         let delta = g.pressure_delta(state.opened);
-        let time_left = 30 - state.minute;
+        let time_left = TIME_LIMIT - state.minute;
         state.pressure += delta * time_left as i64;
         state.minute += time_left;
 
-        debug_assert_eq!(state.minute, 30, "state is bad: {state:#?}");
+        debug_assert_eq!(state.minute, TIME_LIMIT, "state is bad: {state:#?}");
     }
 
     let best = end
@@ -407,7 +423,7 @@ pub fn part1(input: &str) -> i64 {
 
     if cfg!(debug_assertions) {
         info!("best = {best:#?}");
-        g.save_dot("target/", Some(&best)).unwrap();
+        g.save_dot("target/", Some(best.opened)).unwrap();
     }
 
     best.pressure
@@ -418,10 +434,105 @@ pub fn part1(input: &str) -> i64 {
 pub fn part2(input: &str) -> i64 {
     init_logging();
 
-    const TIME_LIMIT: u8 = 30;
-    let _g = Graph::new(input);
+    const TIME_LIMIT: u8 = 26;
+    let g = Graph::new(input);
+    let visit_limit = g.valves().filter(|&v| g.rate_of(v) != 0).count() / 2;
 
-    unimplemented!();
+    let mut queue = BinaryHeap::new();
+    queue.push(State::new(0, &g)); // AA is always 0
+
+    let mut end = vec![];
+    while let Some(state) = queue.pop() {
+        // info!("[{}] Handling state = {state:?}", queue.len());
+        if state.visit_count() == visit_limit || state.minute == TIME_LIMIT {
+            end.push(state);
+            continue;
+        }
+
+        let mut did_enqueue = false;
+        for v in g.valves() {
+            let time_left = TIME_LIMIT - state.minute;
+            let visit_cost = g.visit_cost(state.curr, v);
+
+            if
+            // Only useful valves
+            (g.rate_of(v) > 0)
+                // That we haven't seen
+                && !state.has_visited(v)
+                // But could
+                && (visit_cost < time_left)
+            {
+                // Note: We're "jumping" to the valve and eating the computed cost.
+                // This means we never "visit" rate=0 nodes between here and there.
+
+                // Visit it (takes N minute), and then open the valve (takes 1 minute)
+                let minute = state.minute + visit_cost + 1;
+                let mut pressure = state.pressure;
+                pressure += (visit_cost as i64 + 1) * g.pressure_delta(state.opened);
+                let opened = state.opened | (1 << v);
+
+                let mut history = state.history.clone();
+                history.push((minute, opened));
+
+                // On then next step, this vavle will count
+                let next = State {
+                    curr: v,
+                    minute,
+                    pressure,
+                    opened,
+                    history,
+                    g: g.clone(),
+                };
+
+                queue.push(next);
+                did_enqueue = true;
+            }
+        }
+
+        if !did_enqueue {
+            end.push(state);
+            continue;
+        }
+    }
+
+    // Run the remaining states to completion
+    for state in &mut end {
+        debug_assert!(
+            state.minute <= TIME_LIMIT,
+            "state.minute = {} for some reason",
+            state.minute
+        );
+
+        // This isn't free but also won't change anymore.
+        let delta = g.pressure_delta(state.opened);
+        let time_left = TIME_LIMIT - state.minute;
+        state.pressure += delta * time_left as i64;
+        state.minute += time_left;
+
+        debug_assert_eq!(state.minute, TIME_LIMIT, "state is bad: {state:#?}");
+    }
+
+    let mut maybe = vec![];
+    let l = end.len();
+    for i in 0..l {
+        for j in (i + 1)..l {
+            let a = &end[i];
+            let b = &end[j];
+            if (a.opened & b.opened) == 0 {
+                maybe.push([a, b]);
+            }
+        }
+    }
+
+    let [a, b] = maybe
+        .into_iter()
+        .max_by_key(|[a, b]| a.pressure + b.pressure)
+        .expect("No states finished?");
+    info!("Found two best states:");
+    info!("a = {a:#?}");
+    info!("b = {b:#?}");
+
+    a.pressure + b.pressure
 }
 
 #[cfg(test)]
