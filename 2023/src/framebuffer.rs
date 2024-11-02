@@ -93,7 +93,19 @@ where
         }
     }
 
-    pub fn parse_grid(input: &str, f: impl Fn(char) -> T) -> Self {
+    pub fn new_matching_size_with<U>(other: &Framebuffer<U>, f: impl Fn(&U) -> T) -> Self {
+        let mut new = Self::new_matching_size(other);
+
+        for y in new.range_y() {
+            for x in new.range_x() {
+                new[(x, y)] = f(&other[(x, y)]);
+            }
+        }
+
+        new
+    }
+
+    pub fn parse_grid_with(input: &str, f: impl Fn(char) -> T) -> Self {
         debug_assert!(
             !input.is_empty(),
             "Parsing a grid from an empty string is probably not on purpose."
@@ -112,6 +124,18 @@ where
         }
 
         grid
+    }
+}
+
+impl Framebuffer<u8> {
+    pub fn parse_grid_ascii(input: &str) -> Self {
+        Self::parse_grid_with(input, |c| c.try_into().expect("Expected ASCII character"))
+    }
+}
+
+impl Framebuffer<char> {
+    pub fn parse_grid_char(input: &str) -> Self {
+        Self::parse_grid_with(input, |c| c)
     }
 }
 

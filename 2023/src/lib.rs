@@ -35,7 +35,7 @@ pub mod day19;
 #[cfg(feature = "broken")]
 pub mod day21;
 pub mod day22;
-// pub mod day23;
+pub mod day23;
 // pub mod day24;
 pub mod day25;
 
@@ -72,11 +72,14 @@ mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use bitmask_enum::bitmask;
+    pub use colored::*;
+    pub use defaults::Defaults;
     pub use indicatif::ProgressIterator;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::Complex;
     pub use num::Integer;
+    pub use priority_queue::PriorityQueue;
     pub use scan_fmt::scan_fmt;
     pub use smallvec::{smallvec, SmallVec};
     pub use ultraviolet::{IVec2, IVec3};
@@ -94,10 +97,23 @@ mod prelude {
     pub use crate::fast_parse_u32;
     pub use crate::fast_parse_u64;
     pub use crate::fast_parse_u8;
+    pub use crate::guard;
     pub use crate::parse_list;
 }
 
 use prelude::*;
+
+// Swift has ruined me
+#[macro_export]
+macro_rules! guard {
+    ($e:expr ; else { $rest:tt ; }) => {
+        if let Some(a) = $e {
+            a
+        } else {
+            $rest
+        }
+    };
+}
 
 #[bitmask(u8)]
 #[bitmask_config(vec_debug)]
