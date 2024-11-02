@@ -19,7 +19,6 @@ pub mod day12;
 pub mod day13;
 pub mod day14;
 pub mod day15;
-#[cfg(feature = "broken")]
 pub mod day16;
 pub mod day17;
 pub mod day18;
@@ -40,31 +39,36 @@ aoc_lib! { year = 2022 }
 // This is a BAD IDEA, but cargo-aoc doesn't give us hooks anywhere else. So it's this or lazy-init in EVERY solution 😬.
 // #[ctor::ctor]
 pub fn init_logging() {
-    use env_logger::{Builder, Env};
     use prelude::*;
+    use std::sync::Once;
 
-    let mut env = Env::default();
-    if cfg!(test) || cfg!(debug_assertions) {
-        // Debug and test builds should log MORE
-        env = env.default_filter_or("debug");
-    } else {
-        // Everyone else can log warn and above
-        env = env.default_filter_or("warn");
-    }
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        use env_logger::{Builder, Env};
 
-    Builder::from_env(env)
-        .is_test(cfg!(test))
-        .format_timestamp(None)
-        .format_module_path(false)
-        .format_target(false)
-        .format_indent(Some(4))
-        .init();
+        let mut env = Env::default();
+        if cfg!(test) || cfg!(debug_assertions) {
+            // Debug and test builds should log MORE
+            env = env.default_filter_or("debug");
+        } else {
+            // Everyone else can log warn and above
+            env = env.default_filter_or("warn");
+        }
 
-    trace!("Hello");
-    debug!("Hello");
-    info!("Hello");
-    warn!("Hello");
-    error!("Hello");
+        Builder::from_env(env)
+            .is_test(cfg!(test))
+            .format_timestamp(None)
+            .format_module_path(false)
+            .format_target(false)
+            .format_indent(Some(4))
+            .init();
+    });
+
+    trace!("Trace level enabled");
+    debug!("Debug level enabled");
+    info!("Info level enabled");
+    warn!("Warn level enabled");
+    error!("Error level enabled");
 }
 
 pub mod prelude {

@@ -1,5 +1,8 @@
 use crate::prelude::*;
 
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::fmt;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -9,149 +12,417 @@ impl Name {
     fn new(s: &str) -> Self {
         Self(iter_to_array(s.chars().take(2)))
     }
-
-    fn as_string(&self) -> String {
-        self.0.iter().collect()
-    }
 }
 
 impl fmt::Debug for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\"{}{}\"", self.0[0], self.0[1])
+        write!(f, "{}{}", self.0[0], self.0[1])
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-struct Valve {
-    open: bool,
-    rate: i32,
-}
-
-impl Valve {
-    fn new(rate: i32) -> Self {
-        // "All of the valves begin **closed**"
-        Self { rate, open: false }
+impl fmt::Display for Name {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.0[0], self.0[1])
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Day16 {
-    // Whether a valve is open or not
-    valves: HashMap<Name, Valve>,
+struct Graph {
+    names: Vec<Name>,
+    rates: Vec<i64>,
+    tunnels: Vec<u64>,
 
-    // Connections between tunnels
-    tunnels: HashMap<Name, Vec<Name>>,
+    // TODO: Fast cache from Floyd-Warshall?
+    cache: RefCell<Vec<u8>>,
 }
 
-fn parse(s: &str) -> Day16 {
-    let mut valves = HashMap::new();
-    let mut tunnels = HashMap::new();
+impl Graph {
+    /// Parses from Input
+    fn new(s: &str) -> Self {
+        // O(n) but we only need it for parsing
+        fn get_id(name: Name, names: &mut Vec<Name>) -> usize {
+            if let Some(id) = names.iter().position(|&n| n == name) {
+                id
+            } else {
+                debug_assert!(names.len() < 63);
+                names.push(name);
+                names.len() - 1
+            }
+        }
 
-    for line in s.lines() {
-        // Example:
-        //      Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
+        let mut names = vec![];
+        let mut rates = vec![];
+        let mut tunnels = vec![];
 
-        // Skip "Valve "
-        let line = &line[6..];
+        // Make sure AA is always id=0
+        let aa_id = get_id(Name::new("AA"), &mut names);
+        debug_assert_eq!(aa_id, 0);
 
-        // Parse valve
-        let valve_name = Name::new(line);
+        // Eachg line is parsable in isolation
+        for line in s.lines() {
+            // Example:
+            //      "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB"
 
-        // Skip "AA has flow rate="
-        let line = &line[17..];
-        let [rate_text, line] = iter_to_array(line.split(';'));
-        let rate: i32 = rate_text.parse().unwrap();
+            // Skip "Valve "
+            let line = &line[6..];
 
-        // Skip " tunnels lead to valves "
-        // OR   " tunnels lead to valve "
-        let tunnel_text = &line[23..].trim();
-        let these_tunnels: Vec<Name> = tunnel_text.split(", ").map(Name::new).collect();
+            // Parse valve
+            let valve_name = Name::new(line);
+            let id = get_id(valve_name, &mut names);
+            if id >= rates.len() {
+                rates.resize(id + 1, 0);
+                tunnels.resize(id + 1, 0);
+            }
 
-        valves.insert(valve_name, Valve::new(rate));
-        tunnels.insert(valve_name, these_tunnels);
+            // Skip "AA has flow rate="
+            let line = &line[17..];
+            let [rate_text, line] = iter_to_array(line.split(';'));
+            rates[id] = rate_text.parse().unwrap();
+
+            // Skip " tunnels lead to valves "
+            // OR   " tunnels lead to valve "
+            let tunnel_text = &line[23..].trim();
+            let tunnel: u64 = tunnel_text
+                .split(", ")
+                .map(Name::new)
+                .map(|n| get_id(n, &mut names))
+                .fold(0_u64, |acc, id| (acc | (1 << id)));
+            debug!("Neighbors of {valve_name}: 0b{tunnel:016b}");
+            tunnels[id] = tunnel;
+        }
+
+        let cache = vec![u8::MAX; names.len() * names.len()].into();
+
+        Graph {
+            names,
+            rates,
+            tunnels,
+            cache,
+        }
     }
 
-    info!(
-        "Loaded {n_tunnels} tunnels between {n_valves} valves",
-        n_valves = valves.len(),
-        n_tunnels = tunnels.len(),
-    );
+    /// Recreates the given input to validate that it parsed it right
+    #[cfg(test)]
+    fn input(&self) -> String {
+        debug_assert_eq!(self.names.len(), self.rates.len());
+        debug_assert_eq!(self.names.len(), self.tunnels.len());
+        info!("names={:?}", self.names);
 
-    Day16 { valves, tunnels }
+        let mut lines: Vec<String> = vec![];
+
+        for id in 0..self.names.len() {
+            let name = self.names[id];
+            let rate = self.rates[id];
+
+            let tunnel_names = self
+                .valves_with_mask(self.tunnels[id])
+                .map(|dest| self.name_of(dest))
+                .collect_vec();
+            let plural = tunnel_names.len() != 1;
+            let tunnel_info = tunnel_names.into_iter().join(", ");
+
+            let line = if plural {
+                format!("Valve {name} has flow rate={rate}; tunnels lead to valves {tunnel_info}")
+            } else {
+                format!("Valve {name} has flow rate={rate}; tunnel leads to valve {tunnel_info}")
+            };
+            lines.push(line);
+        }
+
+        lines.sort();
+        lines.join("\n")
+    }
+
+    fn save_dot(&self, dir: &str, state: Option<&StateP1>) -> std::io::Result<()> {
+        use std::fs::File;
+        use std::io::BufWriter;
+        use std::io::Write;
+
+        let filename = format!("{dir}/Day16_{}.dot", self.names[0]);
+        info!("Saving dot file to {:?}", std::path::absolute(&filename));
+
+        let file = File::create(&filename)?;
+        let mut w = BufWriter::new(file);
+        writeln!(w, "digraph Day16_{} {{", self.names[0])?;
+
+        for valve in self.valves() {
+            // Note: We're bundling the flow rate in with the node
+            // dot is better than this, but I am not.
+            let name = format!("{}_{:>02}", self.name_of(valve), self.rate_of(valve));
+
+            // Comment per node
+            writeln!(
+                w,
+                "    # {name} 0b{:0b} ({} neighbors)",
+                self.tunnels[valve],
+                self.tunnels[valve].count_ones()
+            )?;
+
+            // Extra per-node stuff
+            if let Some(state) = state {
+                if ((1 << valve) & state.opened) != 0 {
+                    writeln!(w, "    {name} [color=blue];")?;
+                }
+            }
+
+            // Add an arrow for each tunnel
+            for dest in self.valves_with_mask(self.tunnels[valve]) {
+                let dest_name = format!("{}_{:>02}", self.name_of(dest), self.rate_of(dest));
+                // Main connection
+                writeln!(w, "    {name} -> {dest_name};")?;
+            }
+            writeln!(w)?;
+        }
+
+        writeln!(w, "}}")?;
+        Ok(())
+    }
+
+    #[track_caller]
+    fn name_of(&self, id: usize) -> Name {
+        self.names[id]
+    }
+
+    #[track_caller]
+    fn rate_of(&self, id: usize) -> i64 {
+        self.rates[id]
+    }
+
+    fn valves(&self) -> impl Iterator<Item = usize> {
+        0..self.names.len()
+    }
+
+    fn valves_with_mask(&self, mask: u64) -> impl Iterator<Item = usize> {
+        self.valves().filter(move |v| ((1 << v) & mask) != 0)
+    }
+
+    fn visit_cost(&self, a: usize, b: usize) -> u8 {
+        // TODO: Fast cache from Floyd-Warshall
+        if a == b {
+            return 0;
+        }
+
+        let mut _cache = self.cache.borrow_mut();
+        let best_so_far = &mut _cache[a * self.names.len()..][..self.names.len()];
+
+        let mut queue = vec![(a, 0)];
+        while let Some((curr, cost)) = queue.pop() {
+            best_so_far[curr] = cost;
+            if curr == b {
+                break;
+            }
+
+            for adj_valve in self.valves_with_mask(self.tunnels[curr]) {
+                // If moving to adj_valve would be better than the last time we saw this, do it
+                if (cost + 1) <= best_so_far[adj_valve] {
+                    best_so_far[adj_valve] = cost + 1;
+                    // Re-explore from there, since it's better now (or tied)
+                    queue.push((adj_valve, cost + 1));
+                }
+            }
+
+            queue.sort();
+        }
+        debug_assert_ne!(best_so_far[b], u8::MAX);
+
+        best_so_far[b]
+    }
+
+    fn pressure_delta(&self, open: u64) -> i64 {
+        self.valves_with_mask(open).map(|v| self.rate_of(v)).sum()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct StateP1 {
+    curr: usize,
+    opened: u64,
+    minute: u8,
+    pressure: i64,
+    history: Vec<(u8, u64)>,
+
+    g: Graph,
+}
+
+impl PartialOrd for StateP1 {
+    fn partial_cmp(&self, other: &StateP1) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for StateP1 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.sort_key().cmp(&other.sort_key())
+    }
+}
+
+impl fmt::Debug for StateP1 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let curr = if !cfg!(debug_assertions) {
+            format!("{}", self.curr)
+        } else {
+            format!("{}", self.g.name_of(self.curr))
+        };
+
+        let visited_ids = if !cfg!(debug_assertions) {
+            format!("0b{:016b} ({})", self.opened, self.opened.count_ones())
+        } else {
+            format!(
+                "0b{:016b} ({}) {:?}",
+                self.opened,
+                self.opened.count_ones(),
+                self.g.valves().map(|v| { self.g.name_of(v) }).collect_vec()
+            )
+        };
+
+        f.debug_struct("State")
+            .field("curr", &curr)
+            .field("visited_ids", &visited_ids)
+            .field("minute", &self.minute)
+            .field("pressure", &self.pressure)
+            .finish()
+    }
+}
+
+impl StateP1 {
+    fn new(curr: usize, g: &Graph) -> Self {
+        StateP1 {
+            curr,
+
+            opened: 0,
+            minute: 0,
+            pressure: 0,
+            history: vec![],
+
+            g: g.clone(),
+        }
+    }
+
+    fn has_visited(&self, other_id: usize) -> bool {
+        self.opened & (1 << other_id as u64) != 0
+    }
+
+    fn visit_count(&self) -> usize {
+        self.opened.count_ones() as usize
+    }
+
+    fn sort_key(&self) -> i64 {
+        // bigger is handled sooner
+        self.pressure
+    }
 }
 
 // Part1 ========================================================================
 #[aoc(day16, part1)]
 pub fn part1(input: &str) -> i64 {
-    const AA: Name = Name(['A', 'A']);
+    init_logging();
 
-    let mut day = parse(input);
-    let mut here = AA;
+    const TIME_LIMIT: u8 = 30;
+    let g = Graph::new(input);
 
-    day.valves.get_mut(&here).unwrap().open = true;
+    let mut queue = BinaryHeap::new();
+    queue.push(StateP1::new(0, &g)); // AA is always 0
 
-    // Core idea:
-    //  List all valves by pressure
-    //  Reorder according to tunnel deps (e.g. JJ=20, but we need to go to II first)
-    //  Simulate Move/Open steps (1 min to move, 1 min to open)
-    // ... is this a minimal spanning tree?
-    let mut all_pressure = 0_i32;
+    let mut end = vec![];
+    while let Some(state) = queue.pop() {
+        // info!("[{}] Handling state = {state:?}", queue.len());
+        if state.visit_count() == g.names.len() || state.minute == TIME_LIMIT {
+            end.push(state);
+            continue;
+        }
 
-    // Run for 30 minutes
-    for m in 1..=30 {
-        info!("== Minute {m} ==");
+        let mut did_enqueue = false;
+        for v in g.valves() {
+            let time_left = TIME_LIMIT - state.minute;
+            let visit_cost = g.visit_cost(state.curr, v);
 
-        let open = day
-            .valves
-            .iter()
-            .filter(|(_name, valve)| valve.open)
-            .filter(|(name, _valve)| **name != AA);
-        if log_enabled!(Info) {
-            if open.clone().count() > 0 {
-                let names: String = open
-                    .clone()
-                    .map(|(name, _valve)| name.as_string())
-                    .join(", ");
+            if
+            // Only useful valves
+            (g.rate_of(v) > 0)
+                // That we haven't seen
+                && !state.has_visited(v)
+                // But could
+                && (visit_cost < time_left)
+            {
+                // Note: We're "jumping" to the valve and eating the computed cost.
+                // This means we never "visit" rate=0 nodes between here and there.
 
-                let pressure: i32 = open.clone().map(|(_name, valve)| valve.rate).sum();
-                info!("Valves {names} are open, releasing {pressure} pressure");
-            } else {
-                info!("No valves are open.");
+                // Visit it (takes N minute), and then open the valve (takes 1 minute)
+                let minute = state.minute + visit_cost + 1;
+                let mut pressure = state.pressure;
+                pressure += (visit_cost as i64 + 1) * g.pressure_delta(state.opened);
+                let opened = state.opened | (1 << v);
+
+                let mut history = state.history.clone();
+                history.push((minute, opened));
+
+                // On then next step, this vavle will count
+                let next = StateP1 {
+                    curr: v,
+                    minute,
+                    pressure,
+                    opened,
+                    history,
+                    g: g.clone(),
+                };
+
+                queue.push(next);
+                did_enqueue = true;
             }
         }
-        all_pressure += open.map(|(_name, valve)| valve.rate).sum::<i32>();
 
-        if day.valves[&here].open {
-            // Move rooms
-            // Who knows what's best, let's just be greedy.
-            let mut options = day.tunnels[&here].clone();
-            options.sort_by_key(|n| {
-                if !day.valves[n].open {
-                    -day.valves[n].rate
-                } else {
-                    i32::MAX
-                }
-            });
-
-            here = options[0];
-            info!("You move to valve {here:?}");
-        } else {
-            // Open this one
-            day.valves.get_mut(&here).unwrap().open = true;
-            info!("You open valve {here:?}");
+        if !did_enqueue {
+            end.push(state);
+            continue;
         }
-
-        info!("");
     }
 
-    all_pressure as i64
+    // Run the remaining states to completion
+    for state in &mut end {
+        debug_assert!(
+            state.minute <= TIME_LIMIT,
+            "state.minute = {} for some reason",
+            state.minute
+        );
+
+        // I bet this triggers on bigger input, where you run out of time before exploring everything.
+        debug_assert_eq!(
+            state.opened.count_ones(),
+            g.valves().filter(|&v| g.rate_of(v) != 0).count() as u32,
+        );
+
+        // This isn't free but also won't change anymore.
+        let delta = g.pressure_delta(state.opened);
+        let time_left = 30 - state.minute;
+        state.pressure += delta * time_left as i64;
+        state.minute += time_left;
+
+        debug_assert_eq!(state.minute, 30, "state is bad: {state:#?}");
+    }
+
+    let best = end
+        .into_iter()
+        .max_by_key(|state| state.pressure)
+        .expect("No states finished?");
+
+    if cfg!(debug_assertions) {
+        info!("best = {best:#?}");
+        g.save_dot("target/", Some(&best)).unwrap();
+    }
+
+    best.pressure
 }
 
 // Part2 ========================================================================
-// #[aoc(day16, part2)]
-// pub fn part2(input: &str) -> i64 {
-//     unimplemented!();
-// }
+#[aoc(day16, part2)]
+pub fn part2(input: &str) -> i64 {
+    init_logging();
+
+    const TIME_LIMIT: u8 = 30;
+    let _g = Graph::new(input);
+
+    unimplemented!();
+}
 
 #[cfg(test)]
 mod test {
@@ -161,70 +432,28 @@ mod test {
     use rstest::*;
 
     const EXAMPLE_INPUT: &str = r"Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
-Valve BB has flow rate=13; tunnels lead to valves CC, AA
+Valve BB has flow rate=13; tunnels lead to valves AA, CC
 Valve CC has flow rate=2; tunnels lead to valves DD, BB
-Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
-Valve EE has flow rate=3; tunnels lead to valves FF, DD
+Valve DD has flow rate=20; tunnels lead to valves AA, CC, EE
+Valve EE has flow rate=3; tunnels lead to valves DD, FF
 Valve FF has flow rate=0; tunnels lead to valves EE, GG
 Valve GG has flow rate=0; tunnels lead to valves FF, HH
 Valve HH has flow rate=22; tunnel leads to valve GG
 Valve II has flow rate=0; tunnels lead to valves AA, JJ
-Valve JJ has flow rate=21; tunnel leads to valve II
-";
+Valve JJ has flow rate=21; tunnel leads to valve II";
 
     #[test]
     fn check_parse() {
-        const AA: Name = Name(['A', 'A']);
-        const BB: Name = Name(['B', 'B']);
-        const CC: Name = Name(['C', 'C']);
-        const DD: Name = Name(['D', 'D']);
-        const EE: Name = Name(['E', 'E']);
-        const FF: Name = Name(['F', 'F']);
-        const GG: Name = Name(['G', 'G']);
-        const HH: Name = Name(['H', 'H']);
-        const II: Name = Name(['I', 'I']);
-        const JJ: Name = Name(['J', 'J']);
-
-        // Note: When comparing these two, HashMap ordering is RANDOM, so if anything is wrong the entire thing gets noisey!
         assert_eq!(
-            parse(EXAMPLE_INPUT),
-            Day16 {
-                valves: [
-                    (AA, Valve::new(0)),
-                    (BB, Valve::new(13)),
-                    (CC, Valve::new(2)),
-                    (DD, Valve::new(20)),
-                    (EE, Valve::new(3)),
-                    (FF, Valve::new(0)),
-                    (GG, Valve::new(0)),
-                    (HH, Valve::new(22)),
-                    (II, Valve::new(0)),
-                    (JJ, Valve::new(21)),
-                ]
-                .into_iter()
-                .collect(),
-
-                tunnels: [
-                    (AA, vec![DD, II, BB]),
-                    (BB, vec![CC, AA]),
-                    (CC, vec![DD, BB]),
-                    (DD, vec![CC, AA, EE]),
-                    (EE, vec![FF, DD]),
-                    (FF, vec![EE, GG]),
-                    (GG, vec![FF, HH]),
-                    (HH, vec![GG]),
-                    (II, vec![AA, JJ]),
-                    (JJ, vec![II]),
-                ]
-                .into_iter()
-                .collect(),
-            }
+            Graph::new(EXAMPLE_INPUT.trim_start()).input(),
+            EXAMPLE_INPUT
         );
     }
 
     #[rstest]
     #[case::given(1651, EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(EZ_TIMEOUT)]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -236,17 +465,18 @@ Valve JJ has flow rate=21; tunnel leads to valve II
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(999_999, EXAMPLE_INPUT)]
-    // #[trace]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+    #[rstest]
+    #[case::given(1707, EXAMPLE_INPUT)]
+    #[trace]
+    #[timeout(EZ_TIMEOUT)]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
