@@ -127,6 +127,16 @@ pub enum Cardinal {
 impl Cardinal {
     pub const ALL_NO_DIAG: [Cardinal; 4] = [Norð, Souð, East, West];
 
+    pub fn from_char(c: char) -> Self {
+        match c {
+            '^' => Norð,
+            '>' => East,
+            'v' => Souð,
+            '<' => West,
+            _ => unreachable!("Invalid direction character: {c}. Expected one of ^>v<"),
+        }
+    }
+
     pub fn rev(&self) -> Self {
         let mut r = Cardinal::none();
 
