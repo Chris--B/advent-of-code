@@ -50,7 +50,7 @@ fn init_logging() {
     use env_logger::{Builder, Env};
 
     let mut env = Env::default();
-    if cfg!(test) || cfg!(debug_assert) {
+    if cfg!(test) || cfg!(debug_assertions) {
         // Debug and test builds should log MORE
         env = env.default_filter_or("debug");
     } else {

@@ -27,7 +27,7 @@ fn parse_part(line: &str) -> Part {
     let mut part = [0; 4];
 
     let mut i = 0;
-    let groups = line.bytes().group_by(|b| b.is_ascii_digit());
+    let groups = line.bytes().chunk_by(|b| b.is_ascii_digit());
     for (is_num, chars) in &groups {
         if is_num {
             let num = chars.collect_vec();

@@ -42,7 +42,7 @@ impl Almanac {
         let mut maps: [Vec<MapEntry>; 7] = Default::default();
         let mut i = 0;
 
-        for (is_empty, group) in &s.lines().group_by(|line| line.is_empty()) {
+        for (is_empty, group) in &s.lines().chunk_by(|line| line.is_empty()) {
             if is_empty {
                 i += 1;
             } else {

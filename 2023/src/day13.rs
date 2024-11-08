@@ -36,7 +36,7 @@ fn find_mirrored_axis(rows: &[String], cols: &[String]) -> i64 {
 pub fn part1(input: &str) -> i64 {
     let mut sum = 0;
 
-    let blocks = input.lines().group_by(|l| l.trim().is_empty());
+    let blocks = input.lines().chunk_by(|l| l.trim().is_empty());
     for (is_empty, block) in &blocks {
         if is_empty {
             continue;
@@ -115,7 +115,7 @@ fn find_smudge_mirrored_axis(rows: &[String], cols: &[String]) -> i64 {
 pub fn part2(input: &str) -> i64 {
     let mut sum = 0;
 
-    let blocks = input.lines().group_by(|l| l.trim().is_empty());
+    let blocks = input.lines().chunk_by(|l| l.trim().is_empty());
     for (is_empty, block) in &blocks {
         if is_empty {
             continue;

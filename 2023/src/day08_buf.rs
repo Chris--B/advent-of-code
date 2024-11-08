@@ -22,8 +22,10 @@ const fn is_end(idx: u32) -> bool {
 // If it does not, it has to zero them for us, which we do not need nor want.
 // This shows up when trying to benchmark in hot loops
 fn alloc() -> &'static mut [[Node; 2]] {
+    use std::ptr::addr_of_mut;
     static mut MEM: [[Node; 2]; N] = [[0, 0]; N];
-    unsafe { &mut MEM }
+
+    unsafe { &mut *addr_of_mut!(MEM) }
 }
 
 const N: usize = 1 + idx_of(*b"ZZZ") as usize;

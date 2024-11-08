@@ -30,7 +30,7 @@ fn parse(input: &str) -> (&[u8], NodeMap) {
 
 fn walk<'a>(directions: &'a [u8], map: &'a NodeMap, mut here: &'a Node) -> i64 {
     for (steps, d) in directions.iter().cycle().enumerate() {
-        if here.ends_with(&[b'Z']) {
+        if here.ends_with(b"Z") {
             // dbg!(steps);
             return steps as i64;
         }
@@ -96,7 +96,7 @@ pub fn part2(input: &str) -> i64 {
 
     // Walk all ghost 'simultaneously'
     map.keys()
-        .filter(|k| k.ends_with(&[b'A']))
+        .filter(|k| k.ends_with(b"A"))
         .map(|h| walk(directions, &map, h))
         .reduce(|acc, s| acc.lcm(&s))
         .unwrap_or(0)
