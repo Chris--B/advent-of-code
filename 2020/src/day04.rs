@@ -183,7 +183,7 @@ pub fn parse_input(input: &str) -> Vec<Passport> {
     input
         .trim()
         .lines()
-        .group_by(|l| l.trim().is_empty())
+        .chunk_by(|l| l.trim().is_empty())
         .into_iter()
         .filter_map(|(is_empty, record)| if is_empty { None } else { Some(record) })
         .filter_map(Passport::from_text)

@@ -61,7 +61,7 @@ pub fn parse_input(input: &str) -> Vec<GroupYesCounts> {
     input
         .trim()
         .lines()
-        .group_by(|l| l.trim().is_empty())
+        .chunk_by(|l| l.trim().is_empty())
         .into_iter()
         .filter_map(|(is_empty, lines)| if is_empty { None } else { Some(lines) })
         .map(|lines| {

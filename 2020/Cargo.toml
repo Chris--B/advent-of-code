@@ -10,7 +10,7 @@ default-run = "aoc20"
 [dependencies]
 aoc-runner = "*"
 aoc-runner-derive = "*"
-itertools = "0.9"
+itertools = "0.13"
 lazy_static = "1"
 regex = "1"
 smallvec = "1"
