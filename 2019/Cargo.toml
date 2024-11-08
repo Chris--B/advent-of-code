@@ -11,5 +11,5 @@ default-run = "aoc19"
 aoc-runner = "*"
 aoc-runner-derive = "*"
 smallvec = "1"
-itertools = "0.8"
+itertools = "0.13"
 intcode = { path = "../intcode" }

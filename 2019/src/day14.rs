@@ -7,7 +7,7 @@ use std::collections::HashMap;
 pub type Material = SmallVec<[u8; 5]>;
 pub type Inputs = SmallVec<[(u64, Material); 8]>;
 
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 struct Reactant {
     material: Material,
     rank: u64,
@@ -22,19 +22,17 @@ impl std::fmt::Debug for Reactant {
     }
 }
 
+impl PartialOrd for Reactant {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for Reactant {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.rank.cmp(&other.rank)
     }
 }
-
-impl PartialOrd for Reactant {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.rank.partial_cmp(&other.rank)
-    }
-}
-
-impl Eq for Reactant {}
 
 impl PartialEq for Reactant {
     fn eq(&self, other: &Self) -> bool {

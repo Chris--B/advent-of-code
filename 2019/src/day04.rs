@@ -66,10 +66,7 @@ impl PartialEq for WipPassword {
 
 impl PartialOrd for WipPassword {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // When the two passwords are not equal length, we want to do a prefix compare
-        // This way, a password of "2" >= "234567", which is how the puzzle works.
-        let len = usize::min(self.pwd.len(), other.pwd.len());
-        self.pwd[..len].partial_cmp(&other.pwd[..len])
+        Some(self.cmp(other))
     }
 }
 
@@ -109,8 +106,7 @@ pub fn p1_simple(range: &(u32, u32)) -> usize {
         .collect();
     tasks.reserve(1_000);
     // working set to modify as we iterate over tasks
-    let mut stage: Vec<WipPassword> = vec![];
-    stage.reserve(1_000);
+    let mut stage: Vec<WipPassword> = Vec::with_capacity(1_000);
 
     for _ in 0..5 {
         for curr_pwd in &tasks {
@@ -208,8 +204,7 @@ pub fn p2_simple(range: &(u32, u32)) -> usize {
         .collect();
     tasks.reserve(1_000);
     // working set to modify as we iterate over tasks
-    let mut stage: Vec<WipPassword> = vec![];
-    stage.reserve(1_000);
+    let mut stage: Vec<WipPassword> = Vec::with_capacity(1_000);
 
     for _ in 0..5 {
         for curr_pwd in &tasks {

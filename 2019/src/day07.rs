@@ -75,7 +75,7 @@ pub fn part1_simple(intcode: &[i64]) -> i64 {
 fn run_wild_amp_loop(intcode: &[i64], phases: &[i64]) -> i64 {
     let mut amps = vec![Vm::with_memory_from_slice(intcode); 5];
     let mut signals = vec![0]; // Send a single 0 for A's first signal
-    let mut halted = vec![false; 5];
+    let mut halted = [false; 5];
 
     // Send the phase as the first input for each amp
     for i in 0..5 {
