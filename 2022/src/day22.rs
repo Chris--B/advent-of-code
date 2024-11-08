@@ -84,7 +84,7 @@ pub fn part1(input: &str) -> i64 {
     let mut here = IVec2::new(START_X, 1);
     let mut dir = IVec2::new(1, 0);
 
-    for (is_digit, mut group) in &moves.iter().group_by(|b| b.is_ascii_digit()) {
+    for (is_digit, mut group) in &moves.iter().chunk_by(|b| b.is_ascii_digit()) {
         if is_digit {
             let steps = group
                 .copied()
@@ -741,7 +741,7 @@ pub fn part2(input: &str) -> i64 {
 
     let mut map = Map::new(grid);
 
-    for (is_digit, mut group) in &moves.iter().group_by(|b| b.is_ascii_digit()) {
+    for (is_digit, mut group) in &moves.iter().chunk_by(|b| b.is_ascii_digit()) {
         if is_digit {
             let steps = group
                 .copied()

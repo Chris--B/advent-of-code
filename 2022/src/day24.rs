@@ -322,8 +322,7 @@ pub fn part2(input: &str) -> i32 {
 #[cfg(test)]
 mod test {
     use super::*;
-    #[allow(unused_imports)]
-    use pretty_assertions::{assert_eq, assert_ne};
+    use pretty_assertions::assert_eq;
     use rstest::*;
 
     const _EXAMPLE_INPUT_TINY: &str = r"

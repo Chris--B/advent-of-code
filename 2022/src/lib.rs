@@ -81,7 +81,6 @@ pub mod prelude {
     pub const EZ_TIMEOUT: Duration = Duration::from_millis(1_000);
     pub const LONG_TIMEOUT: Duration = Duration::from_millis(5_000);
 
-    pub use derive_more::*;
     pub use either::*;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
