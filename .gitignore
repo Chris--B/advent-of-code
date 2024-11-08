@@ -10,11 +10,14 @@ _*
 **/out/
 out.*
 
-# Visualizations
+# Visualizations and other debuging output
 **/viz/
 *.svg
 *.png
+*.gif
 *.mp4
+*.dot
+*.txt
 
 # Perf/Debug trace files
 *.trace
