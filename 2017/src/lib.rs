@@ -1,7 +1,7 @@
 use aoc_runner_derive::aoc_lib;
 
 pub mod day01;
-// pub mod day02;
+pub mod day02;
 // pub mod day03;
 // pub mod day04;
 // pub mod day05;
@@ -33,6 +33,8 @@ pub mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
+
+    pub use itertools::Itertools;
 
     pub use crate::Cardinal;
     pub const Norð: Cardinal = Cardinal::Norð;

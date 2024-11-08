@@ -5,7 +5,7 @@ if [ "$#" -eq 2 ] && [ "$2" == "looping" ]; then
     echo $PWD
     set -xe
 
-    export RUST_BACKTRACE=1
+    # export RUST_BACKTRACE=1
     export CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true
 
     cargo clippy --tests
