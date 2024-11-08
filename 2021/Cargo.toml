@@ -18,16 +18,16 @@ path = "src/gif_of.rs"
 aoc-runner = "*"
 aoc-runner-derive = "*"
 
-itertools = "0.10"
+itertools = "0.13"
 lazy_static = "1"
 regex = "1"
 smallvec = { version = "1", features = ["const_generics"] }
 rayon = "1"
-core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true}
-image = "0.23"
+core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true }
+image = { version = "0.25", features = ["gif"] }
 rand = "0.8"
 scan_fmt = "0.2"
-pretty_assertions = "*"
+pretty_assertions = "1"
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]

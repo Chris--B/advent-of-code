@@ -1,7 +1,7 @@
 use image::ImageBuffer;
 use image::Rgba;
 use image::{
-    gif::{GifEncoder, Repeat},
+    codecs::gif::{GifEncoder, Repeat},
     Delay, Frame,
 };
 use std::fs::File;

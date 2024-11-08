@@ -35,7 +35,7 @@ fn expand(rules: &HashMap<(char, char), char>, s: &mut String) {
 
     for ((i, a), (_, b)) in s.chars().enumerate().tuple_windows() {
         if let Some(x) = rules.get(&(a, b)) {
-            inserts.entry(i + 1).or_insert_with(Vec::new).push(*x);
+            inserts.entry(i + 1).or_default().push(*x);
         }
     }
 

@@ -225,7 +225,7 @@ pub fn part2(input: &str) -> usize {
 
     if crate::saving_images() {
         use image::{
-            gif::{GifEncoder, Repeat},
+            codecs::gif::{GifEncoder, Repeat},
             Delay, Frame,
         };
 
