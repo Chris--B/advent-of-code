@@ -1,13 +1,6 @@
-
 use std::{
-    env,
-    fmt,
-    fs,
-    collections,
-    io::{
-        self,
-        BufRead,
-    },
+    collections, env, fmt, fs,
+    io::{self, BufRead},
     str::FromStr,
 };
 
@@ -16,11 +9,11 @@ use failure::bail;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 struct Claim {
-    id:          u32,
+    id: u32,
     offset_left: u32,
-    offset_top:  u32,
-    width:       u32,
-    height:      u32,
+    offset_top: u32,
+    width: u32,
+    height: u32,
 }
 
 impl FromStr for Claim {
@@ -35,16 +28,16 @@ impl FromStr for Claim {
 
         let mut offsets = parts.next().unwrap().split(",").map(|t| {
             if t.ends_with(":") {
-                &t[..t.len()-1]
+                &t[..t.len() - 1]
             } else {
                 t
             }
         });
         let offset_left: u32 = offsets.next().unwrap().parse()?;
-        let offset_top:  u32 = offsets.next().unwrap().parse()?;
+        let offset_top: u32 = offsets.next().unwrap().parse()?;
 
         let mut dims = parts.next().unwrap().split("x");
-        let width:  u32 = dims.next().unwrap().parse()?;
+        let width: u32 = dims.next().unwrap().parse()?;
         let height: u32 = dims.next().unwrap().parse()?;
 
         Ok(Claim {
@@ -64,14 +57,15 @@ fn check_claim() {
         Claim {
             id: 123,
             offset_left: 3,
-            offset_top:  2,
-            width:       5,
-            height:      4,
-        });
+            offset_top: 2,
+            width: 5,
+            height: 4,
+        }
+    );
 }
 
 impl Claim {
-    fn sq_inches(&self) -> impl Iterator<Item=(u32, u32)> {
+    fn sq_inches(&self) -> impl Iterator<Item = (u32, u32)> {
         struct Iter {
             claim: Claim,
             index: u32,
@@ -105,7 +99,8 @@ impl Claim {
 #[aoc(day3, part1)]
 fn run1(input: &str) -> Result<i32, failure::Error> {
     let mut fabric = collections::HashMap::new();
-    input.lines()
+    input
+        .lines()
         .map(|l| l.parse::<Claim>().unwrap())
         .for_each(|claim| {
             for point in claim.sq_inches() {
@@ -127,9 +122,7 @@ fn run1(input: &str) -> Result<i32, failure::Error> {
 #[aoc(day3, part2)]
 fn run2(input: &str) -> Result<u32, failure::Error> {
     let mut fabric = collections::HashMap::new();
-    let claims: Vec<Claim> = input.lines()
-        .map(|l| l.parse::<Claim>().unwrap())
-        .collect();
+    let claims: Vec<Claim> = input.lines().map(|l| l.parse::<Claim>().unwrap()).collect();
 
     for claim in claims.iter() {
         for point in claim.sq_inches() {
@@ -138,8 +131,7 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
         }
     }
 
-    'claim:
-    for claim in claims.iter() {
+    'claim: for claim in claims.iter() {
         for point in claim.sq_inches() {
             if fabric.get(&point).unwrap() != &1 {
                 continue 'claim;

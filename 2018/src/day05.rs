@@ -1,14 +1,9 @@
-
+use aoc_runner_derive::{aoc, aoc_generator};
 use std::{
-    env,
-    fs,
-    io::{
-        self,
-        Read,
-    },
+    env, fs,
+    io::{self, Read},
     time,
 };
-use aoc_runner_derive::{aoc, aoc_generator};
 
 #[aoc(day5, part1)]
 fn run1(input: &str) -> Result<usize, failure::Error> {
@@ -28,7 +23,7 @@ fn is_lower(c: char) -> bool {
     c == c.to_ascii_lowercase()
 }
 
-fn collapse(mut cur: impl Iterator<Item=char>) -> String {
+fn collapse(mut cur: impl Iterator<Item = char>) -> String {
     let mut res = String::new();
     res.push(cur.next().unwrap());
     loop {
@@ -40,8 +35,8 @@ fn collapse(mut cur: impl Iterator<Item=char>) -> String {
                 } else {
                     let a: char = res.chars().last().unwrap();
                     let b: char = next;
-                    if (is_lower(a) && is_upper(b) && a.to_ascii_uppercase() == b) ||
-                       (is_upper(a) && is_lower(b) && a.to_ascii_lowercase() == b)
+                    if (is_lower(a) && is_upper(b) && a.to_ascii_uppercase() == b)
+                        || (is_upper(a) && is_lower(b) && a.to_ascii_lowercase() == b)
                     {
                         res.pop();
                     } else {
@@ -66,21 +61,22 @@ fn optimize(polymer: &str) -> String {
     let polymer = &collapse(polymer.chars());
 
     "abcdefghijklmnopqrstuvwxyz"
-    .chars()
-    .map(|unit| {
-        let trial_polymer = polymer
-            .chars()
-            .filter(|c| *c != unit && *c != unit.to_ascii_uppercase());
-        collapse(trial_polymer)
-    })
-    .min_by_key(|polymer| polymer.len()).unwrap()
+        .chars()
+        .map(|unit| {
+            let trial_polymer = polymer
+                .chars()
+                .filter(|c| *c != unit && *c != unit.to_ascii_uppercase());
+            collapse(trial_polymer)
+        })
+        .min_by_key(|polymer| polymer.len())
+        .unwrap()
 }
 
 #[test]
 fn check() {
-    assert_eq!(collapse("aA".chars()),     "");
-    assert_eq!(collapse("abBA".chars()),   "");
-    assert_eq!(collapse("abAB".chars()),   "abAB");
+    assert_eq!(collapse("aA".chars()), "");
+    assert_eq!(collapse("abBA".chars()), "");
+    assert_eq!(collapse("abAB".chars()), "abAB");
     assert_eq!(collapse("aabAAB".chars()), "aabAAB");
     assert_eq!(collapse("dabAcCaCBAcCcaDA".chars()), "dabCBAcaDA");
 }

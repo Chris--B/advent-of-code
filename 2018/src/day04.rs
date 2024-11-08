@@ -1,11 +1,6 @@
 use std::{
-    env,
-    fs,
-    collections,
-    io::{
-        self,
-        BufRead,
-    },
+    collections, env, fs,
+    io::{self, BufRead},
     str::FromStr,
 };
 
@@ -15,10 +10,10 @@ use regex::Regex;
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
 struct TimeStamp {
-    year:   u32,
-    month:  u8,
-    day:    u8,
-    hour:   u8,
+    year: u32,
+    month: u8,
+    day: u8,
+    hour: u8,
     minute: u8,
 }
 
@@ -30,16 +25,15 @@ impl FromStr for TimeStamp {
         }
         let caps = EXPR.captures(s).expect("No regex matches?");
 
-        let year:   u32 = caps.get(1)
-                              .expect("regex fail on year").as_str().parse()?;
-        let month:  u8  = caps.get(2)
-                              .expect("regex fail on month").as_str().parse()?;
-        let day:    u8  = caps.get(3)
-                              .expect("regex fail on day").as_str().parse()?;
-        let hour:   u8  = caps.get(4)
-                              .expect("regex fail on hour").as_str().parse()?;
-        let minute: u8  = caps.get(5)
-                              .expect("regex fail on minute").as_str().parse()?;
+        let year: u32 = caps.get(1).expect("regex fail on year").as_str().parse()?;
+        let month: u8 = caps.get(2).expect("regex fail on month").as_str().parse()?;
+        let day: u8 = caps.get(3).expect("regex fail on day").as_str().parse()?;
+        let hour: u8 = caps.get(4).expect("regex fail on hour").as_str().parse()?;
+        let minute: u8 = caps
+            .get(5)
+            .expect("regex fail on minute")
+            .as_str()
+            .parse()?;
 
         assert_eq!(year, 1518);
 
@@ -64,8 +58,8 @@ impl Event {
     fn timestamp(&self) -> TimeStamp {
         match self {
             Event::ShiftStart(time, _) => *time,
-            Event::FallsAsleep(time)   => *time,
-            Event::WakesUp(time)       => *time,
+            Event::FallsAsleep(time) => *time,
+            Event::WakesUp(time) => *time,
         }
     }
 }
@@ -83,9 +77,7 @@ impl FromStr for Event {
                 static ref EXPR: Regex = Regex::new(r#"Guard #(\d+)"#).unwrap();
             }
 
-            let id = EXPR.captures(s).unwrap()
-                         .get(1).unwrap().as_str()
-                         .parse()?;
+            let id = EXPR.captures(s).unwrap().get(1).unwrap().as_str().parse()?;
             Ok(Event::ShiftStart(time, id))
         }
     }
@@ -93,10 +85,7 @@ impl FromStr for Event {
 
 #[aoc(day4, part1)]
 fn run1(input: &str) -> Result<u32, failure::Error> {
-    let mut events: Vec<Event> = input
-        .lines()
-        .map(|line| line.parse().unwrap())
-        .collect();
+    let mut events: Vec<Event> = input.lines().map(|line| line.parse().unwrap()).collect();
     events.sort_by_key(|e| e.timestamp());
 
     println!("Found {} events", events.len());
@@ -110,10 +99,12 @@ fn run1(input: &str) -> Result<u32, failure::Error> {
             if let Event::ShiftStart(_, new_id) = event {
                 id = *new_id;
             }
-            println!("#{:<4} {:>02}-{:>02}",
-                     id,
-                     event.timestamp().hour,
-                     event.timestamp().minute);
+            println!(
+                "#{:<4} {:>02}-{:>02}",
+                id,
+                event.timestamp().hour,
+                event.timestamp().minute
+            );
         }
         println!("");
     }
@@ -126,7 +117,6 @@ fn run1(input: &str) -> Result<u32, failure::Error> {
     let mut last_minute = 0;
     for event in events.iter() {
         if let Event::ShiftStart(_, new_id) = event {
-
             id = *new_id;
         }
         let minute: usize;
@@ -138,45 +128,50 @@ fn run1(input: &str) -> Result<u32, failure::Error> {
 
         let minutes = asleep_map.entry(id).or_insert([0u32; 60]);
         match event {
-            Event::ShiftStart(..)  => {
+            Event::ShiftStart(..) => {
                 // Awake
-            },
+            }
             Event::FallsAsleep(..) => {
                 last_minute = minute;
-            },
-            Event::WakesUp(..)     => {
+            }
+            Event::WakesUp(..) => {
                 for m in last_minute..minute {
                     minutes[m] += 1;
                 }
-            },
+            }
         }
     }
 
-    let sleepy_guard = asleep_map.iter()
-        .max_by_key::<u32, _>(|(_k, v)| v.iter().sum()).unwrap()
+    let sleepy_guard = asleep_map
+        .iter()
+        .max_by_key::<u32, _>(|(_k, v)| v.iter().sum())
+        .unwrap()
         .0;
     let best_minute = asleep_map
-        .get(&sleepy_guard).unwrap()
+        .get(&sleepy_guard)
+        .unwrap()
         .iter()
         .enumerate()
-        .max_by_key(|(_i, count)| *count).unwrap()
+        .max_by_key(|(_i, count)| *count)
+        .unwrap()
         .0 as u32;
     println!("Guard #{} @ minute {}", sleepy_guard, best_minute);
-    println!("          {}",
-             asleep_map.get(&sleepy_guard).unwrap()
-                .iter()
-                .map(|count| format!(" {:>2}", count))
-                .collect::<String>());
+    println!(
+        "          {}",
+        asleep_map
+            .get(&sleepy_guard)
+            .unwrap()
+            .iter()
+            .map(|count| format!(" {:>2}", count))
+            .collect::<String>()
+    );
 
     Ok(sleepy_guard * best_minute)
 }
 
 #[aoc(day4, part2)]
 fn run2(input: &str) -> Result<u32, failure::Error> {
-    let mut events: Vec<Event> = input
-        .lines()
-        .map(|line| line.parse().unwrap())
-        .collect();
+    let mut events: Vec<Event> = input.lines().map(|line| line.parse().unwrap()).collect();
     events.sort_by_key(|e| e.timestamp());
 
     println!("Found {} events", events.len());
@@ -190,10 +185,12 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
             if let Event::ShiftStart(_, new_id) = event {
                 id = *new_id;
             }
-            println!("#{:<4} {:>02}-{:>02}",
-                     id,
-                     event.timestamp().hour,
-                     event.timestamp().minute);
+            println!(
+                "#{:<4} {:>02}-{:>02}",
+                id,
+                event.timestamp().hour,
+                event.timestamp().minute
+            );
         }
         println!("");
     }
@@ -206,7 +203,6 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
     let mut last_minute = 0;
     for event in events.iter() {
         if let Event::ShiftStart(_, new_id) = event {
-
             id = *new_id;
         }
         let minute: usize;
@@ -218,29 +214,32 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
 
         let minutes = asleep_map.entry(id).or_insert([0u32; 60]);
         match event {
-            Event::ShiftStart(..)  => {
+            Event::ShiftStart(..) => {
                 // Awake
-            },
+            }
             Event::FallsAsleep(..) => {
                 last_minute = minute;
-            },
-            Event::WakesUp(..)     => {
+            }
+            Event::WakesUp(..) => {
                 for m in last_minute..minute {
                     minutes[m] += 1;
                 }
-            },
+            }
         }
     }
 
     let (best_id, best_minute, _best_count) = asleep_map
         .iter()
         .map(|(id, minutes)| {
-            let (minute, count) = minutes.iter()
+            let (minute, count) = minutes
+                .iter()
                 .enumerate()
-                .max_by_key(|(_i, count)| *count).unwrap();
+                .max_by_key(|(_i, count)| *count)
+                .unwrap();
             (id, minute as u32, count)
         })
-        .max_by_key(|(_id, _minute, count)| *count).unwrap();
+        .max_by_key(|(_id, _minute, count)| *count)
+        .unwrap();
     println!("Guard #{} @ minute {}", best_id, best_minute);
     Ok(best_id * best_minute)
 }

@@ -2,12 +2,8 @@
 
 use std::{
     collections::*,
-    env,
-    fs,
-    io::{
-        self,
-        BufRead,
-    },
+    env, fs,
+    io::{self, BufRead},
     str,
 };
 
@@ -18,9 +14,9 @@ use regex::Regex;
 #[derive(Copy, Clone, Debug)]
 struct Instr {
     opcode: u32, // [0-15]
-    a:      u32, // Input  - opcode determines whether this is a reg id or imm.
-    b:      u32, // Input  - opcode determines whether this is a reg id or imm.
-    c:      u32, // Output - opcode determines whether this is a reg id or imm.
+    a: u32,      // Input  - opcode determines whether this is a reg id or imm.
+    b: u32,      // Input  - opcode determines whether this is a reg id or imm.
+    c: u32,      // Output - opcode determines whether this is a reg id or imm.
 }
 
 impl str::FromStr for Instr {
@@ -28,32 +24,23 @@ impl str::FromStr for Instr {
     fn from_str(s: &str) -> Result<Instr, failure::Error> {
         let mut iter = s.split(' ');
         let opcode: u32 = iter.next().unwrap().parse().expect("Bad opcode");
-        let a:      u32 = iter.next().unwrap().parse().expect("Bad 'a' input");
-        let b:      u32 = iter.next().unwrap().parse().expect("Bad 'b' input");
-        let c:      u32 = iter.next().unwrap().parse().expect("Bad 'c' output");
+        let a: u32 = iter.next().unwrap().parse().expect("Bad 'a' input");
+        let b: u32 = iter.next().unwrap().parse().expect("Bad 'b' input");
+        let c: u32 = iter.next().unwrap().parse().expect("Bad 'c' output");
 
-        Ok(Instr {
-            opcode,
-            a,
-            b,
-            c
-        })
+        Ok(Instr { opcode, a, b, c })
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 struct UnknownOpcode {
     before: [u32; 4],
-    after:  [u32; 4],
-    instr:  Instr
+    after: [u32; 4],
+    instr: Instr,
 }
 
 impl UnknownOpcode {
-    fn parse_from_input(
-            before_line: &str,
-            instr_line:  &str,
-            after_line:  &str)
-    -> UnknownOpcode {
+    fn parse_from_input(before_line: &str, instr_line: &str, after_line: &str) -> UnknownOpcode {
         assert!(before_line.starts_with("Before: ["));
         let before_line = before_line.trim_left_matches("Before: ");
 
@@ -62,8 +49,8 @@ impl UnknownOpcode {
 
         UnknownOpcode {
             before: parse_u32x4(before_line),
-            after:  parse_u32x4(after_line),
-            instr:  str::parse(instr_line).expect("Bad instr"),
+            after: parse_u32x4(after_line),
+            instr: str::parse(instr_line).expect("Bad instr"),
         }
     }
 }
@@ -75,15 +62,34 @@ fn parse_u32x4(s: &str) -> [u32; 4] {
     let captures = EXPR.captures(s).unwrap();
 
     [
-        captures.get(1).expect("No capture 1").as_str().parse().expect("Bad parse 1"),
-        captures.get(2).expect("No capture 2").as_str().parse().expect("Bad parse 2"),
-        captures.get(3).expect("No capture 3").as_str().parse().expect("Bad parse 3"),
-        captures.get(4).expect("No capture 4").as_str().parse().expect("Bad parse 4"),
+        captures
+            .get(1)
+            .expect("No capture 1")
+            .as_str()
+            .parse()
+            .expect("Bad parse 1"),
+        captures
+            .get(2)
+            .expect("No capture 2")
+            .as_str()
+            .parse()
+            .expect("Bad parse 2"),
+        captures
+            .get(3)
+            .expect("No capture 3")
+            .as_str()
+            .parse()
+            .expect("Bad parse 3"),
+        captures
+            .get(4)
+            .expect("No capture 4")
+            .as_str()
+            .parse()
+            .expect("Bad parse 4"),
     ]
 }
 
-#[derive(Copy, Clone, Debug, Hash)]
-#[derive(PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 enum Opcode {
     Addr,
     Addi,
@@ -109,35 +115,35 @@ fn exec(mut r: [u32; 4], op: Opcode, instr: Instr) -> [u32; 4] {
     let c = instr.c as usize;
 
     match op {
-        Opcode::Addi => r[c] = r[a]  +  b as u32,
-        Opcode::Muli => r[c] = r[a]  *  b as u32,
-        Opcode::Bani => r[c] = r[a]  &  b as u32,
-        Opcode::Bori => r[c] = r[a]  |  b as u32,
+        Opcode::Addi => r[c] = r[a] + b as u32,
+        Opcode::Muli => r[c] = r[a] * b as u32,
+        Opcode::Bani => r[c] = r[a] & b as u32,
+        Opcode::Bori => r[c] = r[a] | b as u32,
         Opcode::Seti => r[c] = a as u32,
 
-        Opcode::Addr => r[c] = r[a]  +  r[b],
-        Opcode::Mulr => r[c] = r[a]  *  r[b],
-        Opcode::Banr => r[c] = r[a]  &  r[b],
-        Opcode::Borr => r[c] = r[a]  |  r[b],
+        Opcode::Addr => r[c] = r[a] + r[b],
+        Opcode::Mulr => r[c] = r[a] * r[b],
+        Opcode::Banr => r[c] = r[a] & r[b],
+        Opcode::Borr => r[c] = r[a] | r[b],
         Opcode::Setr => r[c] = r[a],
 
-        Opcode::Gtri => r[c] = if r[a] >  b as u32 { 1 } else { 0 },
+        Opcode::Gtri => r[c] = if r[a] > b as u32 { 1 } else { 0 },
         Opcode::Eqri => r[c] = if r[a] == b as u32 { 1 } else { 0 },
 
-        Opcode::Gtir => r[c] = if a as u32 >  r[b] { 1 } else { 0 },
+        Opcode::Gtir => r[c] = if a as u32 > r[b] { 1 } else { 0 },
         Opcode::Eqir => r[c] = if a as u32 == r[b] { 1 } else { 0 },
 
-        Opcode::Gtrr => r[c] = if r[a] >  r[b] { 1 } else { 0 },
+        Opcode::Gtrr => r[c] = if r[a] > r[b] { 1 } else { 0 },
         Opcode::Eqrr => r[c] = if r[a] == r[b] { 1 } else { 0 },
     }
 
-   r
+    r
 }
 
 fn guess_opcode(ops: &[Opcode], unknown: UnknownOpcode) -> Vec<Opcode> {
     let before = unknown.before;
-    let after  = unknown.after;
-    let instr  = unknown.instr;
+    let after = unknown.after;
+    let instr = unknown.instr;
 
     let mut possible = vec![];
     for op in ops {
@@ -171,21 +177,25 @@ fn run1(input: &str) -> Result<u32, failure::Error> {
     ];
     let starter_unknown = UnknownOpcode {
         before: [3, 2, 1, 1],
-        instr:  Instr { opcode: 9, a: 2, b: 1, c: 2},
-        after:  [3, 2, 2, 1]
+        instr: Instr {
+            opcode: 9,
+            a: 2,
+            b: 1,
+            c: 2,
+        },
+        after: [3, 2, 2, 1],
     };
     let behaves_like = guess_opcode(&opcodes, starter_unknown);
-    println!("{:#?} behaves like {} opcodes:",
-             starter_unknown,
-             behaves_like.len());
+    println!(
+        "{:#?} behaves like {} opcodes:",
+        starter_unknown,
+        behaves_like.len()
+    );
     for op in behaves_like {
         println!("  {:?}", op);
     }
 
-    let lines: Vec<String> = input
-        .lines()
-        .map(|s| s.to_string())
-        .collect();
+    let lines: Vec<String> = input.lines().map(|s| s.to_string()).collect();
 
     let unknowns: Vec<UnknownOpcode> = lines
         .chunks_exact(4)
@@ -195,10 +205,9 @@ fn run1(input: &str) -> Result<u32, failure::Error> {
             assert!(thing[0].starts_with("Before: ["));
             assert!(thing[2].starts_with("After:  ["));
 
-            UnknownOpcode::parse_from_input( &thing[0], &thing[1], &thing[2])
+            UnknownOpcode::parse_from_input(&thing[0], &thing[1], &thing[2])
         })
         .collect();
-
 
     println!("Found {} unknowns to test.", unknowns.len());
     let mut count = 0;
@@ -215,19 +224,18 @@ fn run1(input: &str) -> Result<u32, failure::Error> {
             count += 1;
         }
     }
-    println!("Unknowns with 3 or more potential opcodes: {}/{}",
-             count,
-             unknowns.len());
+    println!(
+        "Unknowns with 3 or more potential opcodes: {}/{}",
+        count,
+        unknowns.len()
+    );
 
     Ok(count)
 }
 
 #[aoc(day16, part2)]
 fn run2(input: &str) -> Result<u32, failure::Error> {
-    let lines: Vec<String> = input
-        .lines()
-        .map(|s| s.to_string())
-        .collect();
+    let lines: Vec<String> = input.lines().map(|s| s.to_string()).collect();
 
     let samples: Vec<UnknownOpcode> = lines
         .chunks_exact(4)
@@ -237,7 +245,7 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
             assert!(thing[0].starts_with("Before: ["));
             assert!(thing[2].starts_with("After:  ["));
 
-            UnknownOpcode::parse_from_input( &thing[0], &thing[1], &thing[2])
+            UnknownOpcode::parse_from_input(&thing[0], &thing[1], &thing[2])
         })
         .collect();
     println!("Found {} samples", samples.len());
@@ -245,7 +253,7 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
     let mut opcode_mappings = HashMap::new();
     opcode_mappings.insert(15, Opcode::Eqrr);
 
-    let mut opcodes: &mut[Opcode] = &mut [
+    let mut opcodes: &mut [Opcode] = &mut [
         Opcode::Addr,
         Opcode::Addi,
         Opcode::Mulr,
@@ -279,7 +287,7 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
 
             if let Some(index) = opcodes.iter().position(|op| *op == known_op) {
                 println!("index: {}", index);
-                let end = opcodes.len()-1;
+                let end = opcodes.len() - 1;
                 opcodes.swap(index, end);
                 opcodes = &mut opcodes[..end];
             }
@@ -290,12 +298,8 @@ fn run2(input: &str) -> Result<u32, failure::Error> {
         println!("{:>2} -> {:?}", id, v);
     }
 
-
     let mut regs = [0; 4];
-    for instr_str in lines
-        .iter()
-        .skip(samples.len() * 4 + 2)
-    {
+    for instr_str in lines.iter().skip(samples.len() * 4 + 2) {
         let instr: Instr = str::parse(instr_str)?;
         let opcode = *opcode_mappings.get(&instr.opcode).unwrap();
         regs = exec(regs, opcode, instr);

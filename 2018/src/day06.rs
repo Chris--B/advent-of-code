@@ -1,12 +1,7 @@
-
 use std::{
     collections::*,
-    env,
-    fs,
-    io::{
-        self,
-        BufRead,
-    },
+    env, fs,
+    io::{self, BufRead},
 };
 
 use aoc_runner_derive::{aoc, aoc_generator};
@@ -23,13 +18,15 @@ fn run1(input: &str) -> Result<usize, failure::Error> {
         })
         .collect();
 
-    let (min_x, min_y) = all_coords.iter().cloned().fold((0, 0), |(ax, ay), (x, y)| {
-        (ax.min(x), ay.min(y))
-    });
+    let (min_x, min_y) = all_coords
+        .iter()
+        .cloned()
+        .fold((0, 0), |(ax, ay), (x, y)| (ax.min(x), ay.min(y)));
     println!("Min Bounds: ({}, {})", min_x, min_y);
-    let (max_x, max_y) = all_coords.iter().cloned().fold((0, 0), |(ax, ay), (x, y)| {
-        (ax.max(x), ay.max(y))
-    });
+    let (max_x, max_y) = all_coords
+        .iter()
+        .cloned()
+        .fold((0, 0), |(ax, ay), (x, y)| (ax.max(x), ay.max(y)));
     println!("Max Bounds: ({}, {})", max_x, max_y);
 
     // If a coordinate is closest to point X and is along a boundry axis,
@@ -74,12 +71,16 @@ fn run1(input: &str) -> Result<usize, failure::Error> {
         *entry += 1;
     }
 
-    Ok(areas.iter().map(|(_coord, area)| area).copied().max().unwrap_or(0))
+    Ok(areas
+        .iter()
+        .map(|(_coord, area)| area)
+        .copied()
+        .max()
+        .unwrap_or(0))
 }
 
 fn man_dist(a: (u32, u32), b: (u32, u32)) -> usize {
-    ((a.0 as i64 - b.0 as i64).abs() +
-     (a.1 as i64 - b.1 as i64).abs()) as usize
+    ((a.0 as i64 - b.0 as i64).abs() + (a.1 as i64 - b.1 as i64).abs()) as usize
 }
 
 fn closest_point(points: &[(u32, u32)], other: (u32, u32)) -> Option<(u32, u32)> {
@@ -110,12 +111,14 @@ fn run2(input: &str) -> Result<usize, failure::Error> {
         })
         .collect();
 
-    let (min_x, min_y) = coords.iter().cloned().fold((0, 0), |(ax, ay), (x, y)| {
-        (ax.min(x), ay.min(y))
-    });
-    let (max_x, max_y) = coords.iter().cloned().fold((0, 0), |(ax, ay), (x, y)| {
-        (ax.max(x), ay.max(y))
-    });
+    let (min_x, min_y) = coords
+        .iter()
+        .cloned()
+        .fold((0, 0), |(ax, ay), (x, y)| (ax.min(x), ay.min(y)));
+    let (max_x, max_y) = coords
+        .iter()
+        .cloned()
+        .fold((0, 0), |(ax, ay), (x, y)| (ax.max(x), ay.max(y)));
     println!("Bounds: ({}, {}) ~ ({}, {})", min_x, min_y, max_x, max_y);
 
     let mut safeties = HashMap::<(u32, u32), usize>::new();

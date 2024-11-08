@@ -1,12 +1,7 @@
-
 use std::{
     collections::*,
-    env,
-    fs,
-    io::{
-        self,
-        BufRead,
-    },
+    env, fs,
+    io::{self, BufRead},
 };
 
 use aoc_runner_derive::{aoc, aoc_generator};
@@ -16,8 +11,8 @@ use regex::Regex;
 
 #[derive(Copy, Clone)]
 struct Point {
-    x:  i64,
-    y:  i64,
+    x: i64,
+    y: i64,
     dx: i64,
     dy: i64,
 }
@@ -39,8 +34,8 @@ impl std::str::FromStr for Point {
             .replace(",", " ");
         let parts: Vec<_> = ss.split(" ").filter(|s| !s.is_empty()).collect();
         Ok(Point {
-            x:  parts[1].parse()?,
-            y:  parts[2].parse()?,
+            x: parts[1].parse()?,
+            y: parts[2].parse()?,
             dx: parts[4].parse()?,
             dy: parts[5].parse()?,
         })
@@ -69,21 +64,18 @@ fn render_stars(mut points: Vec<Point>) -> u32 {
     loop {
         let (minx, miny, maxx, maxy) = aabb(&points);
         let last_points = points.clone();
-        let last_area   = (maxx-minx) * (maxy-miny);
+        let last_area = (maxx - minx) * (maxy - miny);
         for p in points.iter_mut() {
             p.advance();
         }
         let (minx, miny, maxx, maxy) = aabb(&points);
-        let area = (maxx-minx) * (maxy-miny);
+        let area = (maxx - minx) * (maxy - miny);
 
         if area > last_area {
             println!("Star Map @ t={}", t);
             for y in miny..=maxy {
                 for x in minx..=maxx {
-                    if last_points.iter()
-                        .find(|p| p.x == x && p.y == y)
-                        .is_some()
-                    {
+                    if last_points.iter().find(|p| p.x == x && p.y == y).is_some() {
                         // Unicode "Full Block"
                         // See: https://www.compart.com/en/unicode/block/U+2580
                         print!("\u{2588}");
@@ -114,7 +106,8 @@ fn render_stars(mut points: Vec<Point>) -> u32 {
 
 #[aoc(day10, part2)]
 fn run2(input: &str) -> Result<u32, failure::Error> {
-    let points = input.lines()
+    let points = input
+        .lines()
         .map(|line| line.parse().unwrap())
         .collect::<Vec<Point>>();
 

@@ -1,13 +1,8 @@
-
 use std::{
     collections::*,
+    env, fs,
+    io::{self, BufRead},
     iter::FromIterator,
-    env,
-    fs,
-    io::{
-        self,
-        BufRead,
-    },
 };
 
 use aoc_runner_derive::{aoc, aoc_generator};
@@ -35,7 +30,8 @@ impl PartialOrd for Pair {
 
 #[aoc(day7, part1)]
 fn run1(input: &str) -> Result<String, failure::Error> {
-    let re = regex::Regex::new(r"Step ([A-Z]) must be finished before step ([A-Z]) can begin").unwrap();
+    let re =
+        regex::Regex::new(r"Step ([A-Z]) must be finished before step ([A-Z]) can begin").unwrap();
 
     let mut all_labels = HashSet::new();
     let mut next = HashMap::<char, Vec<char>>::new();
@@ -44,20 +40,27 @@ fn run1(input: &str) -> Result<String, failure::Error> {
     let mut roots = HashSet::new();
     let mut not_roots = HashSet::new();
 
-    input.lines()
+    input
+        .lines()
         .filter(|line| line.len() > 0)
         .map(|line| {
             let caps = re.captures(&line).unwrap();
-            (caps[1].chars().nth(0).unwrap(), caps[2].chars().nth(0).unwrap())
-        }).for_each(|(c, d)| {
+            (
+                caps[1].chars().nth(0).unwrap(),
+                caps[2].chars().nth(0).unwrap(),
+            )
+        })
+        .for_each(|(c, d)| {
             all_labels.insert(c);
             all_labels.insert(d);
 
-            not_roots.insert(d);    // d is obviously not a root
-            if roots.contains(&d) { // remove it if we thought it was
+            not_roots.insert(d); // d is obviously not a root
+            if roots.contains(&d) {
+                // remove it if we thought it was
                 roots.remove(&d);
             }
-            if !not_roots.contains(&c) { // we don't think c is a notroot yet
+            if !not_roots.contains(&c) {
+                // we don't think c is a notroot yet
                 roots.insert(c);
             }
 
@@ -90,21 +93,20 @@ fn run1(input: &str) -> Result<String, failure::Error> {
 
     let mut gens = HashMap::new();
 
-    fn populate_gens(label: char,
-                     depth: u32,
-                     gens: &mut HashMap<char, u32>,
-                     next: &HashMap<char, Vec<char>>) {
+    fn populate_gens(
+        label: char,
+        depth: u32,
+        gens: &mut HashMap<char, u32>,
+        next: &HashMap<char, Vec<char>>,
+    ) {
         if let Some(old_gen) = gens.get(&label) {
             gens.insert(label, (*old_gen).max(depth));
         } else {
             gens.insert(label, depth);
         }
-        let children = next
-            .get(&label)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[]);
+        let children = next.get(&label).map(|v| v.as_slice()).unwrap_or(&[]);
         for child in children {
-            populate_gens(*child, depth+1, gens, next);
+            populate_gens(*child, depth + 1, gens, next);
         }
     }
 
@@ -112,10 +114,8 @@ fn run1(input: &str) -> Result<String, failure::Error> {
         populate_gens(root, 0, &mut gens, &next);
     }
 
-    let mut queue = BinaryHeap::from_iter(all_labels.iter()
-        .map(|c| {
-            Pair(*gens.get(c).unwrap(), *c)
-        }));
+    let mut queue =
+        BinaryHeap::from_iter(all_labels.iter().map(|c| Pair(*gens.get(c).unwrap(), *c)));
 
     let mut ordering = String::new();
     while let Some(Pair(gen, label)) = queue.pop() {

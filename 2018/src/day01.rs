@@ -1,9 +1,4 @@
-use std::{
-    collections::HashSet,
-    fs,
-    io,
-    io::BufRead,
-};
+use std::{collections::HashSet, fs, io, io::BufRead};
 
 use aoc_runner_derive::{aoc, aoc_generator};
 use failure;
