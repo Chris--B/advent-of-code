@@ -1,8 +1,10 @@
+#![allow(clippy::needless_range_loop)]
+
 use aoc_runner_derive::aoc_lib;
 
 pub mod day01;
 pub mod day02;
-// pub mod day03;
+pub mod day03;
 // pub mod day04;
 // pub mod day05;
 // pub mod day06;
@@ -43,6 +45,8 @@ pub mod prelude {
     pub const West: Cardinal = Cardinal::West;
 
     pub use bitmask_enum::*;
+
+    pub use ultraviolet::IVec2;
 }
 
 use prelude::*;
@@ -54,4 +58,64 @@ pub enum Cardinal {
     Souð,
     East,
     West,
+}
+
+impl Cardinal {
+    pub const ALL_NO_DIAG: [Cardinal; 4] = [Norð, Souð, East, West];
+    pub fn all_diag() -> [Cardinal; 8] {
+        [
+            Norð,
+            Norð | East,
+            East,
+            Souð | East,
+            Souð,
+            Souð | West,
+            West,
+            Norð | West,
+        ]
+    }
+
+    pub fn rev(&self) -> Self {
+        let mut r = Cardinal::none();
+
+        if self.contains(Norð) {
+            r |= Souð;
+        }
+        if self.contains(Souð) {
+            r |= Norð;
+        }
+        if self.contains(East) {
+            r |= West;
+        }
+        if self.contains(West) {
+            r |= East;
+        }
+
+        r
+    }
+
+    pub fn ivec2(&self) -> IVec2 {
+        (*self).into()
+    }
+}
+
+impl From<Cardinal> for IVec2 {
+    fn from(val: Cardinal) -> Self {
+        let mut r = IVec2::zero();
+
+        if val.contains(Norð) {
+            r += IVec2::new(0, 1);
+        }
+        if val.contains(Souð) {
+            r += IVec2::new(0, -1);
+        }
+        if val.contains(East) {
+            r += IVec2::new(1, 0);
+        }
+        if val.contains(West) {
+            r += IVec2::new(-1, 0);
+        }
+
+        r
+    }
 }

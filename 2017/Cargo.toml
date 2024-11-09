@@ -17,3 +17,4 @@ itertools = "0.13"
 log = "0.4"
 pretty_assertions = "1"
 rstest = "0.23"
+ultraviolet = { version = "0.9", features = ["int"] }
