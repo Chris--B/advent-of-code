@@ -8,7 +8,7 @@ pub mod day03;
 pub mod day04;
 pub mod day05;
 pub mod day06;
-// pub mod day07;
+pub mod day07;
 // pub mod day08;
 // pub mod day09;
 // pub mod day10;
@@ -34,19 +34,18 @@ aoc_lib! { year = 2017 }
 pub mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
-    pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
-
+    pub use bitmask_enum::*;
     pub use itertools::Itertools;
+    pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
+    pub use ultraviolet::IVec2;
+
+    pub use std::collections::*;
 
     pub use crate::Cardinal;
     pub const Norð: Cardinal = Cardinal::Norð;
     pub const Souð: Cardinal = Cardinal::Souð;
     pub const East: Cardinal = Cardinal::East;
     pub const West: Cardinal = Cardinal::West;
-
-    pub use bitmask_enum::*;
-
-    pub use ultraviolet::IVec2;
 
     pub use crate::print_with_focus;
 }
