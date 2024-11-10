@@ -6,7 +6,7 @@ pub mod day01;
 pub mod day02;
 pub mod day03;
 pub mod day04;
-// pub mod day05;
+pub mod day05;
 // pub mod day06;
 // pub mod day07;
 // pub mod day08;
@@ -47,6 +47,8 @@ pub mod prelude {
     pub use bitmask_enum::*;
 
     pub use ultraviolet::IVec2;
+
+    pub use crate::print_with_focus;
 }
 
 use prelude::*;
@@ -118,4 +120,25 @@ impl From<Cardinal> for IVec2 {
 
         r
     }
+}
+
+#[track_caller]
+pub fn print_with_focus<T, U>(things: T, focus: impl TryInto<usize> + std::fmt::Display + Copy)
+where
+    T: IntoIterator<Item = U>,
+    U: std::fmt::Debug,
+{
+    let focus: usize = focus
+        .try_into()
+        .unwrap_or_else(|_| unreachable!("Failed to parse {focus} into a usize"));
+
+    print!("[");
+    for (i, t) in things.into_iter().enumerate() {
+        if i == focus {
+            print!(" ({t:?})");
+        } else {
+            print!("  {t:?} ");
+        }
+    }
+    println!(" ]");
 }

@@ -20,6 +20,8 @@ pub fn part2(input: &str) -> i64 {
 
 #[cfg(test)]
 mod test {
+    use std::time::Duration;
+
     use super::*;
     #[allow(unused_imports)]
     use pretty_assertions::{assert_eq, assert_ne};
@@ -32,6 +34,7 @@ mod test {
     #[rstest]
     #[case::given(999_999, EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -47,6 +50,7 @@ mod test {
     #[case::given(999_999, EXAMPLE_INPUT)]
     #[trace]
     #[ignore]
+    #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
