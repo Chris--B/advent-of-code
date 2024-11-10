@@ -23,8 +23,8 @@ name = "aoc22"
 path = "src/lib.rs"
 
 [dependencies]
-aoc-runner = "*"
-aoc-runner-derive = "*"
+aoc-runner = "0.3"
+aoc-runner-derive = "0.3"
 
 clap = { version = "4", features = ["derive"] }
 core_simd = { git = "https://github.com/rust-lang/portable-simd", optional = true }
