@@ -2,18 +2,14 @@
 
 use crate::prelude::*;
 
-type Report = Vec<i32>;
-
-fn report_is_safe<'a>(report: impl IntoIterator<Item = &'a i32> + Clone) -> bool {
+fn report_is_safe(report: impl Iterator<Item = i32> + Clone) -> bool {
     let inc = report
         .clone()
-        .into_iter()
         .tuple_windows()
         .map(|(a, b)| (b - a))
         .all(|diff| [1, 2, 3].contains(&diff));
 
     let dec = report
-        .into_iter()
         .tuple_windows()
         .map(|(a, b)| (b - a))
         .all(|diff| [1, 2, 3].contains(&-diff));
@@ -26,23 +22,25 @@ fn report_is_safe<'a>(report: impl IntoIterator<Item = &'a i32> + Clone) -> bool
 pub fn part1(input: &str) -> usize {
     input
         .lines()
-        .map(|l| l.split_whitespace().map(parse_or_fail).collect_vec())
-        .filter(|report| report_is_safe(report.iter()))
+        .map(|l| l.split_whitespace().map(parse_or_fail))
+        .map(report_is_safe)
+        .filter(|&is_safe| is_safe)
         .count()
 }
 
 // Part2 ========================================================================
-fn report_is_safe_ish(report: &Report) -> bool {
+fn report_is_safe_ish(report: impl Iterator<Item = i32> + Clone) -> bool {
     // All safe reports are safe-ish too
-    if report_is_safe(report) {
+    if report_is_safe(report.clone()) {
         return true;
     }
 
     // A report is safe-ish if it's safe with a single removal
     // Abuse iterators for fun and profit
-    for i in 0..report.len() {
+    let len = report.clone().count();
+    for i in 0..len {
         let modified_report = report
-            .iter()
+            .clone()
             .enumerate()
             // remove elem #`i`
             .filter_map(|(idx, level)| if idx != i { Some(level) } else { None });
@@ -59,8 +57,10 @@ fn report_is_safe_ish(report: &Report) -> bool {
 pub fn part2(input: &str) -> usize {
     input
         .lines()
-        .map(|l| l.split_whitespace().map(parse_or_fail).collect_vec())
-        .filter(report_is_safe_ish)
+        // double iterator all the way
+        .map(|l| l.split_whitespace().map(parse_or_fail))
+        .map(report_is_safe_ish)
+        .filter(|&is_safe| is_safe)
         .count()
 }
 
