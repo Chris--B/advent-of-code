@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use crate::{parse_list_whitespace, prelude::*};
+use crate::prelude::*;
 
 // Part1 ========================================================================
 #[aoc(day1, part1)]

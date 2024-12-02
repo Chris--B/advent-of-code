@@ -88,6 +88,7 @@ mod prelude {
 
     pub use crate::init_logging;
     pub use crate::parse_list;
+    pub use crate::parse_list_whitespace;
     pub use crate::parse_or_fail;
 
     pub use crate::Tally;
