@@ -10,7 +10,7 @@ if [ "$#" -eq 2 ] && [ "$2" == "looping" ]; then
 
     cargo clippy --tests
     cargo fmt
-    cargo test --lib --quiet day$day
+    cargo test --lib day$day
     cargo aoc --day $day
 
     # cargo doc --document-private-items
