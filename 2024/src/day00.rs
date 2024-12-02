@@ -39,6 +39,8 @@ mod test {
         #[case] expected: i64,
         #[case] input: &str,
     ) {
+        init_logging();
+
         let input = input.trim();
         assert_eq!(p(input), expected);
     }
@@ -54,6 +56,8 @@ mod test {
         #[case] expected: i64,
         #[case] input: &str,
     ) {
+        init_logging();
+
         let input = input.trim();
         assert_eq!(p(input), expected);
     }
