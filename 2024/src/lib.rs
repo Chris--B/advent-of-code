@@ -12,7 +12,7 @@ use std::str::FromStr;
 use aoc_runner_derive::aoc_lib;
 
 pub mod day01;
-// pub mod day02;
+pub mod day02;
 // pub mod day03;
 // pub mod day04;
 // pub mod day05;
@@ -163,7 +163,7 @@ where
             Ok(t) => MaybeUninit::new(t),
             Err(e) => {
                 error!("While splitting \"{s}\" by \"{pattern}\", failed to parse {i}th elem \"{t_s}\" as {ty_name}: {e:?}");
-                unreachable!()
+                unreachable!("While splitting \"{s}\" by \"{pattern}\", failed to parse {i}th elem \"{t_s}\" as {ty_name}: {e:?}");
             }
         };
     }
@@ -174,8 +174,8 @@ where
             str=s,
             pattern=pattern;
                 "Trying to parse exactly {N} values of {ty_name}, but found {rem} more!",
-
         );
+        unreachable!("Trying to parse exactly {N} values of {ty_name}, but found {rem} more!");
     }
 
     unsafe { std::mem::transmute_copy::<_, [T; N]>(&list) }
@@ -195,7 +195,7 @@ where
             Ok(t) => MaybeUninit::new(t),
             Err(e) => {
                 error!("While splitting \"{s}\" by whitespace, failed to parse {i}th elem \"{t_s}\" as {ty_name}: {e:?}");
-                unreachable!()
+                unreachable!("While splitting \"{s}\" by whitespace, failed to parse {i}th elem \"{t_s}\" as {ty_name}: {e:?}");
             }
         };
     }
@@ -206,8 +206,8 @@ where
             str=s,
             pattern="whitespace";
                 "Trying to parse exactly {N} values of {ty_name}, but found {rem} more!",
-
         );
+        unreachable!("Trying to parse exactly {N} values of {ty_name}, but found {rem} more!");
     }
 
     unsafe { std::mem::transmute_copy::<_, [T; N]>(&list) }
