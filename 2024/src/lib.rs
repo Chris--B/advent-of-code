@@ -39,28 +39,30 @@ pub mod day01;
 
 aoc_lib! { year = 2024 }
 
-// Run this function when the binary is loaded. This typically happens BEFORE MAIN.
-// This is a BAD IDEA, but cargo-aoc doesn't give us hooks anywhere else. So it's this or lazy-init in EVERY solution 😬.
-#[ctor::ctor]
-fn init_logging() {
-    use env_logger::{Builder, Env};
+pub fn init_logging() {
+    static LOGGING: std::sync::Once = std::sync::Once::new();
 
-    let mut env = Env::default();
-    if cfg!(test) || cfg!(debug_assertions) {
-        // Debug and test builds should log MORE
-        env = env.default_filter_or("debug");
-    } else {
-        // Everyone else can log warn and above
-        env = env.default_filter_or("warn");
-    }
+    LOGGING.call_once(|| {
+        println!("hello");
+        use env_logger::{Builder, Env};
 
-    Builder::from_env(env)
-        .is_test(cfg!(test))
-        .format_timestamp(None)
-        .format_module_path(false)
-        .format_target(false)
-        .format_indent(Some(4))
-        .init();
+        let mut env = Env::default();
+        if cfg!(test) || cfg!(debug_assertions) {
+            // Debug and test builds should log MORE
+            env = env.default_filter_or("debug");
+        } else {
+            // Everyone else can log warn and above
+            env = env.default_filter_or("warn");
+        }
+
+        Builder::from_env(env)
+            .is_test(cfg!(test))
+            .format_timestamp(None)
+            .format_module_path(false)
+            .format_target(false)
+            .format_indent(Some(4))
+            .init();
+    });
 }
 
 #[allow(unused_imports, non_upper_case_globals)]
@@ -84,7 +86,11 @@ mod prelude {
     pub const East: Cardinal = Cardinal::East;
     pub const West: Cardinal = Cardinal::West;
 
+    pub use crate::init_logging;
     pub use crate::parse_list;
+    pub use crate::parse_or_fail;
+
+    pub use crate::Tally;
 }
 
 use prelude::*;
@@ -141,7 +147,7 @@ impl From<Cardinal> for IVec2 {
     }
 }
 
-// TODO: Use Pattern when it's stable, https://doc.rust-lang.org/std/str/pattern/index.html
+// TODO: Use Pattern when it's stable, https://doc.rust-lang.org/std/str/pattern/index.html?
 pub fn parse_list<const N: usize, T>(s: &str, pattern: &str) -> [T; N]
 where
     T: FromStr + Copy + Sized,
@@ -172,6 +178,70 @@ where
     }
 
     unsafe { std::mem::transmute_copy::<_, [T; N]>(&list) }
+}
+
+pub fn parse_list_whitespace<const N: usize, T>(s: &str) -> [T; N]
+where
+    T: FromStr + Copy + Sized,
+    <T as std::str::FromStr>::Err: std::fmt::Debug,
+{
+    let ty_name = std::any::type_name::<T>();
+    let mut list: [MaybeUninit<T>; N] = unsafe { MaybeUninit::uninit().assume_init() };
+
+    let mut iter = s.split_whitespace().enumerate();
+    for (i, t_s) in (&mut iter).take(N) {
+        list[i] = match t_s.parse() {
+            Ok(t) => MaybeUninit::new(t),
+            Err(e) => {
+                error!("While splitting \"{s}\" by whitespace, failed to parse {i}th elem \"{t_s}\" as {ty_name}: {e:?}");
+                unreachable!()
+            }
+        };
+    }
+
+    let rem = iter.count();
+    if rem != 0 {
+        error!(
+            str=s,
+            pattern="whitespace";
+                "Trying to parse exactly {N} values of {ty_name}, but found {rem} more!",
+
+        );
+    }
+
+    unsafe { std::mem::transmute_copy::<_, [T; N]>(&list) }
+}
+
+pub trait Tally<T>
+where
+    T: Eq + std::hash::Hash,
+{
+    fn tally(self) -> HashMap<T, usize>;
+}
+
+impl<I, T> Tally<T> for I
+where
+    I: Iterator<Item = T>,
+    T: Eq + std::hash::Hash,
+{
+    fn tally(self) -> HashMap<T, usize> {
+        let mut tally = HashMap::new();
+        for elem in self {
+            *tally.entry(elem).or_insert(0) += 1;
+        }
+        tally
+    }
+}
+
+pub fn parse_or_fail<T: FromStr>(s: impl AsRef<str>) -> T {
+    let s: &str = s.as_ref();
+    match s.parse() {
+        Ok(t) => t,
+        Err(_err) => panic!(
+            "Failed to parse \"{s}\" as a {}",
+            std::any::type_name::<T>()
+        ),
+    }
 }
 
 #[cfg(test)]
