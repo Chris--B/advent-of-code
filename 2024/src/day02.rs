@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::prelude::*;
 
 fn report_is_safe(report: impl Iterator<Item = i32> + Clone) -> bool {
@@ -22,7 +20,7 @@ fn report_is_safe(report: impl Iterator<Item = i32> + Clone) -> bool {
 pub fn part1(input: &str) -> usize {
     input
         .lines()
-        .map(|l| l.split_whitespace().map(parse_or_fail))
+        .map(|line| line.split_whitespace().map(parse_or_fail))
         .map(report_is_safe)
         .filter(|&is_safe| is_safe)
         .count()
@@ -57,9 +55,8 @@ fn report_is_safe_ish(report: impl Iterator<Item = i32> + Clone) -> bool {
 pub fn part2(input: &str) -> usize {
     input
         .lines()
-        // double iterator all the way
-        .map(|l| l.split_whitespace().map(parse_or_fail))
-        .map(report_is_safe_ish)
+        .map(|line| line.split_whitespace().map(parse_or_fail).collect_vec())
+        .map(|report| report_is_safe_ish(report.into_iter()))
         .filter(|&is_safe| is_safe)
         .count()
 }
