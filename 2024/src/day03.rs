@@ -72,9 +72,84 @@ pub fn part1(mut input: &str) -> i32 {
 }
 
 // Part2 ========================================================================
+fn eat_until_mul_p2(input: &mut &str) -> Option<(i32, i32)> {
+    let mut enabled = true;
+
+    while !input.is_empty() {
+        // Find the start of a mul(), if there is one
+        #[allow(clippy::nonminimal_bool)]
+        while !enabled || (enabled && !input.starts_with("mul(")) {
+            if input.starts_with("do()") {
+                enabled = true;
+                *input = input.get(4..)?;
+            } else if input.starts_with("don't()") {
+                enabled = false;
+                *input = input.get(7..)?;
+            } else {
+                *input = input.get(1..)?;
+            }
+        }
+        // Skip over the "mul(" part
+        *input = &input[4..];
+
+        let mut first_arg = 0;
+
+        // Walk the arguments until we find two valid i32s, or we determine this arg list is illegal.
+        let mut i = 0;
+        'parse: while let Some(c) = input[i..].chars().next() {
+            // We expect straight numeric until either a ',' or a ')'.
+            // Anything else, and this mul() is invalid and should be skipped.
+            if c.is_numeric() {
+                i += 1;
+                continue 'parse;
+            }
+
+            if c == ',' {
+                // parse the first arg
+                if let Ok(arg) = input[..i].parse() {
+                    first_arg = arg;
+
+                    // Reset our parsing window
+                    *input = &input[(i + 1)..];
+                    i = 0;
+                    continue 'parse;
+                } else if cfg!(test) {
+                    unreachable!("Failed to parse arg {:?} (out of {input:?})", &input[..i]);
+                }
+            }
+
+            if c == ')' {
+                // parse the second arg and exit!
+                if let Ok(arg) = input[..i].parse() {
+                    return Some((first_arg, arg));
+                } else if cfg!(test) {
+                    unreachable!("Failed to parse arg {:?} (out of {input:?})", &input[..i]);
+                }
+            }
+
+            // We get here if we have an illegal character, OR if parsing above failed.
+            break 'parse;
+        }
+
+        // Advance
+        i += 1;
+        *input = input.get(i..)?;
+    }
+
+    // There's nothing left to parse
+    None
+}
 #[aoc(day3, part2)]
-pub fn part2(_input: &str) -> i32 {
-    -1
+pub fn part2(mut input: &str) -> i32 {
+    let mut sum = 0;
+    while let Some((a, b)) = eat_until_mul_p2(&mut input) {
+        if cfg!(test) {
+            println!("    + {a}, {b}");
+        }
+        sum += a * b;
+    }
+
+    sum
 }
 
 #[cfg(test)]
@@ -131,7 +206,6 @@ mod test {
     #[case::just_one_dont(0, "don't()")]
     #[case::just_one_dont_and_then_mul(0, "don't()mul(1,2)")]
     #[case::just_one_do_and_then_mul(2, "mul(1,2)")]
-    #[ignore]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
