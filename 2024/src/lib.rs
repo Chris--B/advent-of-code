@@ -4,7 +4,11 @@
     clippy::identity_op,
     clippy::single_element_loop
 )]
-#![warn(clippy::overly_complex_bool_expr, clippy::if_same_then_else)]
+#![warn(
+    clippy::overly_complex_bool_expr,
+    clippy::if_same_then_else,
+    clippy::never_loop
+)]
 
 use std::mem::MaybeUninit;
 use std::str::FromStr;
@@ -13,7 +17,7 @@ use aoc_runner_derive::aoc_lib;
 
 pub mod day01;
 pub mod day02;
-// pub mod day03;
+pub mod day03;
 // pub mod day04;
 // pub mod day05;
 // pub mod day06;
@@ -43,7 +47,7 @@ pub fn init_logging() {
     static LOGGING: std::sync::Once = std::sync::Once::new();
 
     LOGGING.call_once(|| {
-        println!("hello");
+        println!("logging init'd");
         use env_logger::{Builder, Env};
 
         let mut env = Env::default();
