@@ -45,9 +45,9 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    #[ignore]
     #[rstest]
     #[case::given(999_999, EXAMPLE_INPUT)]
+    #[ignore]
     #[trace]
     fn check_ex_part_2(
         #[notrace]

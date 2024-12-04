@@ -18,7 +18,7 @@ use aoc_runner_derive::aoc_lib;
 pub mod day01;
 pub mod day02;
 pub mod day03;
-// pub mod day04;
+pub mod day04;
 // pub mod day05;
 // pub mod day06;
 // pub mod day07;
@@ -40,6 +40,8 @@ pub mod day03;
 // pub mod day23;
 // pub mod day24;
 // pub mod day25;
+
+pub mod framebuffer;
 
 aoc_lib! { year = 2024 }
 
@@ -89,7 +91,10 @@ mod prelude {
     pub const East: Cardinal = Cardinal::East;
     pub const West: Cardinal = Cardinal::West;
 
+    pub use crate::framebuffer::Framebuffer;
+
     pub use crate::init_logging;
+    pub use crate::just_str;
     pub use crate::parse_list;
     pub use crate::parse_list_whitespace;
     pub use crate::parse_or_fail;
@@ -149,6 +154,11 @@ impl From<Cardinal> for IVec2 {
 
         r
     }
+}
+
+#[track_caller]
+pub fn just_str(bytes: &[u8]) -> &str {
+    std::str::from_utf8(bytes).unwrap()
 }
 
 // TODO: Use Pattern when it's stable, https://doc.rust-lang.org/std/str/pattern/index.html?
