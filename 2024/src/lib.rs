@@ -76,8 +76,7 @@ mod prelude {
     pub use bitmask_enum::bitmask;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
-    pub use num::Complex;
-    pub use num::Integer;
+    pub use num::*;
     pub use scan_fmt::scan_fmt;
     pub use ultraviolet::{IVec2, IVec3};
 
