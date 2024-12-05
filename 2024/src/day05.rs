@@ -28,47 +28,31 @@ fn parse(input: &str) -> ([Bitset128; 100], impl Iterator<Item = SmallVec<i32>> 
 pub fn part1(input: &str) -> i32 {
     let (before, updates) = parse(input);
 
-    let mut answer = 0;
-    'updates: for update in updates {
-        debug_assert_eq!(update.len() % 2, 1);
-
-        for (&a, &b) in update.iter().tuple_windows() {
-            if !before[a as usize].contains(b) {
-                continue 'updates;
-            }
-        }
-
-        answer += update[update.len() / 2];
-    }
-
-    answer
+    updates
+        .filter(|update| update.is_sorted_by(|&a, &b| before[a as usize].contains(b)))
+        .map(|update| update[update.len() / 2])
+        .sum()
 }
 
 // Part2 ========================================================================
 #[aoc(day5, part2)]
 pub fn part2(input: &str) -> i32 {
-    let (before, mut updates) = parse(input);
+    let (before, updates) = parse(input);
 
-    let mut answer = 0;
-    for mut update in &mut updates {
-        debug_assert_eq!(update.len() % 2, 1);
-
-        if update.is_sorted_by(|&a, &b| before[a as usize].contains(b)) {
-            continue;
-        }
-
-        update.sort_unstable_by(|&a, &b| {
-            if before[a as usize].contains(b) {
-                std::cmp::Ordering::Less
-            } else {
-                std::cmp::Ordering::Greater
-            }
-        });
-
-        answer += update[update.len() / 2];
-    }
-
-    answer
+    updates
+        .filter(|update| !update.is_sorted_by(|&a, &b| before[a as usize].contains(b)))
+        .map(|mut update| {
+            update.sort_unstable_by(|&a, &b| {
+                if before[a as usize].contains(b) {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                }
+            });
+            update
+        })
+        .map(|update| update[update.len() / 2])
+        .sum()
 }
 
 #[cfg(test)]
