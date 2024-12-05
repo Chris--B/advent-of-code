@@ -20,7 +20,6 @@ pub mod day02;
 pub mod day03;
 pub mod day04;
 pub mod day05;
-pub mod day05_bitset;
 // pub mod day06;
 // pub mod day07;
 // pub mod day08;
@@ -82,6 +81,7 @@ mod prelude {
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use num::*;
     pub use scan_fmt::scan_fmt;
+    pub use smallvec::SmallVec;
     pub use ultraviolet::{IVec2, IVec3};
 
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};

@@ -1,14 +1,9 @@
 use crate::prelude::*;
 
-#[derive(Debug)]
-struct PrintingBits {
-    // They're all 2 digit numbers - maybe we can use a u128 bit set
-    before: HashMap<i32, Vec<i32>>,
-    updates: Vec<Vec<i32>>,
-}
+type SmallVec<T> = smallvec::SmallVec<[T; 32]>;
 
-fn parse(input: &str) -> PrintingBits {
-    let mut before: HashMap<i32, Vec<i32>> = HashMap::new();
+fn parse(input: &str) -> ([Bitset128; 100], impl Iterator<Item = SmallVec<i32>> + '_) {
+    let mut before = [Bitset128::new(); 100];
 
     let mut lines = input.lines();
     for line in lines.by_ref() {
@@ -17,39 +12,33 @@ fn parse(input: &str) -> PrintingBits {
         }
 
         let (a, b) = line.split_once('|').unwrap();
-        let a = parse_or_fail(a);
-        let b = parse_or_fail(b);
+        let a: u8 = parse_or_fail(a);
+        let b: u8 = parse_or_fail(b);
 
-        before.entry(a).or_default().push(b);
+        before[a as usize].insert(b);
     }
 
-    let updates: Vec<_> = lines
-        .by_ref()
-        .map(|line| -> Vec<i32> { line.split(",").map(parse_or_fail).collect_vec() })
-        .collect_vec();
+    let updates = lines.map(|line| line.split(",").map(parse_or_fail).collect());
 
-    PrintingBits { before, updates }
+    (before, updates)
 }
 
 // Part1 ========================================================================
 #[aoc(day5, part1)]
 pub fn part1(input: &str) -> i32 {
-    let bits = parse(input);
+    let (before, updates) = parse(input);
 
     let mut answer = 0;
-    'updates_loop: for update in bits.updates {
-        let middle = update[update.len() / 2];
+    'updates: for update in updates {
+        debug_assert_eq!(update.len() % 2, 1);
 
-        for (a, b) in update.into_iter().tuple_windows() {
-            if let Some(before) = bits.before.get(&a) {
-                if before.contains(&b) {
-                    continue;
-                }
+        for (&a, &b) in update.iter().tuple_windows() {
+            if !before[a as usize].contains(b) {
+                continue 'updates;
             }
-            continue 'updates_loop;
         }
 
-        answer += middle;
+        answer += update[update.len() / 2];
     }
 
     answer
@@ -58,32 +47,25 @@ pub fn part1(input: &str) -> i32 {
 // Part2 ========================================================================
 #[aoc(day5, part2)]
 pub fn part2(input: &str) -> i32 {
-    let mut bits = parse(input);
+    let (before, mut updates) = parse(input);
 
     let mut answer = 0;
-    for update in &mut bits.updates {
-        if update.is_sorted_by(|a, b| {
-            if let Some(before) = bits.before.get(a) {
-                before.contains(b)
-            } else {
-                false
-            }
-        }) {
+    for mut update in &mut updates {
+        debug_assert_eq!(update.len() % 2, 1);
+
+        if update.is_sorted_by(|&a, &b| before[a as usize].contains(b)) {
             continue;
         }
 
-        update.sort_unstable_by(|a, b| {
-            use std::cmp::Ordering;
-            if let Some(before) = bits.before.get(a) {
-                if before.contains(b) {
-                    return Ordering::Less;
-                }
+        update.sort_unstable_by(|&a, &b| {
+            if before[a as usize].contains(b) {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Greater
             }
-            Ordering::Greater
         });
 
-        let middle = update[update.len() / 2];
-        answer += middle;
+        answer += update[update.len() / 2];
     }
 
     answer
