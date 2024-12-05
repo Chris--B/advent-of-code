@@ -41,6 +41,7 @@ pub mod day05;
 // pub mod day24;
 // pub mod day25;
 
+pub mod bitset;
 pub mod framebuffer;
 
 aoc_lib! { year = 2024 }
@@ -91,6 +92,7 @@ mod prelude {
     pub const East: Cardinal = Cardinal::East;
     pub const West: Cardinal = Cardinal::West;
 
+    pub use crate::bitset::Bitset128;
     pub use crate::framebuffer::Framebuffer;
 
     pub use crate::init_logging;
