@@ -3,22 +3,37 @@ use crate::prelude::*;
 type SmallVec<T> = smallvec::SmallVec<[T; 32]>;
 
 fn parse(input: &str) -> ([Bitset128; 100], impl Iterator<Item = SmallVec<i32>> + '_) {
+    let input = input.as_bytes();
+
     let mut before = [Bitset128::new(); 100];
 
-    let mut lines = input.lines();
-    for line in lines.by_ref() {
-        if line.trim().is_empty() {
-            break;
-        }
-
-        let (a, b) = line.split_once('|').unwrap();
-        let a: u8 = parse_or_fail(a);
-        let b: u8 = parse_or_fail(b);
-
+    // The input here comes in two parts: rules and updates. We'll use this `i` to track our progress in the rules,
+    // and then know where to start parsing for the updates.
+    let mut i = 0;
+    while input[i] != b'\n' {
+        // Each line looks like:
+        //      12|34
+        //      ^  ^
+        //      0  3
+        let a = 10 * (input[i + 0] - b'0') as i32 + (input[i + 1] - b'0') as i32;
+        let b = 10 * (input[i + 3] - b'0') as i32 + (input[i + 4] - b'0') as i32;
         before[a as usize].insert(b);
+
+        // Each line is exactly 6 long
+        i += 6;
     }
 
-    let updates = lines.map(|line| line.split(",").map(parse_or_fail).collect());
+    // Step over the final newline
+    i += 1;
+
+    let updates = input[i..]
+        .split(|&byte| byte == b'\n')
+        .map(|line| -> SmallVec<i32> {
+            line.split(|&b| b == b',')
+                // Each entry here is exactly 2 digits, like above
+                .map(|bytes| 10 * (bytes[0] - b'0') as i32 + (bytes[1] - b'0') as i32)
+                .collect()
+        });
 
     (before, updates)
 }
