@@ -37,6 +37,13 @@ pub struct Framebuffer<T> {
     border_color: Option<T>,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct ParsingInfo {
+    pub c: char,
+    pub x: i32,
+    pub y: i32,
+}
+
 /// Construction Methods
 impl<T> Framebuffer<T>
 where
@@ -111,6 +118,34 @@ where
             let y = height - y - 1;
             for (x, c) in line.chars().enumerate() {
                 grid[(x, y)] = f(c);
+            }
+        }
+
+        grid
+    }
+
+    #[track_caller]
+    pub fn parse_grid2(input: &str, mut f: impl FnMut(ParsingInfo) -> T) -> Self {
+        debug_assert!(
+            !input.is_empty(),
+            "Parsing a grid from an empty string is probably not on purpose."
+        );
+
+        let width = input.lines().next().map(str::len).unwrap_or_default();
+        let height = input.lines().count();
+
+        let mut grid = Framebuffer::new(width as u32, height as u32);
+
+        for (y, line) in input.lines().enumerate() {
+            assert_eq!(line.len(), width, "Is the input string actually a grid?");
+            assert!(y < height, "Is the input string actually a grid?");
+            let y = height - y - 1;
+            for (x, c) in line.chars().enumerate() {
+                grid[(x, y)] = f(ParsingInfo {
+                    c,
+                    x: x as i32,
+                    y: y as i32,
+                });
             }
         }
 

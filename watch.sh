@@ -12,6 +12,7 @@ if [ "$#" -eq 2 ] && [ "$2" == "looping" ]; then
     cargo fmt
     cargo test --lib day$day
     cargo aoc --day $day
+    # cargo aoc bench --day $day
 
     # cargo doc --document-private-items
 

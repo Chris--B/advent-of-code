@@ -20,7 +20,7 @@ pub mod day02;
 pub mod day03;
 pub mod day04;
 pub mod day05;
-// pub mod day06;
+pub mod day06;
 // pub mod day07;
 // pub mod day08;
 // pub mod day09;
@@ -133,6 +133,25 @@ impl Cardinal {
         }
         if self.contains(West) {
             r |= East;
+        }
+
+        r
+    }
+
+    pub fn turn_right(&self) -> Self {
+        let mut r = Cardinal::none();
+
+        if self.contains(Norð) {
+            r |= East;
+        }
+        if self.contains(Souð) {
+            r |= West;
+        }
+        if self.contains(East) {
+            r |= Souð;
+        }
+        if self.contains(West) {
+            r |= Norð;
         }
 
         r
