@@ -1,8 +1,7 @@
-#![allow(unused)]
-
-use traits::float::FloatCore;
-
 use crate::prelude::*;
+
+use smallvec::smallvec;
+type SmallVec<T> = smallvec::SmallVec<[T; 16]>;
 
 #[derive(Clone, Debug)]
 struct CalibEq {
@@ -88,30 +87,11 @@ fn parse(input: &str) -> Vec<CalibEq> {
         })
         .collect();
 
-    // {
-    //     let eq = calib_eqs.iter().max_by_key(|eq| eq.args.len()).unwrap();
-    //     println!("    Longest:     ({:>6}) {eq:?}", eq.args.len());
-    // }
-    // {
-    //     let eq = calib_eqs
-    //         .iter()
-    //         .max_by_key(|eq| eq.args.iter().max())
-    //         .unwrap();
-    //     println!(
-    //         "    Largest Arg: ({:>6}) {eq:?}",
-    //         eq.args.iter().max().unwrap()
-    //     );
-    // }
-    // {
-    //     let eq = calib_eqs.iter().max_by_key(|eq| eq.res).unwrap();
-    //     println!("    Largest Res: ({:>6}) {eq:?}", eq.res);
-    // }
-
     calib_eqs
 }
 
 // Part1 ========================================================================
-#[aoc(day7, part1)]
+#[aoc(day7, part1, brute_force)]
 pub fn part1(input: &str) -> u64 {
     let calib_eqs = parse(input);
 
@@ -133,7 +113,7 @@ pub fn part1(input: &str) -> u64 {
 }
 
 // Part2 ========================================================================
-#[aoc(day7, part2)]
+#[aoc(day7, part2, brute_force)]
 pub fn part2(input: &str) -> u64 {
     let calib_eqs = parse(input);
 
@@ -148,6 +128,46 @@ pub fn part2(input: &str) -> u64 {
             } else {
                 break;
             }
+        }
+    }
+
+    total
+}
+
+#[aoc(day7, part2, smarter)]
+pub fn part2_smarter(input: &str) -> u64 {
+    let calib_eqs = parse(input);
+
+    let mut total = 0;
+    for eq in calib_eqs {
+        // Walk the args backwards and track every value we *could* reach
+        // Then we can see if the actual result is even possible!
+        let mut possible: SmallVec<u64> = smallvec![eq.res];
+
+        for &arg in eq.args[1..].iter().rev() {
+            let mut next: SmallVec<u64> = smallvec![];
+
+            for &tmp in &possible {
+                if tmp >= arg {
+                    next.push(tmp - arg);
+                }
+                if tmp % arg == 0 {
+                    next.push(tmp / arg);
+                }
+                // Try and un-concatenate our temp state and the latest arg
+                let pow10 = 10.pow(arg.ilog10() + 1);
+                if tmp > arg && tmp % pow10 == arg {
+                    debug_assert_eq!(format!("{}{arg}", tmp / pow10), tmp.to_string());
+                    next.push(tmp / pow10);
+                }
+            }
+
+            possible = next;
+        }
+
+        // If the possible states includes our first arg, then we found at least one valid combination of ops!
+        if possible.contains(&eq.args[0]) {
+            total += eq.res;
         }
     }
 
@@ -206,7 +226,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_smarter)]
         p: impl FnOnce(&str) -> u64,
         #[case] expected: u64,
         #[case] input: &str,
