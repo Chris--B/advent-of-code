@@ -139,6 +139,7 @@ fn eat_until_mul_p2(input: &mut &str) -> Option<(i32, i32)> {
     // There's nothing left to parse
     None
 }
+
 #[aoc(day3, part2)]
 pub fn part2(mut input: &str) -> i32 {
     let mut sum = 0;
