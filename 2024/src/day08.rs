@@ -99,57 +99,56 @@ impl IndexMut<char> for AntennaMap {
 #[aoc(day8, part1)]
 pub fn part1(input: &str) -> i64 {
     let map = AntennaMap::parse(input);
-    let mut seen = HashSet::new();
+    let mut seen = vec![0; (map.dims.x * map.dims.y) as usize];
 
     for (_c, antennas) in map.antennas() {
         for i in 0..antennas.len() {
             for j in (i + 1)..antennas.len() {
                 let a = antennas[i];
                 let b = antennas[j];
-
                 let d = a - b;
+
                 for next in [a + d, b - d] {
                     if map.contains(next) {
-                        seen.insert(next);
+                        seen[(next.x + map.dims.x * next.y) as usize] = 1;
                     }
                 }
             }
         }
     }
 
-    seen.len() as i64
+    seen.iter().sum()
 }
 
 // Part2 ========================================================================
 #[aoc(day8, part2)]
 pub fn part2(input: &str) -> i64 {
     let map = AntennaMap::parse(input);
-    let mut seen = HashSet::new();
+    let mut seen = vec![0; (map.dims.x * map.dims.y) as usize];
 
     for (_c, antennas) in map.antennas() {
         for i in 0..antennas.len() {
             for j in (i + 1)..antennas.len() {
                 let a = antennas[i];
                 let b = antennas[j];
-
                 let d = a - b;
 
                 let mut next = a;
                 while map.contains(next) {
-                    seen.insert(next);
+                    seen[(next.x + map.dims.x * next.y) as usize] = 1;
                     next += d;
                 }
 
                 let mut next = b;
                 while map.contains(next) {
-                    seen.insert(next);
+                    seen[(next.x + map.dims.x * next.y) as usize] = 1;
                     next += -d;
                 }
             }
         }
     }
 
-    seen.len() as i64
+    seen.iter().sum()
 }
 
 #[cfg(test)]
