@@ -153,6 +153,22 @@ where
     }
 }
 
+/// Consruction Methods for char grids
+impl Framebuffer<char> {
+    #[track_caller]
+    pub fn parse_grid_char(input: &str) -> Self {
+        Self::parse_grid2(input, |info: ParsingInfo| -> char { info.c })
+    }
+}
+
+/// Consruction Methods for u8 grids
+impl Framebuffer<u8> {
+    #[track_caller]
+    pub fn parse_grid_u8(input: &str) -> Self {
+        Self::parse_grid2(input, |info: ParsingInfo| -> u8 { info.c as u8 })
+    }
+}
+
 /// Construction Methods
 impl<T> Framebuffer<T> {
     pub fn new_with_ranges_and(
