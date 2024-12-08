@@ -65,7 +65,7 @@ impl AntennaMap {
             .filter(|(_i, antennas)| !antennas.is_empty())
             .map(|(i, a)| {
                 let c = (i as u8 + b'0') as char;
-                assert!(c.is_alphanumeric());
+                debug_assert!(c.is_alphanumeric());
                 (c, a.as_slice())
             })
     }
