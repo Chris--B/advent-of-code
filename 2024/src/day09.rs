@@ -1,9 +1,9 @@
 use crate::prelude::*;
 
-fn print_blocks(blocks: &[Option<i64>], left: usize, right: usize) {
+fn print_blocks(blocks: &[i16], left: usize, right: usize) {
     if cfg!(test) {
-        for b in blocks {
-            if let Some(b) = b {
+        for &b in blocks {
+            if b >= 0 {
                 print!("{}", b);
             } else {
                 print!(".");
@@ -31,17 +31,18 @@ pub fn part1(input: &str) -> i64 {
     let disk_map = input.as_bytes();
 
     // Expand (this will not scale lol)
-    let mut blocks: Vec<Option<i64>> = vec![];
+    // TODO: Try doing this in-place, so that instead of moving left and right, we decrement first.
+    let mut blocks: Vec<i16> = vec![];
     let mut id = 0;
     while 2 * id < input.len() {
         let file = disk_map[2 * id];
         for _ in b'0'..file {
-            blocks.push(Some(id as i64));
+            blocks.push(id as i16);
         }
 
         if let Some(free) = disk_map.get(2 * id + 1) {
             for _ in b'0'..*free {
-                blocks.push(None);
+                blocks.push(-1);
             }
         }
 
@@ -52,20 +53,20 @@ pub fn part1(input: &str) -> i64 {
     let mut right = blocks.len() - 1;
 
     while left < right {
-        // print_blocks(&blocks, left, right);
+        print_blocks(&blocks, left, right);
 
         // Advance left
-        while left < right && blocks[left].is_some() {
+        while left < right && blocks[left] >= 0 {
             left += 1;
         }
 
         // Advance right
-        while left < right && blocks[right].is_none() {
+        while left < right && blocks[right] < 0 {
             right -= 1;
         }
 
         // Copy over free space
-        while left < right && blocks[left].is_none() && blocks[right].is_some() {
+        while left < right && blocks[left] < 0 && blocks[right] >= 0 {
             blocks.swap(left, right);
             left += 1;
             right -= 1;
@@ -76,14 +77,15 @@ pub fn part1(input: &str) -> i64 {
     blocks
         .iter()
         .enumerate()
-        .map(|(pos, id)| (pos as i64) * (id.unwrap_or(0)))
+        .filter(|(_pos, &id)| id >= 0)
+        .map(|(pos, &id)| (pos as i64) * (id as i64))
         .sum()
 }
 
 // Part2 ========================================================================
 #[derive(Copy, Clone, Debug)]
 enum Block {
-    File { id: i64, size: usize },
+    File { id: i16, size: usize },
     Free { size: usize },
 }
 use Block::*;
@@ -92,7 +94,7 @@ impl Block {
     #[track_caller]
     fn file_id(self) -> i64 {
         match self {
-            File { id, .. } => id,
+            File { id, .. } => id as i64,
             Free { .. } => unreachable!(),
         }
     }
@@ -189,7 +191,7 @@ pub fn part2(input: &str) -> i64 {
     let mut id = 0;
     while 2 * id < input.len() {
         blocks.push(File {
-            id: id as i64,
+            id: id as i16,
             size: (disk_map[2 * id] - b'0') as usize,
         });
         if 2 * id + 1 < disk_map.len() {
@@ -201,10 +203,18 @@ pub fn part2(input: &str) -> i64 {
         id += 1;
     }
 
-    let mut seen_ids = vec![];
+    // Lut for seen IDs.
+    let mut seen = vec![false; 10_000 + 1];
+    // As we run, the start of the buffer becomes packed. We can track that to reduce search times.
+    let mut earliest_free = 0;
 
     let mut curr = blocks.len();
     while curr != 0 {
+        earliest_free += blocks[earliest_free..]
+            .iter()
+            .position(|b| matches!(b, Free { .. }))
+            .unwrap_or(0);
+
         curr -= 1;
 
         // Advance curr until it's at a file
@@ -213,7 +223,7 @@ pub fn part2(input: &str) -> i64 {
         }
 
         // Skip already-moved files
-        if seen_ids.contains(&blocks[curr].file_id()) {
+        if seen[blocks[curr].file_id() as usize] {
             continue;
         }
 
@@ -221,16 +231,22 @@ pub fn part2(input: &str) -> i64 {
         // println!("+ Trying to move id {}", blocks[curr].file_id());
 
         // Walk our free list until we find one that fits
-        if let Some((target_idx, _)) = blocks.iter().enumerate().find(|(_id, &block)| match block {
-            File { .. } => false,
-            Free { size } => size >= blocks[curr].file_size(),
-        }) {
+        if let Some((target_idx, _)) =
+            blocks
+                .iter()
+                .enumerate()
+                .skip(earliest_free)
+                .find(|(_id, &block)| match block {
+                    File { .. } => false,
+                    Free { size } => size >= blocks[curr].file_size(),
+                })
+        {
             if target_idx > curr {
                 // don't move "forward"
                 continue;
             }
             // println!("Moving {curr} -> {target_idx}");
-            seen_ids.push(blocks[curr].file_id());
+            seen[blocks[curr].file_id() as usize] = true;
 
             let new_free_size = blocks[target_idx].free_size() - blocks[curr].file_size();
 
@@ -239,7 +255,8 @@ pub fn part2(input: &str) -> i64 {
             blocks[curr] = Free {
                 size: file.file_size(),
             };
-            // TODO: Combine blocks[curr] with its neighbors (maybe?)
+
+            // Note: Don't need to combine adjacent free blocks - we never move something into a region that's full of them.
 
             // Insert file in the new slot
             blocks[target_idx] = file;
@@ -267,7 +284,7 @@ pub fn part2(input: &str) -> i64 {
         match block {
             File { id, size } => {
                 for p in 0..size {
-                    checksum += (pos + p) as i64 * id;
+                    checksum += (pos + p) as i64 * (id as i64);
                 }
                 pos += size;
             }
