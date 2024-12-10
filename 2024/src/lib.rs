@@ -1,7 +1,8 @@
 #![allow(
     clippy::comparison_chain,
-    clippy::iter_nth_zero,
     clippy::identity_op,
+    clippy::iter_nth_zero,
+    clippy::nonminimal_bool,
     clippy::single_element_loop
 )]
 #![warn(

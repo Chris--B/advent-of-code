@@ -15,6 +15,10 @@ path = "src/main.rs"
 name = "aoc24"
 path = "src/lib.rs"
 
+[[bin]]
+name = "viz-day10"
+path = "src/viz-day10.rs"
+
 [features]
 default = []
 broken = []
