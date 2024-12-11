@@ -1,6 +1,7 @@
 use aoc24::framebuffer::Framebuffer;
 use image::Rgb;
 
+#[allow(unused)]
 const EXAMPLE_JUST_9: &str = r"
 89010123
 78121874
