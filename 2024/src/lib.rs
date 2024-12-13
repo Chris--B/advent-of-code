@@ -1,5 +1,6 @@
 #![allow(
     clippy::collapsible_else_if,
+    clippy::collapsible_if,
     clippy::comparison_chain,
     clippy::identity_op,
     clippy::inconsistent_digit_grouping,
@@ -105,6 +106,7 @@ mod prelude {
     pub use crate::parse_list_whitespace;
     pub use crate::parse_or_fail;
 
+    pub use crate::IntParsable;
     pub use crate::Tally;
 }
 
@@ -184,6 +186,85 @@ impl From<Cardinal> for IVec2 {
 #[track_caller]
 pub fn just_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).unwrap()
+}
+
+pub struct Parsedi64s<'a> {
+    bytes: &'a [u8],
+}
+
+// TODO: Reverse would be nice
+impl Iterator for Parsedi64s<'_> {
+    type Item = i64;
+    fn next(&mut self) -> Option<Self::Item> {
+        // Skip non-digits
+        let mut i = 0;
+        while i < self.bytes.len() && !(self.bytes[i].is_ascii_digit() || self.bytes[i] == b'-') {
+            i += 1;
+        }
+        self.bytes = &self.bytes[i..];
+
+        // Check for a leading '-' because we handle negatives
+        let mut negative = false;
+        let mut i = 0;
+        if i < self.bytes.len() && self.bytes[i] == b'-' {
+            negative = true;
+            i += 1;
+        }
+
+        // Grab digits
+        let mut n: i64 = 0;
+        while i < self.bytes.len() && self.bytes[i].is_ascii_digit() {
+            n *= 10;
+            n += (self.bytes[i] - b'0') as i64;
+
+            i += 1;
+        }
+        if negative {
+            n = -n;
+        }
+
+        // Sanity check on debug builds
+        if cfg!(debug_assertions) && i > 0 {
+            let digits_text: &str =
+                std::str::from_utf8(&self.bytes[..i]).expect("Failed to parse bytes as UTF8");
+
+            let parsed_n: i64 = digits_text
+                    .parse::<i64>()
+                    .unwrap_or_else(|e| {
+                panic!("Parsing {digits_text:?} to an i64 failed: {e:?}. Release builds will parse as n={n}")
+            });
+            debug_assert_eq!(
+                n, parsed_n,
+                "We parsed {digits_text:?} as {n}, but \"should\" have parsed {parsed_n}"
+            );
+        }
+        self.bytes = &self.bytes[i..];
+
+        // If we didn't grab any digits, we're done
+        if i > 0 {
+            Some(n)
+        } else {
+            None
+        }
+    }
+}
+
+pub trait IntParsable {
+    fn i64s(&self) -> Parsedi64s;
+}
+
+impl IntParsable for &'_ str {
+    fn i64s(&self) -> Parsedi64s {
+        Parsedi64s {
+            bytes: self.as_bytes(),
+        }
+    }
+}
+
+impl IntParsable for &'_ [u8] {
+    fn i64s(&self) -> Parsedi64s {
+        Parsedi64s { bytes: self }
+    }
 }
 
 // TODO: Use Pattern when it's stable, https://doc.rust-lang.org/std/str/pattern/index.html?
@@ -285,7 +366,10 @@ pub fn parse_or_fail<T: FromStr>(s: impl AsRef<str>) -> T {
 
 #[cfg(test)]
 mod util_tests {
-    use crate::parse_list;
+    use super::*;
+    #[allow(unused_imports)]
+    use pretty_assertions::{assert_eq, assert_ne};
+    use rstest::*;
 
     #[test]
     fn check_parse_list() {
@@ -298,5 +382,25 @@ mod util_tests {
             let a: [i32; 3] = parse_list("10-100000-1", "-");
             assert_eq!(a, [10, 100000, 1]);
         }
+    }
+
+    #[rstest]
+    #[case::basic("1", [1])]
+    #[case::basic("1234", [1234])]
+    #[case::basic("1 2 3 4", [1, 2, 3, 4])]
+    #[case::basic("1 akl;dfalkdsjflakjsdflajsdlfjalkdf 2 asdjflakjdsfl;kajdslkfja  3 alsdjfla;jdflkaj 4", [1, 2, 3, 4])]
+    #[case::basic("1 -2 3 -4", [1, -2, 3, -4])]
+    #[trace]
+    fn check_i64s(
+        #[case] blah: impl IntParsable, // .
+        #[case] expected: impl IntoIterator<Item = i64>,
+    ) {
+        let parsed: Vec<i64> = blah.i64s().collect_vec();
+        let expected: Vec<_> = expected.into_iter().collect_vec();
+
+        println!("parsed:   {parsed:?}");
+        println!("expected: {expected:?}");
+
+        assert_eq!(parsed, expected);
     }
 }
