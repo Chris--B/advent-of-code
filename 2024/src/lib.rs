@@ -268,6 +268,20 @@ impl IntParsable for &'_ [u8] {
     }
 }
 
+impl IntParsable for str {
+    fn i64s(&self) -> Parsedi64s {
+        Parsedi64s {
+            bytes: self.as_bytes(),
+        }
+    }
+}
+
+impl IntParsable for [u8] {
+    fn i64s(&self) -> Parsedi64s {
+        Parsedi64s { bytes: self }
+    }
+}
+
 // TODO: Use Pattern when it's stable, https://doc.rust-lang.org/std/str/pattern/index.html?
 pub fn parse_list<const N: usize, T>(s: &str, pattern: &str) -> [T; N]
 where
