@@ -74,17 +74,12 @@ fn presses_to_win(m: Machine) -> Option<(i64, i64)> {
     None
 }
 
-#[aoc_generator(day13)]
-pub fn parse(input: &str) -> Vec<Machine> {
-    input.split("\n\n").map(Machine::parse).collect_vec()
-}
-
 // Part1 ========================================================================
 #[aoc(day13, part1)]
-pub fn part1(machines: &[Machine]) -> i64 {
-    machines
-        .iter()
-        .copied()
+pub fn part1(input: &str) -> i64 {
+    input
+        .split("\n\n")
+        .map(Machine::parse)
         .filter_map(presses_to_win)
         .map(|(a, b)| 3 * a + b)
         .sum()
@@ -92,10 +87,10 @@ pub fn part1(machines: &[Machine]) -> i64 {
 
 // Part2 ========================================================================
 #[aoc(day13, part2)]
-pub fn part2(machines: &[Machine]) -> i64 {
-    machines
-        .iter()
-        .copied()
+pub fn part2(input: &str) -> i64 {
+    input
+        .split("\n\n")
+        .map(Machine::parse)
         .map(|mut m| {
             m.prize[0] += 1_0000_000_000_000;
             m.prize[1] += 1_0000_000_000_000;
@@ -161,14 +156,14 @@ Prize: X=18641, Y=10279
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&[Machine]) -> i64,
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
         init_logging();
 
         let input = input.trim_start();
-        assert_eq!(p(&parse(input)), expected);
+        assert_eq!(p(input), expected);
     }
 
     #[rstest]
@@ -177,13 +172,13 @@ Prize: X=18641, Y=10279
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
-        p: impl FnOnce(&[Machine]) -> i64,
+        p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
     ) {
         init_logging();
 
         let input = input.trim();
-        assert_eq!(p(&parse(input)), expected);
+        assert_eq!(p(input), expected);
     }
 }
