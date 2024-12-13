@@ -1,6 +1,8 @@
 #![allow(
+    clippy::collapsible_else_if,
     clippy::comparison_chain,
     clippy::identity_op,
+    clippy::inconsistent_digit_grouping,
     clippy::iter_nth_zero,
     clippy::nonminimal_bool,
     clippy::single_element_loop
@@ -28,7 +30,7 @@ pub mod day09;
 // pub mod day10;
 pub mod day11;
 pub mod day12;
-// pub mod day13;
+pub mod day13;
 // pub mod day14;
 // pub mod day15;
 // pub mod day16;
