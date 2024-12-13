@@ -1,104 +1,102 @@
-#![allow(unused)]
-
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Machine {
-    btn_a: [i64; 2],
-    btn_b: [i64; 2],
-    prize: [i64; 2],
+    a: [i64; 2],
+    b: [i64; 2],
+    p: [i64; 2],
 }
 
-impl Machine {
-    fn parse(s: &str) -> Self {
-        #[rustfmt::skip]
-        let (ax, ay, bx, by, px, py) = scan_fmt!(
-            s.trim(),
-            r#"
-                Button A: X+{}, Y+{}
-                Button B: X+{}, Y+{}
-                Prize: X={}, Y={}
-            "#
-            .trim(),
-            i64, i64, i64, i64, i64, i64
-        )
-        .unwrap();
+fn parse(b: &[u8]) -> Machine {
+    if cfg!(debug_assertions) {
+        println!("  + Parsing bytes {:?}", std::str::from_utf8(b));
+        debug_assert!(!b.is_empty());
+    }
 
-        Self {
-            btn_a: [ax, ay],
-            btn_b: [bx, by],
-            prize: [px, py],
+    let mut nums = [0_i64; 6];
+    for (i, n) in b.i64s().enumerate().take(6) {
+        nums[i] = n;
+    }
+
+    if cfg!(debug_assertions) {
+        for (i, n) in nums.iter().enumerate() {
+            debug_assert!(
+                *n != 0,
+                "nums[{i}] == 0: did we parse everything? b={:?}, nums={nums:?}",
+                std::str::from_utf8(b)
+            );
         }
     }
+
+    Machine {
+        a: [nums[0], nums[1]],
+        b: [nums[2], nums[3]],
+        p: [nums[4], nums[5]],
+    }
 }
 
-fn presses_to_win(m: Machine) -> Option<(i64, i64)> {
-    /*
-        m.prize[0] == A * m.btn_a[0] + B * m.btn_b[0];
-        m.prize[1] == A * m.btn_a[1] + B * m.btn_b[1];
-
-        prize              == [A, B]^T * btn_mat
-        prize * btn_mat^-1 == [A, B]^T
-    */
-
-    #[rustfmt::skip]
-    let btn = [
-        [m.btn_a[0], m.btn_b[0]],
-        [m.btn_a[1], m.btn_b[1]],
-    ];
-    let [[a, b], [c, d]] = btn;
-    let det = a * d - b * c;
-    let inv = [[d, -b], [-c, a]];
-
+fn tokens<const PART: u8>(Machine { a, b, p }: Machine) -> i64 {
+    let det = a[0] * b[1] - b[0] * a[1];
+    debug_assert!(det != 0, "Never expect det(btn) == 0");
     if det == 0 {
-        unreachable!("Never expect det(btn) == 0.0");
+        return 0;
     }
 
-    let press_a = (m.prize[0] * inv[0][0] + m.prize[1] * inv[0][1]) / det;
-    let press_b = (m.prize[0] * inv[1][0] + m.prize[1] * inv[1][1]) / det;
+    let inv = [[b[1], -b[0]], [-a[1], a[0]]];
+    let press_a = (p[0] * inv[0][0] + p[1] * inv[0][1]) / det;
+    let press_b = (p[0] * inv[1][0] + p[1] * inv[1][1]) / det;
 
     // Either prizes are small (part 1) and inputs must be small
     // ... or prizes are huge (part 2) and we need way more than 100 presses
-    if (m.prize[0] >= 1_0000_000_000_000)
-        || (0..=100).contains(&press_a) && (0..=100).contains(&press_b)
-    {
-        let x = m.btn_a[0] * press_a + m.btn_b[0] * press_b;
-        let y = m.btn_a[1] * press_a + m.btn_b[1] * press_b;
-
-        // WHY
-        if [x, y] == m.prize {
-            return Some((press_a, press_b));
+    if PART == 1 {
+        if !(0..=100).contains(&press_a) && (0..=100).contains(&press_b) {
+            return 0;
         }
     }
+    debug_assert!(press_a > 0);
+    debug_assert!(press_b > 0);
 
-    None
+    // Check again (why do we need this?)
+    let should_be_p = [
+        a[0] * press_a + b[0] * press_b,
+        a[1] * press_a + b[1] * press_b,
+    ];
+
+    (should_be_p == p) as i64 * (3 * press_a + press_b)
 }
 
 // Part1 ========================================================================
 #[aoc(day13, part1)]
 pub fn part1(input: &str) -> i64 {
-    input
-        .split("\n\n")
-        .map(Machine::parse)
-        .filter_map(presses_to_win)
-        .map(|(a, b)| 3 * a + b)
-        .sum()
+    let bytes = input.as_bytes();
+    let mut start = 0;
+
+    let mut sum = 0;
+    for end in memmem::find_iter(bytes, b"\n\n").chain([bytes.len()]) {
+        let m = parse(&bytes[start..end]);
+        sum += tokens::<1>(m);
+        start = end + 2;
+    }
+
+    sum
 }
 
 // Part2 ========================================================================
 #[aoc(day13, part2)]
 pub fn part2(input: &str) -> i64 {
-    input
-        .split("\n\n")
-        .map(Machine::parse)
-        .map(|mut m| {
-            m.prize[0] += 1_0000_000_000_000;
-            m.prize[1] += 1_0000_000_000_000;
-            m
-        })
-        .filter_map(presses_to_win)
-        .map(|(a, b)| 3 * a + b)
-        .sum()
+    let bytes = input.as_bytes();
+    let mut start = 0;
+
+    let mut sum = 0;
+    for end in memmem::find_iter(bytes, b"\n\n").chain([bytes.len()]) {
+        let mut m = parse(&bytes[start..end]);
+        m.p[0] += 1_0000_000_000_000;
+        m.p[1] += 1_0000_000_000_000;
+        sum += tokens::<2>(m);
+        start = end + 2;
+    }
+
+    sum
 }
 
 #[cfg(test)]
@@ -127,27 +125,49 @@ Prize: X=18641, Y=10279
 ";
 
     #[rstest]
-    #[case::given_1(Some((80, 40)), Machine { btn_a: [94, 34], btn_b: [22, 67], prize: [ 8400,  5400] })]
-    #[case::given_2(None,           Machine { btn_a: [26, 66], btn_b: [67, 21], prize: [12748, 12176] })]
-    #[case::given_3(Some((38, 86)), Machine { btn_a: [17, 86], btn_b: [84, 37], prize: [ 7870,  6450] })]
-    #[case::given_4(None,           Machine { btn_a: [69, 23], btn_b: [27, 71], prize: [18641, 10279] })]
-    #[case::round(Some((31, 35)),   Machine { btn_a: [63, 26], btn_b: [41, 75], prize: [ 3388,  3431] })]
-    #[case::what_the_01(None, Machine { btn_a: [16, 68], btn_b: [33, 11], prize: [2036, 4852] })]
-    #[case::what_the_02(None, Machine { btn_a: [41, 21], btn_b: [41, 67], prize: [3510, 4822] })]
-    #[case::what_the_03(None, Machine { btn_a: [56, 11], btn_b: [38, 81], prize: [1058, 2074] })]
-    #[case::what_the_04(None, Machine { btn_a: [22, 65], btn_b: [75, 31], prize: [4996, 7118] })]
-    #[case::what_the_05(None, Machine { btn_a: [49, 14], btn_b: [19, 33], prize: [2815, 3480] })]
-    #[case::what_the_06(None, Machine { btn_a: [15, 63], btn_b: [52, 16], prize: [5098, 7126] })]
-    #[case::what_the_07(None, Machine { btn_a: [37, 15], btn_b: [27, 57], prize: [1639, 3029] })]
-    #[case::what_the_08(None, Machine { btn_a: [17, 55], btn_b: [51, 24], prize: [ 584,  404] })]
-    #[case::what_the_09(None, Machine { btn_a: [31, 16], btn_b: [14, 47], prize: [2191, 1666] })]
-    #[case::what_the_10(None, Machine { btn_a: [67, 28], btn_b: [14, 49], prize: [3226, 2755] })]
+    #[case::given_1(
+        Machine { a: [94, 34], b: [22, 67], p: [8400, 5400] },
+        "Button A: X+94, Y+34\nButton B: X+22, Y+67\nPrize: X= 8400, Y= 5400")]
+    #[case::given_2(
+        Machine { a: [26, 66], b: [67, 21], p: [12748, 12176] },
+        "Button A: X+26, Y+66\nButton B: X+67, Y+21\nPrize: X=12748, Y=12176"
+    )]
+    #[case::given_3(
+        Machine { a: [17, 86], b: [84, 37], p: [ 7870,  6450] },
+        "Button A: X+17, Y+86\nButton B: X+84, Y+37\nPrize: X= 7870, Y= 6450")]
+    #[case::given_4(
+        Machine { a: [69, 23], b: [27, 71], p: [18641, 10279] },
+        "Button A: X+69, Y+23\nButton B: X+27, Y+71\nPrize: X=18641, Y=10279"
+    )]
+    #[trace]
+    fn check_parse(#[case] expected: Machine, #[case] machine: &str) {
+        let parsed = parse(machine.as_bytes());
+        assert_eq!(parsed, expected);
+    }
+
+    #[rustfmt::skip]
+    #[rstest]
+    #[case::given_01(3*80 + 40, "Button A: X+94, Y+34\nButton B: X+22, Y+67\nPrize: X= 8400, Y= 5400")]
+    #[case::given_03(3*38 + 86, "Button A: X+17, Y+86\nButton B: X+84, Y+37\nPrize: X= 7870, Y= 6450")]
+    #[case::round   (3*31 + 35, "Button A: X+63, Y+26\nButton B: X+41, Y+75\nPrize: X= 3388, Y= 3431")]
+    #[case::given_02(0, "Button A: X+26, Y+66\nButton B: X+67, Y+21\nPrize: X=12748, Y=12176")]
+    #[case::given_04(0, "Button A: X+69, Y+23\nButton B: X+27, Y+71\nPrize: X=18641, Y=10279")]
+    #[case::weird_01(0, "Button A: X+16, Y+68\nButton B: X+33, Y+11\nPrize: X= 2036, Y= 4852")]
+    #[case::weird_02(0, "Button A: X+41, Y+21\nButton B: X+41, Y+67\nPrize: X= 3510, Y= 4822")]
+    #[case::weird_03(0, "Button A: X+56, Y+11\nButton B: X+38, Y+81\nPrize: X= 1058, Y= 2074")]
+    #[case::weird_04(0, "Button A: X+22, Y+65\nButton B: X+75, Y+31\nPrize: X= 4996, Y= 7118")]
+    #[case::weird_05(0, "Button A: X+49, Y+14\nButton B: X+19, Y+33\nPrize: X= 2815, Y= 3480")]
+    #[case::weird_06(0, "Button A: X+15, Y+63\nButton B: X+52, Y+16\nPrize: X= 5098, Y= 7126")]
+    #[case::weird_07(0, "Button A: X+37, Y+15\nButton B: X+27, Y+57\nPrize: X= 1639, Y= 3029")]
+    #[case::weird_08(0, "Button A: X+17, Y+55\nButton B: X+51, Y+24\nPrize: X=  584, Y=  404")]
+    #[case::weird_09(0, "Button A: X+31, Y+16\nButton B: X+14, Y+47\nPrize: X= 2191, Y= 1666")]
+    #[case::weird_10(0, "Button A: X+67, Y+28\nButton B: X+14, Y+49\nPrize: X= 3226, Y= 2755")]
     #[trace]
     fn check_presses_to_win(
-        #[case] expected: Option<(i64, i64)>, //
-        #[case] machine: Machine,             //
+        #[case] expected: i64,
+        #[case] machine: &str,
     ) {
-        assert_eq!(presses_to_win(machine), expected);
+        assert_eq!(tokens::<1>(parse(machine.as_bytes())), expected);
     }
 
     #[rstest]

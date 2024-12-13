@@ -107,6 +107,7 @@ dependencies = [
  "image",
  "itertools",
  "log",
+ "memchr",
  "num",
  "pretty_assertions",
  "rstest",

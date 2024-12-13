@@ -83,6 +83,7 @@ mod prelude {
     pub use bitmask_enum::bitmask;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
+    pub use memchr::*;
     pub use num::*;
     pub use scan_fmt::scan_fmt;
     pub use smallvec::SmallVec;
