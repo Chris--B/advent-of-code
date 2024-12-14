@@ -1,4 +1,4 @@
-use image::{imageops::FilterType, Rgb, RgbImage};
+use image::{imageops::FilterType, RgbImage};
 
 use crate::prelude::*;
 
@@ -86,9 +86,6 @@ pub fn part2(input: &str) -> i64 {
 
         // Make pretty picture I guess (we know where the tree isn't from failed attempts)
         if false {
-            const AOC_BLUE: Rgb<u8> = Rgb([0x0f, 0x0f, 0x23]);
-            const AOC_GOLD: Rgb<u8> = Rgb([0xff, 0xff, 0x66]);
-
             std::fs::create_dir_all("day14-images/").unwrap();
             let mut img = RgbImage::from_fn(DIMS.x as _, DIMS.y as _, |_x, _y| AOC_BLUE);
 
@@ -109,6 +106,68 @@ pub fn part2(input: &str) -> i64 {
     }
 
     tree_time
+}
+
+#[aoc(day14, part2, cycles)]
+pub fn part2_cycles(input: &str) -> i64 {
+    let mut bots = input
+        .i64s()
+        .map(|n| n as i32)
+        .tuples()
+        .map(|(px, py, vx, vy)| (IVec2::new(px, py), IVec2::new(px, py), IVec2::new(vx, vy)))
+        .collect_vec();
+
+    // First pass - find our cycle offsets
+    let mut max_pop = [30, 30];
+    let mut offsets = [0, 0];
+    for seconds in 1..=DIMS.component_min() {
+        // Board is always wider than tall
+        let mut pop = [[0; DIMS.y as usize]; 2];
+        for (_start, pos, vel) in &mut bots {
+            *pos += *vel;
+            pos.x = (pos.x + DIMS.x) % DIMS.x;
+            pos.y = (pos.y + DIMS.y) % DIMS.y;
+
+            pop[0][pos.x as usize] += 1;
+            pop[1][pos.y as usize] += 1;
+        }
+
+        // Look for horizontal/vertical oddities
+        for i in [0, 1_usize] {
+            let max = *pop[i].iter().max().unwrap();
+            if max > max_pop[i] {
+                max_pop[i] = max;
+                offsets[i] = seconds;
+            }
+        }
+    }
+
+    if cfg!(debug_assertions) {
+        println!("cycles={offsets:?}",);
+        println!("Tree appears at t, for some a & b");
+        println!(
+            "    t == {dims_x}a + {offset0} == {dims_y}b + {offset1}",
+            dims_x = DIMS.x,
+            dims_y = DIMS.y,
+            offset0 = offsets[0],
+            offset1 = offsets[1],
+        );
+    }
+
+    // TODO: Sunzi's Theorem / CRT
+    for a in 0..=100 {
+        if (DIMS.x * a + offsets[0] - offsets[1]) % DIMS.y != 0 {
+            continue;
+        }
+        if cfg!(debug_assertions) {
+            let b = (DIMS.x * a + offsets[0] - offsets[1]) / DIMS.y;
+            debug_assert_eq!(DIMS.x * a + offsets[0], DIMS.y * b + offsets[1]);
+        }
+
+        return (DIMS.x * a + offsets[0]) as i64;
+    }
+
+    unreachable!("No solutions found")
 }
 
 #[cfg(test)]

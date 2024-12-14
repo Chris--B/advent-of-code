@@ -81,6 +81,7 @@ mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use bitmask_enum::bitmask;
+    pub use image::Rgb;
     pub use itertools::Itertools;
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use memchr::*;
@@ -97,6 +98,9 @@ mod prelude {
     pub const Souð: Cardinal = Cardinal::Souð;
     pub const East: Cardinal = Cardinal::East;
     pub const West: Cardinal = Cardinal::West;
+
+    pub const AOC_BLUE: Rgb<u8> = Rgb([0x0f, 0x0f, 0x23]);
+    pub const AOC_GOLD: Rgb<u8> = Rgb([0xff, 0xff, 0x66]);
 
     pub use crate::bitset::Bitset128;
     pub use crate::framebuffer::Framebuffer;
