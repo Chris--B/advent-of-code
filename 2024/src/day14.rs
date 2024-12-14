@@ -1,5 +1,3 @@
-use image::{imageops::FilterType, RgbImage};
-
 use crate::prelude::*;
 
 const DIMS: IVec2 = if cfg!(test) {
@@ -93,14 +91,14 @@ pub fn part2(input: &str) -> i64 {
                 img.put_pixel(p.x as _, p.y as _, AOC_GOLD);
             }
 
-            let img = image::imageops::resize(
-                &img,
-                2 * DIMS.x as u32,
-                2 * DIMS.y as u32,
-                FilterType::Triangle,
-            );
+            // let img = image::imageops::resize(
+            //     &img,
+            //     2 * DIMS.x as u32,
+            //     2 * DIMS.y as u32,
+            //     imageops::FilterType::Triangle,
+            // );
 
-            img.save(format!("day14-images/day14-{seconds:04}.png"))
+            img.save(format!("day14-images/day14-{seconds:04}.jpeg"))
                 .unwrap();
         }
     }
