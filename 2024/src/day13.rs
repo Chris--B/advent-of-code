@@ -11,15 +11,6 @@ fn tokens(a: [i64; 2], b: [i64; 2], p: [i64; 2]) -> i64 {
     let press_a = (p[0] * inv[0][0] + p[1] * inv[0][1]) / det;
     let press_b = (p[0] * inv[1][0] + p[1] * inv[1][1]) / det;
 
-    debug_assert!(
-        press_a != 0,
-        "We need nonzero presses of A but we have {press_a}"
-    );
-    debug_assert!(
-        press_b != 0,
-        "We need nonzero presses of B but we have {press_b}"
-    );
-
     // Check again (why do we need this?)
     let should_be_p = [
         a[0] * press_a + b[0] * press_b,

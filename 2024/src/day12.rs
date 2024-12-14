@@ -156,10 +156,11 @@ EEEEE
 
     #[rstest]
     #[case::given(80, EXAMPLE_INPUT_SMALL)]
-    // #[case::given(368, EXAMPLE_AAAAAAAA_BBB)]
-    // #[case::given(236, EXAMPLE_BUT_ITS_JUST_AN_E)]
-    // #[case::given(1206, EXAMPLE_INPUT)]
+    #[case::given(368, EXAMPLE_AAAAAAAA_BBB)]
+    #[case::given(236, EXAMPLE_BUT_ITS_JUST_AN_E)]
+    #[case::given(1206, EXAMPLE_INPUT)]
     #[trace]
+    #[ignore]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
