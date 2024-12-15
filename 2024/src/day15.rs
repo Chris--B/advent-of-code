@@ -26,50 +26,55 @@ pub fn part1(input: &str) -> i64 {
     });
 
     if cfg!(test) {
+        println!("{} moves={moves:?}", moves.len());
+        println!();
         println!("Initial State:");
         map.just_print();
-        println!("{} moves={moves:?}", moves.len());
     }
 
     for c in moves.lines().flat_map(str::chars) {
         let dir: IVec2 = c_to_dir(c).into();
         let next = robot + dir;
 
-        if cfg!(test) {
-            println!("Move {c}:");
-        }
         match map[next] {
-            '.' => { /* Easy move, nothing special to do */ }
+            '.' => {
+                map[robot] = '.';
+                map[next] = '@';
+                robot = next;
+            }
             '#' => {
                 // Nothing happens, do nothing.
                 if cfg!(test) {
                     println!("  + BONK! Wall.");
                     println!();
                 }
-                continue;
             }
             'O' => {
                 // We found a box! Let's see if we can move it or not.
-                let mut chain = vec![];
+                let mut count = 0;
                 let mut n = next;
                 while map[n] == 'O' {
-                    chain.push(n);
                     n += dir;
+                    count += 1;
                 }
-                chain.push(n);
-                let end = map[n];
-                if end == '.' {
-                    // We can move the boxes!
-                    for (next, prev) in chain.into_iter().rev().tuple_windows() {
-                        map[next] = map[prev];
-                    }
+
+                if map[n] == '.' {
+                    // We can move the boxes! (Just update the start and end, since the whole chain is identical)
+                    map[next] = '.';
+                    map[n] = 'O';
+
+                    // And move the robot
+                    map[robot] = '.';
+                    map[next] = '@';
+                    robot = next;
                 } else {
-                    let n = chain.len() - 1;
                     if cfg!(test) {
-                        println!("  + BONK! Tried to move {n} boxes, but pushing against {end:?}",);
+                        println!(
+                            "  + BONK! Tried to move {count} boxes, but pushing against {:?}",
+                            map[n]
+                        );
                         println!();
                     }
-                    continue;
                 }
             }
             cc => {
@@ -79,12 +84,8 @@ pub fn part1(input: &str) -> i64 {
             }
         }
 
-        // And move the robot
-        map[robot] = '.';
-        map[next] = '@';
-        robot = next;
-
         if cfg!(test) {
+            println!("Move {c}:");
             map.just_print();
             println!();
         }
