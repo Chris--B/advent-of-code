@@ -77,7 +77,7 @@ pub fn init_logging() {
     });
 }
 
-#[allow(unused_imports, non_upper_case_globals)]
+#[allow(dead_code, unused_imports, non_upper_case_globals)]
 mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
@@ -102,9 +102,13 @@ mod prelude {
 
     pub const AOC_BLUE: Rgb<u8> = Rgb([0x0f, 0x0f, 0x23]);
     pub const AOC_GOLD: Rgb<u8> = Rgb([0xff, 0xff, 0x66]);
+    pub const AOC_LIGHT_GREEN: Rgb<u8> = Rgb([0x00, 0xcc, 0x00]);
+    pub const AOC_DARK_GREEN: Rgb<u8> = Rgb([0x00, 0x99, 0x00]);
+    pub const AOC_DARK_GRAY: Rgb<u8> = Rgb([0x52, 0x52, 0x5b]);
+    pub const AOC_LIGHT_GRAY: Rgb<u8> = Rgb([0xcc, 0xcc, 0xcc]);
 
     pub use crate::bitset::Bitset128;
-    pub use crate::framebuffer::Framebuffer;
+    pub use crate::framebuffer::{Framebuffer, ParsingInfo};
 
     pub use crate::init_logging;
     pub use crate::just_str;

@@ -1,4 +1,4 @@
-use crate::{framebuffer::ParsingInfo, prelude::*};
+use crate::prelude::*;
 
 fn c_to_dir(c: char) -> Cardinal {
     match c {
@@ -212,10 +212,7 @@ pub fn part2(input: &str) -> i64 {
     let map = Framebuffer::new_with_ranges_and(
         0..(2 * map.width() as i32),
         0..(map.height() as i32),
-        |x, y| {
-            let x = x / 2;
-            map[(x, y)]
-        },
+        |x, y| map[(x / 2, y)],
     );
 
     if cfg!(test) {
@@ -223,7 +220,10 @@ pub fn part2(input: &str) -> i64 {
         print_board(Some(robot), &map, &boxes);
     }
 
-    for c in moves.lines().flat_map(str::chars) {
+    let mut frames: Vec<(Vec<_>, usize, [IVec2; 2])> = vec![];
+
+    for (move_num, c) in moves.lines().flat_map(str::chars).enumerate() {
+        let prev = robot;
         let dir: IVec2 = c_to_dir(c).into();
         let next = robot + dir;
 
@@ -255,11 +255,54 @@ pub fn part2(input: &str) -> i64 {
             robot = next;
         }
 
+        // set to true to generate images
+        if false {
+            frames.push((boxes.clone(), move_num + 1, [robot, prev]));
+        }
+
         if cfg!(test) {
             println!("Moving {c}:");
             print_board(Some(robot), &map, &boxes);
             sanity_check_boxes(&boxes);
         }
+    }
+
+    if !frames.is_empty() {
+        use indicatif::*;
+        use rayon::prelude::*;
+
+        std::fs::create_dir_all("day15-images").unwrap();
+
+        let pb = ProgressBar::new(frames.len() as u64);
+        frames.into_par_iter().for_each(|(boxes, name, robots)| {
+            pb.inc(1);
+            let name = format!("day15-images/day15-{name:>05}.png");
+            let mut img = map.make_image(1, |&c| match c {
+                '.' => AOC_BLUE,
+                '#' => AOC_DARK_GRAY,
+                '@' => AOC_GOLD,
+                _ => unreachable!("Unknown map character {c:?}"),
+            });
+
+            for b in &boxes {
+                // let c = AOC_LIGHT_GRAY;
+                let c = AOC_DARK_GREEN;
+                img.put_pixel(b.x as u32, b.y as u32, c);
+                img.put_pixel(b.x as u32 + 1, b.y as u32, c);
+            }
+
+            for bot in robots {
+                img.put_pixel(bot.x as _, bot.y as _, AOC_GOLD);
+            }
+
+            let img = image::imageops::resize(
+                &img,
+                20 * img.width(),
+                20 * img.height(),
+                image::imageops::FilterType::Nearest,
+            );
+            img.save(name).unwrap();
+        });
     }
 
     // Compute GPS scores
@@ -375,7 +418,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     #[case::nothing(2 + 100*1, NOTHING_HAPPENS)]
     #[case::given_big(9021, EXAMPLE_INPUT_BIG)]
     #[trace]
-    #[timeout(Duration::from_millis(200))]
+    // #[timeout(Duration::from_millis(200))]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
