@@ -89,6 +89,7 @@ mod prelude {
     pub use memchr::*;
     pub use num::*;
     pub use scan_fmt::scan_fmt;
+    pub use smallvec::smallvec;
     pub use smallvec::SmallVec;
     pub use ultraviolet::{IVec2, IVec3};
 
