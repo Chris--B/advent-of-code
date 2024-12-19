@@ -169,6 +169,25 @@ pub fn part1(input: &str) -> i64 {
     patterns.iter().filter(|&&p| p_cache[p].possible).count() as i64
 }
 
+#[aoc(day19, part1, regex)]
+pub fn part1_regex(input: &str) -> i64 {
+    let (towels, patterns) = input.split_once("\n\n").unwrap();
+
+    let regex_str = format!("^({})+$", towels.split(", ").join("|"));
+    if cfg!(test) {
+        println!("Using regex:");
+        println!("  {regex_str:?}");
+    }
+
+    let re = RegexBuilder::new(&regex_str)
+        .unicode(false)
+        .multi_line(true)
+        .build()
+        .unwrap();
+
+    re.find_iter(patterns).count() as i64
+}
+
 // Part2 ========================================================================
 #[aoc(day19, part2)]
 pub fn part2(input: &str) -> i64 {
@@ -245,7 +264,7 @@ bbrgwb
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_regex)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,

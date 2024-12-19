@@ -112,6 +112,7 @@ dependencies = [
  "num",
  "pretty_assertions",
  "rayon",
+ "regex",
  "rstest",
  "scan_fmt",
  "smallvec",

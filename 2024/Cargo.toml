@@ -33,16 +33,17 @@ log = { version = "0.4", features = ["serde", "kv"] }
 
 bitmask-enum = "2"
 image = "0.24"
+indicatif = "0.17.9"
 itertools = "0.13"
+memchr = "2.7"
 num = "0.4"
 pretty_assertions = "*"
+rayon = "1"
+regex = "1"
 rstest = { version = "0.23", default-features = false }
 scan_fmt = "0.2"
 smallvec = "1"
 ultraviolet = { version = "0.9", features = ["int"] }
-memchr = "2.7"
-rayon = "1"
-indicatif = "0.17.9"
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]

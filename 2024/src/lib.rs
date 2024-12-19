@@ -88,6 +88,7 @@ mod prelude {
     pub use log::{debug, error, info, log_enabled, trace, warn, Level::*};
     pub use memchr::*;
     pub use num::*;
+    pub use regex::{Regex, RegexBuilder};
     pub use scan_fmt::scan_fmt;
     pub use smallvec::smallvec;
     pub use smallvec::SmallVec;
