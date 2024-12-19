@@ -13,7 +13,7 @@ git add -N src/day$day.rs
 
 cargo aoc input --day $day
 gsed -i "s%// pub mod day$day;%pub mod day$day;%g" src/lib.rs
-gsed -i 's/dayN/day18/g' src/day$day.rs
+gsed -i "s/dayN/day$day/g" src/day$day.rs
 
 cargo aoc input --day $day
 cargo aoc --day $day
