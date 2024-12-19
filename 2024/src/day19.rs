@@ -1,50 +1,155 @@
-#![allow(unused)]
-
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
-struct State {
-    possible: bool,
-}
+type PrefixCache<'a> = HashMap<&'a str, State<'a>>;
+type CountCache<'a> = HashMap<&'a str, i64>;
 
-impl State {
-    fn new(possible: bool) -> Self {
-        #![allow(clippy::needless_update)]
-        Self {
-            possible,
-            ..Self::default()
-        }
-    }
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+struct State<'a> {
+    // Whether this state is possible at all
+    possible: bool,
+
+    // Which towels can be used as a prefix to make this state.
+    // We will take each prefix, peel it off, and use the rest of the pattern to build a final list.
+    // This is only one "level" deep.
+    towel_prefixes: Vec<&'a str>,
 }
 
 fn is_pattern_possible<'a>(
     pattern: &'a str,
-    towels: &[&str],
-    cache: &mut HashMap<&'a str, State>,
+    towels: &[&'a str],
+    cache: &mut PrefixCache<'a>,
 ) -> bool {
-    if let Some(state) = cache.get_mut(pattern) {
-        return state.possible;
+    if cache.contains_key(pattern) {
+        return cache[pattern].possible;
     }
 
     let mut possible = false;
-    for towel in towels {
-        if let Some(next_pattern) = pattern.strip_prefix(towel) {
-            // We found a match!
-            possible |= is_pattern_possible(next_pattern, towels, cache);
-            if possible {
-                break;
+    let mut towel_prefixes: Vec<&str> = vec![];
+    for &towel_prefix in towels {
+        if let Some(next_pattern) = pattern.strip_prefix(towel_prefix) {
+            let next_possible = is_pattern_possible(next_pattern, towels, cache);
+            if next_possible {
+                towel_prefixes.push(towel_prefix);
             }
+            possible |= next_possible;
         }
     }
-    cache.insert(pattern, State::new(possible));
+
+    cache.insert(
+        pattern,
+        State {
+            possible,
+            towel_prefixes,
+        },
+    );
 
     if cfg!(test) {
+        let towel_prefixes = &cache[pattern].towel_prefixes;
         println!(
-            "({possible}) cache[{pattern}] == {:?}",
-            cache.get(pattern).map(|s| s.possible)
+            "  + \"{pattern:>6}\" has {} prefixes(s): {towel_prefixes:?}",
+            towel_prefixes.len()
         );
     }
     possible
+}
+
+fn build_p_cache<'a>(patterns: &[&'a str], towels: &[&'a str]) -> PrefixCache<'a> {
+    let mut p_cache = PrefixCache::new();
+
+    // The empty string is always creatable, and has no valid prefixes.
+    // This is the only thing we seed our cache with, to account for towels with prefixes!
+    // e.g. "g", "b", and "gb" are all towels, but one can create "gb" two ways.
+    p_cache.insert(
+        "",
+        State {
+            possible: true,
+            towel_prefixes: vec![],
+        },
+    );
+
+    // Run through our patterns and build up a cache
+    for pattern in patterns {
+        // If we've seen it, just use it.
+        if p_cache.contains_key(pattern) {
+            continue;
+        }
+
+        is_pattern_possible(pattern, towels, &mut p_cache);
+    }
+
+    if cfg!(test) {
+        println!();
+    }
+
+    p_cache
+}
+
+fn build_c_cache<'a>(patterns: &[&'a str], p_cache: &PrefixCache<'a>) -> CountCache<'a> {
+    let mut c_cache = CountCache::new();
+    c_cache.insert("", 1);
+
+    for &pattern in patterns {
+        // If we've seen it, just use it.
+        if c_cache.contains_key(pattern) {
+            continue;
+        }
+
+        count_ways(pattern, p_cache, &mut c_cache);
+    }
+
+    for &pattern in patterns {
+        let _ = c_cache.entry(pattern).or_insert(0);
+    }
+
+    if cfg!(test) {
+        println!();
+    }
+
+    c_cache
+}
+
+fn count_ways<'a>(
+    pattern: &'a str,
+    p_cache: &PrefixCache<'a>,
+    c_cache: &mut CountCache<'a>,
+) -> i64 {
+    if c_cache.contains_key(pattern) {
+        return c_cache[pattern];
+    }
+
+    assert!(!pattern.is_empty());
+    if cfg!(test) {
+        println!("  + Counting \"{pattern:>6}\"");
+    }
+
+    let state = &p_cache[pattern];
+    if !state.possible {
+        return 0;
+    }
+
+    // "gbbr" will generate a few entries:
+    //      "gbbr" -> {true, ["g", "gb"]},
+    //      "bbr"  -> {true, ["b"]}
+    //      "br"   -> {true, ["b", "br"]},
+    //      "g"    -> {true, ["g"]},
+    //      "b"    -> {true, ["b"]},
+    //      ""     -> {true, []},
+    // "gb" doesn't show up because while it starts our word, it's never inside of it.
+    let mut count = 0;
+    for prefix in &state.towel_prefixes {
+        let suffix = pattern.strip_prefix(prefix).unwrap();
+        count += count_ways(suffix, p_cache, c_cache);
+    }
+
+    if cfg!(test) {
+        println!(
+            "  + Counting \"{pattern:>6}\" == {count} (# prefix == {})",
+            state.towel_prefixes.len()
+        );
+    }
+
+    c_cache.insert(pattern, count);
+    count
 }
 
 // Part1 ========================================================================
@@ -55,72 +160,31 @@ pub fn part1(input: &str) -> i64 {
     let patterns: Vec<&str> = patterns.lines().collect_vec();
 
     if cfg!(test) {
-        println!("Found {} towels: {towels:?}", towels.len());
+        println!("Found {} towels:   {towels:?}", towels.len());
         println!("Found {} patterns: {patterns:?}", patterns.len());
     }
 
-    let mut cache: HashMap<&str, State> = HashMap::new();
-    cache.insert("", State::new(true));
-    for towel in &towels {
-        cache.insert(towel, State::new(true));
-    }
+    let p_cache = build_p_cache(&patterns, &towels);
 
-    for pattern in &patterns {
-        if let Some(state) = cache.get_mut(pattern) {
-            continue;
-        }
-
-        is_pattern_possible(pattern, &towels, &mut cache);
-    }
-
-    let mut possible_patterns: Vec<&&str> = patterns
-        .iter()
-        .filter(|&&p| {
-            if cache.contains_key(p) {
-                cache[p].possible
-            } else {
-                false
-            }
-        })
-        .collect_vec();
-
-    if cfg!(test) {
-        possible_patterns.sort();
-
-        println!("Possible patterns:");
-        for p in &possible_patterns {
-            println!("  + {p:?}");
-        }
-
-        println!("{} entries in cache", cache.len());
-        let mut pairs = cache.iter().collect_vec();
-        pairs.sort_by_key(|(&k, &v)| (k, v.possible));
-        for (p, s) in pairs {
-            println!("    + {:<5} <- {p:?}", s.possible);
-        }
-    }
-
-    if !cfg!(test) {
-        let good = patterns.iter().filter(|&&p| cache[p].possible).count();
-        println!("Good patterns: {good}");
-
-        let bad = patterns.iter().filter(|&&p| !cache[p].possible).count();
-        println!("Bad patterns:  {bad}");
-
-        assert!(
-            possible_patterns.len() > 322,
-            "{} <= 322, answer too low, UNDER counting",
-            possible_patterns.len()
-        );
-    }
-
-    possible_patterns.len() as i64
+    patterns.iter().filter(|&&p| p_cache[p].possible).count() as i64
 }
 
 // Part2 ========================================================================
 #[aoc(day19, part2)]
 pub fn part2(input: &str) -> i64 {
-    0
+    let (towels, patterns) = input.split_once("\n\n").unwrap();
+    let towels: Vec<&str> = towels.split(", ").collect_vec();
+    let patterns: Vec<&str> = patterns.lines().collect_vec();
+
+    if cfg!(test) {
+        println!("Found {} towels:   {towels:?}", towels.len());
+        println!("Found {} patterns: {patterns:?}", patterns.len());
+    }
+
+    let p_cache = build_p_cache(&patterns, &towels);
+    let c_cache = build_c_cache(&patterns, &p_cache);
+
+    patterns.iter().map(|&p| c_cache[p]).sum()
 }
 
 #[cfg(test)]
@@ -178,10 +242,6 @@ bbrgwb
     #[case::given_ubwu__(0, &ex("ubwu"))]
     //           "bbrgwb" is impossible.
     #[case::given_bbrgwb(0, &ex("bbrgwb"))]
-    //
-    // # bleh my sutff doesn't work Examples
-    #[case::big_b(1, &ex("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))]
-    #[case::big_b_trailing_w(0, &ex("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbw"))]
     #[trace]
     fn check_ex_part_1(
         #[notrace]
@@ -197,8 +257,9 @@ bbrgwb
     }
 
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
-    #[ignore]
+    // #[case::given(2 + 1 + 4 + 6 + 1 + 2, EXAMPLE_INPUT)]
+    #[case::given_gbbr__(4, &ex("gbbr"))]
+    // #[case::given_rrbgbr(6, &ex("rrbgbr"))]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
