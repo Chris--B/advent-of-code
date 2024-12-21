@@ -16,12 +16,17 @@ pub trait Graph {
 
     fn distance_get(&self, vert: Self::Vert) -> Option<i64>;
     fn distance_set(&mut self, vert: Self::Vert, dist: i64);
+
+    fn prev_set(&mut self, vert: Self::Vert, next: Self::Vert);
 }
 
 /// A grid of '.' and '#', where '#' are always impassable.
 pub struct AocGridGraph {
     pub map: Framebuffer<char>,
     pub dist: Framebuffer<i64>,
+
+    // Each cell points to the next cell in the shortest path(s)
+    pub prev: Framebuffer<Option<IVec2>>,
 }
 
 impl AocGridGraph {
@@ -29,7 +34,34 @@ impl AocGridGraph {
         let mut dist = Framebuffer::new_matching_size(&map);
         dist.clear(i64::MAX);
 
-        Self { map, dist }
+        let mut path = Framebuffer::new_matching_size(&map);
+
+        Self {
+            map,
+            dist,
+            prev: path,
+        }
+    }
+}
+
+impl AocGridGraph {
+    pub fn shortest_path(&mut self, start: IVec2, end: IVec2) -> Option<Vec<IVec2>> {
+        if let None = self.distance_get(end) {
+            return None;
+        }
+
+        let mut path = vec![end];
+
+        let mut i = 0;
+        let mut curr = end;
+        while let Some(prev) = self.prev[curr] {
+            path.push(prev);
+            i += 1;
+            curr = prev;
+        }
+
+        path.reverse();
+        Some(path)
     }
 }
 
@@ -72,6 +104,10 @@ impl Graph for AocGridGraph {
 
     fn distance_set(&mut self, vert: Self::Vert, dist: i64) {
         self.dist[vert] = dist;
+    }
+
+    fn prev_set(&mut self, vert: Self::Vert, next: Self::Vert) {
+        self.prev[vert] = Some(next);
     }
 }
 
@@ -128,21 +164,22 @@ where
             if dist + weight < old_dist {
                 // Better path, use this one.
                 g.distance_set(next, dist + weight);
+                g.prev_set(next, curr);
                 queue.push_back(next);
             }
         }
     }
 
-    if cfg!(test) {
-        let verts = g.verts().collect_vec();
-        for vert in verts {
-            if let Some(dist) = g.distance_get(vert) {
-                println!("{vert:?}: {dist} steps");
-            } else {
-                // println!("{vert:?}: Unreachable");
-            }
-        }
-    }
+    // if cfg!(test) {
+    //     let verts = g.verts().collect_vec();
+    //     for vert in verts {
+    //         if let Some(dist) = g.distance_get(vert) {
+    //             println!("{vert:?}: {dist} steps");
+    //         } else {
+    //             // println!("{vert:?}: Unreachable");
+    //         }
+    //     }
+    // }
 
     if let Some(end) = end {
         g.distance_get(end)
