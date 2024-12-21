@@ -49,6 +49,7 @@ pub mod day20;
 
 pub mod bitset;
 pub mod framebuffer;
+pub mod graph;
 pub mod vec_ext;
 
 aoc_lib! { year = 2024 }
@@ -111,8 +112,10 @@ mod prelude {
     pub const AOC_DARK_GRAY: Rgb<u8> = Rgb([0x52, 0x52, 0x5b]);
     pub const AOC_LIGHT_GRAY: Rgb<u8> = Rgb([0xcc, 0xcc, 0xcc]);
 
-    pub use crate::bitset::Bitset128;
-    pub use crate::framebuffer::{Framebuffer, ParsingInfo};
+    pub use crate::bitset::*;
+    pub use crate::framebuffer::*;
+    pub use crate::graph::*;
+    pub use crate::vec_ext::*;
 
     pub use crate::init_logging;
     pub use crate::just_str;
@@ -120,7 +123,6 @@ mod prelude {
     pub use crate::parse_list_whitespace;
     pub use crate::parse_or_fail;
 
-    pub use crate::vec_ext::VecExt;
     pub use crate::IntParsable;
     pub use crate::Tally;
 }

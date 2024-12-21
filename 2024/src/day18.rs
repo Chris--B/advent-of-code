@@ -1,93 +1,24 @@
 use crate::prelude::*;
 
-fn steps_to(start: IVec2, end: IVec2, map: &Framebuffer<char>) -> Option<i32> {
-    let mut cost_map: Framebuffer<i32> = Framebuffer::new_matching_size(map);
-    cost_map.clear(i32::MAX);
-    cost_map[start] = 0;
-
-    let mut queue = vec![start];
-    while let Some(curr) = queue.pop() {
-        if curr == end {
-            continue;
-        }
-
-        let curr_cost = cost_map[curr];
-        for dir in Cardinal::ALL_NO_DIAG {
-            let next = curr + dir.into();
-            let next_cost = curr_cost + 1;
-
-            if let Some(&cost) = cost_map.get(next.x as _, next.y as _) {
-                if (map[next] == '.') && (next_cost < cost) {
-                    // Better deal
-                    cost_map[next] = next_cost;
-                    queue.push(next);
-                }
-            }
-        }
-    }
-
-    if cost_map[end] == i32::MAX {
-        None
-    } else {
-        Some(cost_map[end])
-    }
-}
-
-fn steps_to_partial(
-    start: IVec2,
-    end: IVec2,
-    map: &Framebuffer<char>,
-    cost_map: &mut Framebuffer<i32>,
-) {
-    let mut seen = HashSet::new();
-    let mut queue = vec![start];
-    while let Some(curr) = queue.pop() {
-        if curr == end {
-            // break;
-        }
-        if seen.contains(&curr) {
-            continue;
-        }
-        seen.insert(curr);
-
-        let curr_cost = cost_map[curr];
-        for dir in Cardinal::ALL_NO_DIAG {
-            let next = curr + dir.into();
-            let next_cost = curr_cost + 1;
-
-            if let Some(&cost) = cost_map.get(next.x as _, next.y as _) {
-                if (map[next] == '.') && (next_cost <= cost) {
-                    cost_map[next] = next_cost;
-                    queue.push(next);
-                }
-            }
-        }
-    }
-}
-
 // Part1 ========================================================================
 #[aoc(day18, part1)]
-pub fn part1(input: &str) -> i32 {
+pub fn part1(input: &str) -> i64 {
     let dim = if cfg!(test) { 6 } else { 70 } + 1;
     let first_n = if cfg!(test) { 12 } else { 1024 };
 
     let mut map = Framebuffer::new(dim as u32, dim as u32);
     map.clear('.');
-
-    if cfg!(test) {
-        println!("After the corruption:");
-        map.just_print();
-    }
+    map.set_border_color(Some('#'));
 
     for (x, y) in input.i64s().map(|n| n as i32).tuples().take(first_n) {
-        let y = dim - y - 1;
         map[(x, y)] = '#';
     }
 
-    let start = IVec2::new(0, dim - 1);
-    let end = IVec2::new(dim - 1, 0);
+    let mut graph = AocGridGraph::new(map);
+    let start = IVec2::new(0, 0);
+    let end = IVec2::new(dim - 1, dim - 1);
 
-    steps_to(start, end, &map).expect("No path found?")
+    dijkstra(&mut graph, start, Some(end)).expect("No path found?")
 }
 
 // Part2 ========================================================================
@@ -106,26 +37,41 @@ pub fn part2(input: &str) -> Coord {
 
     let mut map = Framebuffer::new(dim as u32, dim as u32);
     map.clear('.');
-
-    let start = IVec2::new(0, dim - 1);
-    let end = IVec2::new(dim - 1, 0);
+    map.set_border_color(Some('#'));
 
     // Build the map fully
     let coords = input.i64s().map(|n| n as i32).tuples().collect_vec();
     for &(x, y) in &coords {
-        map[(x, dim - y - 1)] = '#';
+        map[(x, y)] = '#';
     }
 
-    let mut cost_map: Framebuffer<i32> = Framebuffer::new_matching_size(&map);
-    cost_map.clear(i32::MAX);
-    cost_map[start] = 0;
+    if cfg!(test) {
+        map.just_print();
+    }
+
+    let mut graph = AocGridGraph::new(map);
+    let start = IVec2::new(0, 0);
+    let end = IVec2::new(dim - 1, dim - 1);
+    dijkstra(&mut graph, start, Some(end));
 
     // Peel off the coordinates one-by-one until we find a path that works
     for (i, &(x, y)) in coords.iter().enumerate().rev() {
-        map[(x, dim - y - 1)] = '.';
-        steps_to_partial(start, end, &map, &mut cost_map);
+        graph.map[(x, y)] = '.';
 
-        if cost_map[end] != i32::MAX {
+        // Check the surrounding area that we just removed.
+        // If we can find a neighbor that was used previously, we'll use that to resume our search.
+        // If we cannot find such a path, then we can never reach this removed block and
+        // we can skip it wholesale!
+        if let Some(resume_point) = graph
+            .neighbors(&IVec2::new(x, y))
+            // Note: We need to filter out unreachable areas here.
+            .filter(|&n| graph.distance_get(n).is_some())
+            .min_by_key(|&n| graph.distance_get(n))
+        {
+            dijkstra_resume(&mut graph, resume_point, Some(end));
+        }
+
+        if graph.dist[end] != i64::MAX {
             // This means blocking coords[i] prevents a valid path.
             return Coord(coords[i]);
         }
@@ -175,8 +121,8 @@ mod test {
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
-        p: impl FnOnce(&str) -> i32,
-        #[case] expected: i32,
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
         #[case] input: &str,
     ) {
         init_logging();
