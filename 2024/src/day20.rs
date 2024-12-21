@@ -2,6 +2,8 @@ use crate::prelude::*;
 
 struct Day20Graph {
     quota: i32,
+    end: IVec2,
+
     map: Framebuffer<char>,
     dist: HashMap<IVec3, i64>,
     prev: HashMap<IVec3, IVec3>,
@@ -28,12 +30,24 @@ impl Graph for Day20Graph {
             }
         }
 
+        // Allow end states to neighbor (end.x, end.y, 0)
+        if (vert.xy() == self.end) && (vert.z != 0) {
+            verts.push(IVec3::new(self.end.x, self.end.y, 0));
+        }
+
         verts.into_iter()
     }
 
     fn edge_weight(&self, from: &IVec3, to: &IVec3) -> Option<i64> {
         if !self.map.in_bounds(from.xy()) || !self.map.in_bounds(to.xy()) {
             return None;
+        }
+
+        // Allow end states to neighbor (end.x, end.y, 0) (for free)
+        if (from.xy() == self.end) && (to.xy() == self.end) {
+            if (from.z != 0) && (to.z == 0) {
+                return Some(0);
+            }
         }
 
         let [x1, y1, z1] = from.as_array();
@@ -124,11 +138,18 @@ pub fn part1(input: &str) -> i64 {
     // let quota = 20;
     let mut cheat_graph = Day20Graph {
         quota,
+        end,
+
         map: graph.map.clone(),
         dist: HashMap::new(),
         prev: HashMap::new(),
     };
-    dijkstra(&mut cheat_graph, IVec3::new(start.x, start.y, quota), None);
+    dijkstra(
+        &mut cheat_graph,
+        IVec3::new(start.x, start.y, quota),
+        // Some(end.xyz()),
+        None,
+    );
 
     if cfg!(test) {
         println!("Best paths WITH cheating:");
@@ -137,10 +158,19 @@ pub fn part1(input: &str) -> i64 {
             .collect_vec();
 
         for e in end_states {
-            let dist = cheat_graph.distance_get(e).unwrap();
-            let savings = shortest_dist_no_cheating - dist;
             let [x, y, z] = e.as_array();
-            println!("  + end=({x}, {y}) ({z:>2} cheat left): saves {savings:>4} picoseconds ({shortest_dist_no_cheating} -> {dist})");
+            if let Some(dist) = cheat_graph.distance_get(e) {
+                let savings = shortest_dist_no_cheating - dist;
+                println!("  + end=({x}, {y}) ({z:>2} cheat(s) left): saves {savings:>4} picoseconds ({shortest_dist_no_cheating:>2} -> {dist:>2})");
+                // if e.z == 0
+                {
+                    let [x, y, z] = cheat_graph.prev[&e].as_array();
+                    println!("    + From ({x}, {y}) w/ {z} cheat(s) left");
+                }
+            } else {
+                println!("  + end=({x}, {y}) ({z:>2} cheat(s) left): unreachable?");
+            }
+            println!();
         }
     }
 

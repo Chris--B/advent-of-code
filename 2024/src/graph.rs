@@ -152,7 +152,7 @@ pub fn dijkstra_resume<G: Graph>(g: &mut G, resume: G::Vert, end: Option<G::Vert
             let weight = g.edge_weight(&curr, &next).unwrap_or_else(|| {
                 panic!("No edge weight? But neighbors() returned this: {curr:?} -> {next:?}")
             });
-            assert!(weight > 0, "Dijsktra's Algorithm does not work with zero or negative edge weights! g.edge_weight({curr:?}, {next:?}) == {weight}");
+            assert!(weight >= 0, "Dijsktra's Algorithm does not work with zero or negative edge weights! g.edge_weight({curr:?}, {next:?}) == {weight}");
 
             let old_dist = g.distance_get(next).unwrap_or(i64::MAX);
             if dist + weight < old_dist {

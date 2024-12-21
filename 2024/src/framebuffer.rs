@@ -363,6 +363,14 @@ impl<T> Framebuffer<T> {
             }
             println!();
         }
+        print!("{:>2} ", "");
+        for x in xs.clone() {
+            if (x > 0) && (x % 5 == 0) {
+                print!("{x}");
+            } else {
+                print!(" ")
+            }
+        }
         println!();
     }
 }
