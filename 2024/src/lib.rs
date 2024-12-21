@@ -98,6 +98,7 @@ mod prelude {
 
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
+    pub use std::time::Duration;
 
     pub use crate::Cardinal;
     pub const Norð: Cardinal = Cardinal::Norð;

@@ -6,7 +6,7 @@ use std::cmp::{Ord, Ordering, Reverse};
 use std::hash::Hash;
 
 pub trait Graph {
-    type Vert: Clone + std::fmt::Debug + Eq + Hash;
+    type Vert: Copy + Eq + Hash + std::fmt::Debug;
 
     fn verts(&self) -> impl Iterator<Item = Self::Vert>;
 
@@ -126,18 +126,12 @@ fn remove_min<T: Hash + Eq + Copy>(queue: &mut VecDeque<T>, g: &impl Graph<Vert 
     }
 }
 
-pub fn dijkstra<G: Graph>(g: &mut G, start: G::Vert, end: Option<G::Vert>) -> Option<i64>
-where
-    G::Vert: Copy,
-{
+pub fn dijkstra<G: Graph>(g: &mut G, start: G::Vert, end: Option<G::Vert>) -> Option<i64> {
     g.distance_set(start, 0);
     dijkstra_resume(g, start, end)
 }
 
-pub fn dijkstra_resume<G: Graph>(g: &mut G, resume: G::Vert, end: Option<G::Vert>) -> Option<i64>
-where
-    G::Vert: Copy,
-{
+pub fn dijkstra_resume<G: Graph>(g: &mut G, resume: G::Vert, end: Option<G::Vert>) -> Option<i64> {
     let mut queue: VecDeque<G::Vert> = VecDeque::new();
     queue.push_back(resume);
 
