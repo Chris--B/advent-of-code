@@ -258,6 +258,10 @@ impl<T> Framebuffer<T> {
 
         ys.flat_map(move |y| xs.clone().map(move |x| (x, y)))
     }
+
+    pub fn in_bounds(&self, xy: IVec2) -> bool {
+        self.get(xy.x as isize, xy.y as isize).is_some()
+    }
 }
 
 impl<T: Default + PartialEq> Framebuffer<T> {

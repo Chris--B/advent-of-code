@@ -17,7 +17,7 @@ pub trait Graph {
     fn distance_get(&self, vert: Self::Vert) -> Option<i64>;
     fn distance_set(&mut self, vert: Self::Vert, dist: i64);
 
-    fn prev_set(&mut self, vert: Self::Vert, next: Self::Vert);
+    fn prev_set(&mut self, vert: Self::Vert, prev: Self::Vert);
 }
 
 /// A grid of '.' and '#', where '#' are always impassable.
@@ -106,8 +106,8 @@ impl Graph for AocGridGraph {
         self.dist[vert] = dist;
     }
 
-    fn prev_set(&mut self, vert: Self::Vert, next: Self::Vert) {
-        self.prev[vert] = Some(next);
+    fn prev_set(&mut self, vert: Self::Vert, prev: Self::Vert) {
+        self.prev[vert] = Some(prev);
     }
 }
 
@@ -155,9 +155,9 @@ where
         }
 
         for next in g.neighbors(&curr) {
-            let weight = g
-                .edge_weight(&curr, &next)
-                .expect("No edge weight? But neighbors() returned this.");
+            let weight = g.edge_weight(&curr, &next).unwrap_or_else(|| {
+                panic!("No edge weight? But neighbors() returned this: {curr:?} -> {next:?}")
+            });
             assert!(weight > 0, "Dijsktra's Algorithm does not work with zero or negative edge weights! g.edge_weight({curr:?}, {next:?}) == {weight}");
 
             let old_dist = g.distance_get(next).unwrap_or(i64::MAX);
