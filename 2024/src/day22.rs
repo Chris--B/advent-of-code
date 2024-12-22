@@ -7,9 +7,8 @@ use crate::prelude::*;
 const MAX_SECRET: i64 = ((1 << 24) - 1);
 
 fn secrets(seed: i64) -> impl Iterator<Item = i64> {
-    let mut secret = seed;
-    (0..=2_000).map(move |_| {
-        let ret = secret;
+    std::iter::successors(Some(seed), |secret| {
+        let mut secret = *secret;
 
         secret ^= secret << 6;
         secret &= ((1 << 24) - 1);
@@ -20,8 +19,9 @@ fn secrets(seed: i64) -> impl Iterator<Item = i64> {
         secret ^= secret << 11;
         secret &= ((1 << 24) - 1);
 
-        ret
+        Some(secret)
     })
+    .take(2_001)
 }
 
 fn prices(seed: i64) -> impl Iterator<Item = i64> {
