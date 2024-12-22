@@ -41,29 +41,57 @@ fn price_after_seq(seed: i64, seq: [i64; 4]) -> Option<i64> {
 }
 
 #[cfg(target_feature = "neon")]
-fn sum_secret_iters_neon(secret: &[u32; 4], times: usize) -> i64 {
+const NEON_N: usize = 20;
+
+#[cfg(target_feature = "neon")]
+fn sum_secret_iters_neon(secret: &[u32; NEON_N], times: usize) -> i64 {
     unsafe {
         let mask = vld1q_dup_u32(&((1 << 24) - 1));
         let neg5 = vld1q_dup_s32(&-5);
 
-        let mut secret = vld1q_u32(secret.as_ptr());
+        let mut secret0 = vld1q_u32(secret[0..].as_ptr());
+        let mut secret1 = vld1q_u32(secret[4..].as_ptr());
+        let mut secret2 = vld1q_u32(secret[8..].as_ptr());
+        let mut secret3 = vld1q_u32(secret[12..].as_ptr());
+        let mut secret4 = vld1q_u32(secret[16..].as_ptr());
 
         for _ in 0..times {
-            // secret ^= secret << 6;
-            secret = veorq_u32(secret, vshlq_n_u32(secret, 6));
-            // secret &= ((1 << 24) - 1);
-            secret = vandq_u32(secret, mask);
+            secret0 = veorq_u32(secret0, vshlq_n_u32(secret0, 6));
+            secret0 = vandq_u32(secret0, mask);
+            secret0 = veorq_u32(secret0, vshlq_u32(secret0, neg5));
+            secret0 = veorq_u32(secret0, vshlq_n_u32(secret0, 11));
+            secret0 = vandq_u32(secret0, mask);
 
-            // secret ^= secret >> 5;
-            secret = veorq_u32(secret, vshlq_u32(secret, neg5));
+            secret1 = veorq_u32(secret1, vshlq_n_u32(secret1, 6));
+            secret1 = vandq_u32(secret1, mask);
+            secret1 = veorq_u32(secret1, vshlq_u32(secret1, neg5));
+            secret1 = veorq_u32(secret1, vshlq_n_u32(secret1, 11));
+            secret1 = vandq_u32(secret1, mask);
 
-            // secret ^= secret << 11;
-            secret = veorq_u32(secret, vshlq_n_u32(secret, 11));
-            // secret &= ((1 << 24) - 1);
-            secret = vandq_u32(secret, mask);
+            secret2 = veorq_u32(secret2, vshlq_n_u32(secret2, 6));
+            secret2 = vandq_u32(secret2, mask);
+            secret2 = veorq_u32(secret2, vshlq_u32(secret2, neg5));
+            secret2 = veorq_u32(secret2, vshlq_n_u32(secret2, 11));
+            secret2 = vandq_u32(secret2, mask);
+
+            secret3 = veorq_u32(secret3, vshlq_n_u32(secret3, 6));
+            secret3 = vandq_u32(secret3, mask);
+            secret3 = veorq_u32(secret3, vshlq_u32(secret3, neg5));
+            secret3 = veorq_u32(secret3, vshlq_n_u32(secret3, 11));
+            secret3 = vandq_u32(secret3, mask);
+
+            secret4 = veorq_u32(secret4, vshlq_n_u32(secret4, 6));
+            secret4 = vandq_u32(secret4, mask);
+            secret4 = veorq_u32(secret4, vshlq_u32(secret4, neg5));
+            secret4 = veorq_u32(secret4, vshlq_n_u32(secret4, 11));
+            secret4 = vandq_u32(secret4, mask);
         }
 
-        vaddvq_u32(secret) as i64
+        (vaddvq_u32(secret0) as i64)
+            + vaddvq_u32(secret1) as i64
+            + vaddvq_u32(secret2) as i64
+            + vaddvq_u32(secret3) as i64
+            + vaddvq_u32(secret4) as i64
     }
 }
 
@@ -82,14 +110,14 @@ pub fn part1_neon(input: &str) -> i64 {
     let mut seeds: Vec<u32> = input.i64s().map(|s| s as _).collect_vec();
 
     // 0 never changes, so we can pad freely
-    while seeds.len() % 4 != 0 {
+    while seeds.len() % NEON_N != 0 {
         seeds.push(0);
     }
 
     let mut sum: i64 = 0;
-    for i in 0..(seeds.len() / 4) {
+    for i in 0..(seeds.len() / NEON_N) {
         unsafe {
-            let reg: [_; 4] = std::ptr::read(seeds[4 * i..].as_ptr() as *const _);
+            let reg: [_; NEON_N] = std::ptr::read(seeds[NEON_N * i..].as_ptr() as *const _);
             sum += sum_secret_iters_neon(&reg, 2_000);
         }
     }
@@ -181,9 +209,12 @@ mod test {
         let n = 10;
 
         let mut answers: Vec<_> = vec![];
+
         for i in 0..n {
             // Note: 0 stays 0 so we can ignore it
-            let ans = sum_secret_iters_neon(&[seed, 0, 0, 0], i);
+            let mut reg = [0; NEON_N];
+            reg[0] = seed;
+            let ans = sum_secret_iters_neon(&reg, i);
             answers.push(ans);
         }
 
