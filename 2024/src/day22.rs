@@ -40,63 +40,49 @@ fn price_after_seq(seed: i64, seq: [i64; 4]) -> Option<i64> {
     None
 }
 
+/// The number of u32s read in one iteration of `sum_secret_iters_neon()`
+/// We'd make this a const parameter below, but:
+///      "generic parameters may not be used in const operations"
 #[cfg(target_feature = "neon")]
-const NEON_N: usize = 20;
+const NEON_N: usize = 4 /* uint32_x4_t */ * 10 /* 4-bundle-of-seeds at a time */;
 
 #[cfg(target_feature = "neon")]
-fn sum_secret_iters_neon(secret: &[u32; NEON_N], times: usize) -> i64 {
+#[inline(always)]
+fn secret_neon(secret: &[u32], times: usize) -> [i64; NEON_N / 4] {
+    assert!(secret.len() >= NEON_N);
+    assert_eq!(NEON_N % 4, 0);
+
     unsafe {
         let mask = vld1q_dup_u32(&((1 << 24) - 1));
         let neg5 = vld1q_dup_s32(&-5);
 
-        let mut secret0 = vld1q_u32(secret[0..].as_ptr());
-        let mut secret1 = vld1q_u32(secret[4..].as_ptr());
-        let mut secret2 = vld1q_u32(secret[8..].as_ptr());
-        let mut secret3 = vld1q_u32(secret[12..].as_ptr());
-        let mut secret4 = vld1q_u32(secret[16..].as_ptr());
-
-        for _ in 0..times {
-            secret0 = veorq_u32(secret0, vshlq_n_u32(secret0, 6));
-            secret0 = vandq_u32(secret0, mask);
-            secret0 = veorq_u32(secret0, vshlq_u32(secret0, neg5));
-            secret0 = veorq_u32(secret0, vshlq_n_u32(secret0, 11));
-            secret0 = vandq_u32(secret0, mask);
-
-            secret1 = veorq_u32(secret1, vshlq_n_u32(secret1, 6));
-            secret1 = vandq_u32(secret1, mask);
-            secret1 = veorq_u32(secret1, vshlq_u32(secret1, neg5));
-            secret1 = veorq_u32(secret1, vshlq_n_u32(secret1, 11));
-            secret1 = vandq_u32(secret1, mask);
-
-            secret2 = veorq_u32(secret2, vshlq_n_u32(secret2, 6));
-            secret2 = vandq_u32(secret2, mask);
-            secret2 = veorq_u32(secret2, vshlq_u32(secret2, neg5));
-            secret2 = veorq_u32(secret2, vshlq_n_u32(secret2, 11));
-            secret2 = vandq_u32(secret2, mask);
-
-            secret3 = veorq_u32(secret3, vshlq_n_u32(secret3, 6));
-            secret3 = vandq_u32(secret3, mask);
-            secret3 = veorq_u32(secret3, vshlq_u32(secret3, neg5));
-            secret3 = veorq_u32(secret3, vshlq_n_u32(secret3, 11));
-            secret3 = vandq_u32(secret3, mask);
-
-            secret4 = veorq_u32(secret4, vshlq_n_u32(secret4, 6));
-            secret4 = vandq_u32(secret4, mask);
-            secret4 = veorq_u32(secret4, vshlq_u32(secret4, neg5));
-            secret4 = veorq_u32(secret4, vshlq_n_u32(secret4, 11));
-            secret4 = vandq_u32(secret4, mask);
+        let mut regs: [uint32x4_t; NEON_N / 4] = core::mem::transmute([0; NEON_N]); // yolo
+        for n in (0..NEON_N).step_by(4) {
+            regs[n / 4] = vld1q_u32(secret[n..(n + 4)].as_ptr());
         }
 
-        (vaddvq_u32(secret0) as i64)
-            + vaddvq_u32(secret1) as i64
-            + vaddvq_u32(secret2) as i64
-            + vaddvq_u32(secret3) as i64
-            + vaddvq_u32(secret4) as i64
+        for _ in 0..times {
+            for reg in &mut regs {
+                *reg = veorq_u32(*reg, vshlq_n_u32(*reg, 6));
+                *reg = vandq_u32(*reg, mask);
+                *reg = veorq_u32(*reg, vshlq_u32(*reg, neg5));
+                *reg = veorq_u32(*reg, vshlq_n_u32(*reg, 11));
+                *reg = vandq_u32(*reg, mask);
+            }
+        }
+
+        // regs.iter().map(|&r| vaddvq_u32(r) as i64).sum()
+        let mut out = [0; NEON_N / 4];
+        for i in 0..(NEON_N / 4) {
+            out[i] = vaddvq_u32(regs[i]) as i64;
+        }
+
+        out
     }
 }
 
 // Part1 ========================================================================
-#[aoc(day22, part1)]
+// #[aoc(day22, part1)]
 pub fn part1(input: &str) -> i64 {
     input
         .i64s()
@@ -107,18 +93,24 @@ pub fn part1(input: &str) -> i64 {
 #[cfg(target_feature = "neon")]
 #[aoc(day22, part1, neon)]
 pub fn part1_neon(input: &str) -> i64 {
-    let mut seeds: Vec<u32> = input.i64s().map(|s| s as _).collect_vec();
+    // Note: A 0 seed never changes, so we can pad with 0s freely.
+    let mut seeds = [0_u32; 1600];
+    for (i, n) in input.i64s().enumerate() {
+        seeds[i] = n as u32;
+    }
+    let len = seeds.len() - seeds.len() % NEON_N;
 
-    // 0 never changes, so we can pad freely
-    while seeds.len() % NEON_N != 0 {
-        seeds.push(0);
+    // Make sure we don't cut off data
+    debug_assert_eq!(seeds[len - 1], 0);
+
+    if cfg!(test) {
+        println!("Reading {NEON_N} seeds per loop");
     }
 
     let mut sum: i64 = 0;
-    for i in 0..(seeds.len() / NEON_N) {
-        unsafe {
-            let reg: [_; NEON_N] = std::ptr::read(seeds[NEON_N * i..].as_ptr() as *const _);
-            sum += sum_secret_iters_neon(&reg, 2_000);
+    for i in (0..len).step_by(NEON_N) {
+        for secret in secret_neon(&seeds[i..][..NEON_N], 2_000) {
+            sum += secret;
         }
     }
 
@@ -214,7 +206,7 @@ mod test {
             // Note: 0 stays 0 so we can ignore it
             let mut reg = [0; NEON_N];
             reg[0] = seed;
-            let ans = sum_secret_iters_neon(&reg, i);
+            let ans = secret_neon(&reg, i)[0];
             answers.push(ans);
         }
 
