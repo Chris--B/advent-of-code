@@ -23,6 +23,11 @@ path = "src/viz-day10.rs"
 default = []
 broken = []
 
+[dev-dependencies]
+pretty_assertions = "*"
+rstest = { version = "0.23", default-features = false }
+generic-tests = "0.1.3"
+
 [dependencies]
 aoc-runner = "0.3"
 aoc-runner-derive = "0.3"
@@ -37,10 +42,8 @@ indicatif = "0.17.9"
 itertools = "0.13"
 memchr = "2.7"
 num = "0.4"
-pretty_assertions = "*"
 rayon = "1"
 regex = "1"
-rstest = { version = "0.23", default-features = false }
 scan_fmt = "0.2"
 smallvec = "1"
 ultraviolet = { version = "0.9", features = ["int"] }
