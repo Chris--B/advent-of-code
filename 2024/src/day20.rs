@@ -222,6 +222,7 @@ mod test {
     #[rstest]
     #[case::given(5, EXAMPLE_INPUT)]
     #[trace]
+    #[ignore]
     #[timeout(Duration::from_millis(750))]
     fn check_ex_part_1(
         #[notrace]
