@@ -140,6 +140,50 @@ pub fn part1_simd(input: &str) -> i64 {
     }
 }
 
+#[aoc(day25, part1, bits)]
+pub fn part1_bits(input: &str) -> i64 {
+    let input = input.as_bytes();
+
+    const LOCK: usize = 1;
+    const KEY: usize = 0;
+    const LOCKKEY_LEN: usize = 6 * 7 - 1;
+
+    let mut lockkeys: [[u32; 250]; 2] = [[0; 250]; 2];
+    let mut lens: [usize; 2] = [0; 2];
+
+    let mut i = 0;
+    while i < input.len() {
+        let mut v = 0;
+        for j in 6..36 {
+            v |= ((input[i + j] == b'#') as u32) << (j - 6);
+        }
+
+        let which = (input[i] == b'#') as usize;
+        lockkeys[which][lens[which]] = v;
+        lens[which] += 1;
+
+        i += LOCKKEY_LEN + 2;
+    }
+
+    let mut count = 0;
+
+    if cfg!(test) {
+        for lock in 0..lens[LOCK] {
+            for key in 0..lens[KEY] {
+                count += ((lockkeys[LOCK][lock] & lockkeys[KEY][key]) == 0) as i64;
+            }
+        }
+    } else {
+        for lock in 0..250 {
+            for key in 0..250 {
+                count += ((lockkeys[LOCK][lock] & lockkeys[KEY][key]) == 0) as i64;
+            }
+        }
+    }
+
+    count
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -206,7 +250,7 @@ mod test {
     #[trace]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_bits)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
