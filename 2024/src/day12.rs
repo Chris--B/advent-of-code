@@ -134,6 +134,9 @@ MMMISSJEEE
         init_logging();
 
         let input = input.trim();
+        println!("{input}");
+        println!();
+
         assert_eq!(p(input), expected);
     }
 
@@ -171,6 +174,9 @@ EEEEE
         init_logging();
 
         let input = input.trim();
+        println!("{input}");
+        println!();
+
         assert_eq!(p(input), expected);
     }
 }

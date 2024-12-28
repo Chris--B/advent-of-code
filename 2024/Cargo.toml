@@ -17,7 +17,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "viz-day10"
-path = "src/viz-day10.rs"
+path = "src/viz/viz-day10.rs"
 
 [features]
 default = []
@@ -47,6 +47,7 @@ regex = "1"
 scan_fmt = "0.2"
 smallvec = "1"
 ultraviolet = { version = "0.9", features = ["int"] }
+clap = { version = "4", features = ["derive"] }
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]
