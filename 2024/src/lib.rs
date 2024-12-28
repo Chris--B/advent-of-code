@@ -79,7 +79,7 @@ pub fn init_logging() {
 }
 
 #[allow(dead_code, unused_imports, non_upper_case_globals)]
-mod prelude {
+pub mod prelude {
     pub use aoc_runner_derive::{aoc, aoc_generator};
 
     pub use bitmask_enum::bitmask;
@@ -110,6 +110,8 @@ mod prelude {
     pub const AOC_DARK_GREEN: Rgb<u8> = Rgb([0x00, 0x99, 0x00]);
     pub const AOC_DARK_GRAY: Rgb<u8> = Rgb([0x52, 0x52, 0x5b]);
     pub const AOC_LIGHT_GRAY: Rgb<u8> = Rgb([0xcc, 0xcc, 0xcc]);
+    pub const START_GREEN: Rgb<u8> = Rgb([0x66, 0xc2, 0xa5]);
+    pub const FINAL_RED: Rgb<u8> = Rgb([0x9e, 0x01, 0x42]);
 
     pub use crate::utils::*;
 

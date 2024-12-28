@@ -19,6 +19,10 @@ path = "src/lib.rs"
 name = "viz-day10"
 path = "src/viz/viz-day10.rs"
 
+[[bin]]
+name = "viz-day20"
+path = "src/viz/viz-day20.rs"
+
 [features]
 default = []
 broken = []

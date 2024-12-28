@@ -1,197 +1,105 @@
+#![allow(unused)]
+
 use crate::prelude::*;
 
-struct Day20Graph {
+fn solve_with_cheat_quota(
+    map: &Framebuffer<char>,
+    start: IVec2,
     quota: i32,
-    end: IVec2,
+    min_savings: i32,
+) -> i64 {
+    #![allow(clippy::needless_range_loop)]
 
-    map: Framebuffer<char>,
-    dist: HashMap<IVec3, i64>,
-    prev: HashMap<IVec3, IVec3>,
-}
+    let mut path = vec![start];
+    let mut i = 0;
+    'search: loop {
+        let curr = path[i];
+        i += 1;
 
-impl Graph for Day20Graph {
-    type Vert = IVec3;
+        for next in curr.neighbors() {
+            if i > 2 && path[i - 2] == next {
+                continue;
+            }
 
-    fn verts(&self) -> impl Iterator<Item = IVec3> {
-        #![allow(unreachable_code)]
-        todo!();
-        [].into_iter()
-    }
-
-    fn neighbors(&self, vert: &IVec3) -> impl Iterator<Item = IVec3> + 'static {
-        let mut verts: SmallVec<[IVec3; 8]> = smallvec![];
-
-        for v in vert.xy().neighbors() {
-            for dz in [-1, 0] {
-                let v = IVec3::new(v.x, v.y, vert.z + dz);
-                if self.edge_weight(vert, &v).is_some() {
-                    verts.push(v);
+            match map[next] {
+                '#' => continue,
+                '.' => {
+                    path.push(next);
+                    break;
                 }
-            }
-        }
-
-        // Allow end states to neighbor (end.x, end.y, 0)
-        if (vert.xy() == self.end) && (vert.z != 0) {
-            verts.push(IVec3::new(self.end.x, self.end.y, 0));
-        }
-
-        verts.into_iter()
-    }
-
-    fn edge_weight(&self, from: &IVec3, to: &IVec3) -> Option<i64> {
-        if !self.map.in_bounds(from.xy()) || !self.map.in_bounds(to.xy()) {
-            return None;
-        }
-
-        // Allow end states to neighbor (end.x, end.y, 0) (for free)
-        if (from.xy() == self.end) && (to.xy() == self.end) {
-            if (from.z != 0) && (to.z == 0) {
-                return Some(0);
-            }
-        }
-
-        let [x1, y1, z1] = from.as_array();
-        let [x2, y2, z2] = to.as_array();
-
-        assert!(z1 <= self.quota);
-        assert!(z2 <= self.quota);
-        if z1 < 0 || z2 < 0 {
-            return None;
-        }
-
-        let diff = (*from - *to).xy().abs();
-        if diff.x + diff.y == 1 {
-            if [z1, z2] == [self.quota, self.quota] || [z1, z2] == [0, 0] {
-                // Not in a cheat, check the map
-                if self.map[(x1, y1)] == '.' && self.map[(x2, y2)] == '.' {
-                    return Some(1);
+                'S' => unreachable!(),
+                'E' => {
+                    path.push(next);
+                    break 'search;
                 }
-            } else if z1 == z2 + 1 {
-                // In a cheat, ignore walls
-                return Some(1);
+                c => unreachable!("Unrecognized map character {c}"),
             }
-        } else {
-            // Never expect to ask for an edge weight for non-adjacent states
-            unreachable!()
         }
-
-        None
     }
 
-    fn distance_get(&self, vert: Self::Vert) -> Option<i64> {
-        self.dist.get(&vert).copied()
+    let mut count = 0;
+
+    for bi in 0..path.len() {
+        // B is strictly after A
+        let b = path[bi];
+        for ai in 0..bi {
+            let a = path[ai];
+
+            let dist: i32 = (a - b).abs().as_array().iter().sum();
+            if !(0 < dist && dist <= quota) {
+                continue;
+            }
+            let bi = bi as i32;
+            let ai = ai as i32;
+
+            let savings = bi - (ai + dist);
+            debug_assert!(savings >= 0);
+
+            if savings >= min_savings {
+                count += 1;
+            }
+        }
     }
 
-    fn distance_set(&mut self, vert: Self::Vert, dist: i64) {
-        self.dist.insert(vert, dist);
-    }
-
-    fn prev_set(&mut self, vert: Self::Vert, prev: Self::Vert) {
-        self.prev.insert(vert, prev);
-    }
+    count
 }
 
 // Part1 ========================================================================
 #[aoc(day20, part1)]
 pub fn part1(input: &str) -> i64 {
-    #![allow(unused)]
-
-    let dims = if cfg!(test) {
-        let m = Framebuffer::parse_grid_u8(input);
-        IVec2::new(m.width() as i32, m.height() as i32)
-    } else {
-        IVec2::new(141, 141)
-    };
-
     let mut start = IVec2::zero();
-    let mut end = IVec2::zero();
-
-    let mut map: Framebuffer<char> = Framebuffer::parse_grid2(input, |info| match info.c {
-        '#' => '#',
-        '.' => '.',
-        'S' => {
-            start = IVec2::new(info.x, info.y);
-            '.'
+    let map: Framebuffer<char> = Framebuffer::parse_grid2(input, |info| {
+        match info.c {
+            '#' => {}
+            '.' => {}
+            'S' => start = IVec2::new(info.x, info.y),
+            // 'E' => end = IVec2::new(info.x, info.y),
+            'E' => {}
+            c => unreachable!("Unexpected map character: {c:?}"),
         }
-        'E' => {
-            end = IVec2::new(info.x, info.y);
-            '.'
-        }
-        c => unreachable!("Unexpected map character: {c:?}"),
+        info.c
     });
 
-    if cfg!(test) {
-        println!("start={start:?}");
-        println!("end  ={end:?}");
-        map[start] = 'S';
-        map[end] = 'E';
-        map.just_print();
-        map[start] = '.';
-        map[end] = '.';
-    }
-
-    let mut graph = AocGridGraph::new(map);
-    dijkstra(&mut graph, start, Some(end));
-    let shortest_dist_no_cheating = graph.distance_get(end).unwrap();
-
-    let quota = 2;
-    // let quota = 20;
-    let mut cheat_graph = Day20Graph {
-        quota,
-        end,
-
-        map: graph.map.clone(),
-        dist: HashMap::new(),
-        prev: HashMap::new(),
-    };
-    dijkstra(
-        &mut cheat_graph,
-        IVec3::new(start.x, start.y, quota),
-        // Some(end.xyz()),
-        None,
-    );
-
-    if cfg!(test) {
-        println!("Best paths WITH cheating:");
-        let end_states = (0..=quota)
-            .map(|z| IVec3::new(end.x, end.y, z))
-            .collect_vec();
-
-        for e in end_states {
-            let [x, y, z] = e.as_array();
-            if let Some(dist) = cheat_graph.distance_get(e) {
-                let savings = shortest_dist_no_cheating - dist;
-                println!("  + end=({x}, {y}) ({z:>2} cheat(s) left): saves {savings:>4} picoseconds ({shortest_dist_no_cheating:>2} -> {dist:>2})");
-                // if e.z == 0
-                {
-                    let [x, y, z] = cheat_graph.prev[&e].as_array();
-                    println!("    + From ({x}, {y}) w/ {z} cheat(s) left");
-                }
-            } else {
-                println!("  + end=({x}, {y}) ({z:>2} cheat(s) left): unreachable?");
-            }
-            println!();
-        }
-    }
-
-    let min_savings = if cfg!(test) { 20 } else { 100 };
-    let cost_to_ignore = shortest_dist_no_cheating - min_savings;
-
-    // TODO:
-    //      1. BFS from the end, stopping when (cheat_graph.distance_get(curr) > cost_to_ignore) or curr == start
-    //      2. De-duplicate based on nodes in path with z==19 and (firt) z == 0
-    //      3. Tally savings
-    //      4. Profit!
-
-    0
+    solve_with_cheat_quota(&map, start, 2, 100)
 }
 
 // Part2 ========================================================================
 #[aoc(day20, part2)]
 pub fn part2(input: &str) -> i64 {
-    #![allow(unused)]
+    let mut start = IVec2::zero();
+    let map: Framebuffer<char> = Framebuffer::parse_grid2(input, |info| {
+        match info.c {
+            '#' => {}
+            '.' => {}
+            'S' => start = IVec2::new(info.x, info.y),
+            // 'E' => end = IVec2::new(info.x, info.y),
+            'E' => {}
+            c => unreachable!("Unexpected map character: {c:?}"),
+        }
+        info.c
+    });
 
-    0
+    solve_with_cheat_quota(&map, start, 20, 100)
 }
 
 #[cfg(test)]
@@ -220,21 +128,39 @@ mod test {
 ";
 
     #[rstest]
-    #[case::given(5, EXAMPLE_INPUT)]
+    #[case::given_minsavings_20(5, 20_i32, EXAMPLE_INPUT)]
+    #[case::given_minsavings_64(1, 64_i32, EXAMPLE_INPUT)]
     #[trace]
-    #[ignore]
     #[timeout(Duration::from_millis(750))]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
+        #[case] min_savings: i32,
         #[case] input: &str,
     ) {
         init_logging();
 
         let input = input.trim();
-        assert_eq!(p(input), expected);
+        let mut start = IVec2::zero();
+        let map: Framebuffer<char> = Framebuffer::parse_grid2(input, |info| {
+            match info.c {
+                '#' => {}
+                '.' => {}
+                'S' => start = IVec2::new(info.x, info.y),
+                // 'E' => end = IVec2::new(info.x, info.y),
+                'E' => {}
+                c => unreachable!("Unexpected map character: {c:?}"),
+            }
+            info.c
+        });
+
+        let quota = 2;
+        assert_eq!(
+            solve_with_cheat_quota(&map, start, quota, min_savings),
+            expected
+        );
     }
 
     /*
@@ -255,19 +181,38 @@ mod test {
             There are  3 cheats that save 76 picoseconds.
     */
     #[rstest]
-    #[case::given(32 + 31 + 29 + 39 + 25 + 23 + 20 + 19 + 12 + 14 + 12 + 22 + 4 + 3, EXAMPLE_INPUT)]
-    #[ignore]
+    #[case::given_minsavings_50((32 + 31 + 29 + 39 + 25 + 23 + 20 + 19 + 12 + 14 + 12 + 22 + 4 + 3), 50_i32, EXAMPLE_INPUT)]
+    #[case::given_minsavings_64((19 + 12 + 14 + 12 + 22 + 4 + 3), 64_i32, EXAMPLE_INPUT)]
     #[trace]
+    // #[ignore]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
+        #[case] min_savings: i32,
         #[case] input: &str,
     ) {
         init_logging();
 
         let input = input.trim();
-        assert_eq!(p(input), expected);
+        let mut start = IVec2::zero();
+        let map: Framebuffer<char> = Framebuffer::parse_grid2(input, |info| {
+            match info.c {
+                '#' => {}
+                '.' => {}
+                'S' => start = IVec2::new(info.x, info.y),
+                // 'E' => end = IVec2::new(info.x, info.y),
+                'E' => {}
+                c => unreachable!("Unexpected map character: {c:?}"),
+            }
+            info.c
+        });
+
+        let quota = 20;
+        assert_eq!(
+            solve_with_cheat_quota(&map, start, quota, min_savings),
+            expected
+        );
     }
 }

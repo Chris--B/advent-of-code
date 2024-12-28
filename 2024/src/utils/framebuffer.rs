@@ -356,6 +356,16 @@ impl<T> Framebuffer<T> {
     ) where
         U: std::fmt::Display,
     {
+        print!("{:>2} ", "");
+        for x in xs.clone() {
+            if (x > 0) && (x % 5 == 0) {
+                print!("{x}");
+            } else {
+                print!(" ")
+            }
+        }
+        println!();
+
         for y in ys.rev() {
             print!("{y:>2} ");
             for x in xs.clone() {
