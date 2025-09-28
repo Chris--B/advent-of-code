@@ -1,4 +1,4 @@
-#![allow(clippy::needless_range_loop)]
+#![warn(clippy::needless_range_loop, clippy::overly_complex_bool_expr)]
 
 use aoc_runner_derive::aoc_lib;
 

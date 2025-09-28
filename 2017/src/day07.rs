@@ -71,11 +71,18 @@ fn parse<'a>(input: &'a str) -> Tree<'a> {
         }
 
         let mut total_weight = info.weight;
-        for child in info.children.clone() {
+        let mut children = info.children.clone();
+        for &child in &children {
             total_weight += build_weights(child, tree);
         }
 
-        tree.get_mut(name).unwrap().total_weight = total_weight;
+        // Since the children are now fully weighted, we can sort them to simplify later checks
+        children.sort_by_key(|c| tree[c].total_weight);
+
+        let info: &mut Info = tree.get_mut(name).unwrap();
+        info.total_weight = total_weight;
+        info.children = children;
+
         total_weight
     }
     build_weights(root, &mut tree);
@@ -126,17 +133,22 @@ pub fn part1(input: &str) -> String {
 // Part2 ========================================================================
 
 fn is_balanced(name: &str, tree: &Tree) -> bool {
-    match &tree[name].children[..] {
-        [] | [_] => true,
-        [a, rest @ ..] => {
-            for b in rest {
-                if tree[a].total_weight != tree[b].total_weight {
-                    // println!("name={name:?} {children:?}");
-                    return false;
-                }
-            }
-            true
-        }
+    overweight_child(name, tree).is_none()
+}
+
+fn overweight_child<'a>(name: &'_ str, tree: &'a Tree) -> Option<(&'a str, i64)> {
+    // We keep these children sorted by total_weight.
+    // Since exactly 0 or exactly 1 child is the "wrong" weight, and these are sorted,
+    // it must be the first or last child that is off.
+    // We will assume the last, since the weights are always *too much* (???? unverified?)
+    let first = tree[name].children.first()?;
+    let last = tree[name].children.last()?;
+
+    let diff = tree[last].total_weight - tree[first].total_weight;
+    if diff != 0 {
+        Some((last, diff))
+    } else {
+        None
     }
 }
 
@@ -166,12 +178,11 @@ pub fn part2(input: &str) -> i64 {
         println!();
     }
 
-    // eyeball it
-    if cfg!(test) {
-        243
-    } else {
-        757
-    }
+    let Some((bad_apple, diff)) = overweight_child(name, &tree) else {
+        unreachable!("No unbalanced child found under {name}");
+    };
+
+    tree[bad_apple].weight - diff
 }
 
 #[cfg(test)]
@@ -215,7 +226,7 @@ cntj (57)
     }
 
     #[rstest]
-    #[case::given(243, EXAMPLE_INPUT)]
+    #[case::given(60, EXAMPLE_INPUT)]
     #[trace]
     #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_2(
