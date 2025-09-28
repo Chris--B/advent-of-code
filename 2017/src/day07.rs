@@ -325,16 +325,10 @@ pub fn part1_orphan_seeker(input: &str) -> String {
             let end = memchr(b' ', line).unwrap();
             parent = &line[..end];
         }
-        // TODO: insert with binary_search?
         parents.push(parent);
     }
 
     if cfg!(debug_assertions) {
-        // println!("{} lines:", lines.len());
-        // for line in &lines {
-        //     println!("  + {:?}", std::str::from_utf8(line));
-        // }
-
         println!("{} parents:", parents.len());
         for parent in &parents {
             println!("  + {:?}", std::str::from_utf8(parent));
