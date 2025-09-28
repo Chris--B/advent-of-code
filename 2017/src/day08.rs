@@ -118,7 +118,18 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day8, part2)]
 pub fn part2(input: &str) -> i64 {
-    0
+    let mut res = 0;
+
+    let mut regs = Registers::new();
+    for line in input.lines() {
+        regs.run(line);
+        res = i64::max(res, *regs.regs.values().max().unwrap() as i64);
+    }
+
+    if cfg!(debug_assertions) {
+        regs.print_state();
+    }
+    res
 }
 
 #[cfg(test)]
@@ -170,9 +181,8 @@ c inc -20 if c == 10
     }
 
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[case::given(10, EXAMPLE_INPUT)]
     #[trace]
-    #[ignore]
     #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_2(
         #[notrace]
