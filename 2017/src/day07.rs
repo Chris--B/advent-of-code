@@ -383,6 +383,149 @@ pub fn part1_orphan_seeker(input: &str) -> String {
     std::str::from_utf8(parents[0]).unwrap().to_string()
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+struct PackedStr(u32);
+
+impl PackedStr {
+    fn pack(bytes: &[u8], start: usize, end: usize) -> Self {
+        let len = end - start;
+        assert!(
+            len < (1 << 4),
+            "{:?} is too long",
+            std::str::from_utf8(&bytes[start..end])
+        );
+        // If we can squeeze ONE more bit somewhere, this gets us into 2 bytes.
+        // assert!(
+        //     len >= (1 << 2),
+        //     "{:?} not long enough",
+        //     std::str::from_utf8(&bytes[start..end])
+        // );
+        assert!(
+            start < (1 << 15),
+            "{:?} starts too far into its buffer ({start})",
+            std::str::from_utf8(&bytes[start..end])
+        );
+
+        let [a, b] = (start as u16).to_ne_bytes();
+        let [c] = (len as u8).to_ne_bytes();
+        Self(u32::from_ne_bytes([a, b, c, 0]))
+    }
+
+    fn unpack<'a>(&'_ self, bytes: &'a [u8]) -> &'a [u8] {
+        let [a, b, c, _] = self.0.to_ne_bytes();
+        let start = u16::from_ne_bytes([a, b]) as usize;
+        let len = u8::from_ne_bytes([c]) as usize;
+
+        if cfg!(debug_assertions) {
+            let _ = &bytes[start..(start + len)];
+        }
+        unsafe { core::slice::from_raw_parts(bytes.as_ptr().add(start), len) }
+    }
+
+    fn as_str<'a>(&'_ self, bytes: &'a [u8]) -> &'a str {
+        std::str::from_utf8(self.unpack(bytes)).unwrap()
+    }
+}
+
+#[aoc(day7, part1, orphan_seeker_packed)]
+pub fn part1_orphan_seeker_packed(input: &str) -> String {
+    use memchr::*;
+
+    let bytes: &[u8] = input.as_bytes();
+    let mut lines = Vec::with_capacity(512);
+    let mut parents: Vec<PackedStr> = Vec::with_capacity(512);
+
+    // Find all nodes with children
+    for found in memchr_iter(b'>', bytes) {
+        // Each line looks like:
+        //      "fwft (72) -> ktlj, cntj, xhth"
+        // or
+        //      "xhth (57)"
+        // memchr above filters to just the first type and points us in the middle of the line
+        // We'll walk back and forward to get just the line we want.
+        let line: &[u8];
+
+        // start of parent name and line, in bytes
+        let mut start = found;
+        {
+            while 0 < start && bytes[start] != b'\n' {
+                start -= 1;
+            }
+            start += 1;
+
+            let mut end = found;
+            while end < bytes.len() && bytes[end] != b'\n' {
+                end += 1;
+            }
+            line = &bytes[start..end];
+        }
+        lines.push(&line[(found - start + 2)..]);
+
+        // end of parent name, in bytes
+        let end = start + memchr(b' ', line).unwrap();
+
+        parents.push(PackedStr::pack(bytes, start, end));
+    }
+
+    parents.sort_by_key(|p| p.unpack(bytes));
+
+    if cfg!(debug_assertions) {
+        println!("{} parents:", parents.len());
+        for parent in &parents {
+            println!("  + {:?}", parent.as_str(bytes));
+        }
+        println!();
+    }
+
+    if cfg!(debug_assertions) {
+        println!("children:");
+    }
+
+    // seek the orphan.
+    for line in lines {
+        if cfg!(debug_assertions) {
+            println!("  + {:?}", std::str::from_utf8(line));
+        }
+
+        // For each line, parse the children.
+        // Since these children have a parent, they can't be the root.
+        // We'll remove each parent from `parents` until there is only one left!
+        let mut start = 0;
+        for end in memchr_iter(b',', line) {
+            let child = &line[start..end];
+            if cfg!(debug_assertions) {
+                println!("    + {:?}", std::str::from_utf8(child));
+            }
+            if let Ok(i) = parents.binary_search_by_key(&child, |packed| packed.unpack(bytes)) {
+                parents.remove(i);
+            }
+            start = end + 2;
+        }
+        {
+            let child = &line[start..];
+            if cfg!(debug_assertions) {
+                println!("    + {:?}", std::str::from_utf8(child));
+            }
+            if let Ok(i) = parents.binary_search_by_key(&child, |packed| packed.unpack(bytes)) {
+                parents.remove(i);
+            }
+        }
+    }
+
+    if cfg!(debug_assertions) {
+        println!("{} parents:", parents.len());
+        for parent in &parents {
+            println!("  + {:?}", parent.as_str(bytes));
+        }
+    }
+
+    debug_assert_eq!(parents.len(), 1);
+
+    std::str::from_utf8(parents[0].unpack(bytes))
+        .unwrap()
+        .to_string()
+}
+
 #[cfg(test)]
 mod test {
     use std::time::Duration;
@@ -414,7 +557,7 @@ cntj (57)
     #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_lum, part1_orphan_seeker)]
+        #[values(part1, part1_lum, part1_orphan_seeker, part1_orphan_seeker_packed)]
         p: impl FnOnce(&str) -> String,
         #[case] expected: impl ToString,
         #[case] input: &str,
