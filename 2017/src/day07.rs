@@ -288,6 +288,107 @@ pub fn part2_lum(input: &str) -> i64 {
     tree.value(bad_apple).weight - diff
 }
 
+#[aoc(day7, part1, orphan_seeker)]
+pub fn part1_orphan_seeker(input: &str) -> String {
+    use memchr::*;
+
+    let bytes: &[u8] = input.as_bytes();
+    let mut lines = Vec::with_capacity(512);
+    let mut parents: Vec<&[u8]> = Vec::with_capacity(512);
+
+    // Find all nodes with children
+    for found in memchr_iter(b'>', bytes) {
+        // Each line looks like:
+        //      "fwft (72) -> ktlj, cntj, xhth"
+        // or
+        //      "xhth (57)"
+        // memchr above filters to just the first type and points us in the middle of the line
+        // We'll walk back and forward to get just the line we want.
+        let line: &[u8];
+        let mut start = found;
+        {
+            while 0 < start && bytes[start] != b'\n' {
+                start -= 1;
+            }
+            start += 1;
+
+            let mut end = found;
+            while end < bytes.len() && bytes[end] != b'\n' {
+                end += 1;
+            }
+            line = &bytes[start..end];
+        }
+        lines.push(&line[(found - start + 2)..]);
+
+        let parent: &[u8];
+        {
+            let end = memchr(b' ', line).unwrap();
+            parent = &line[..end];
+        }
+        // TODO: insert with binary_search?
+        parents.push(parent);
+    }
+
+    if cfg!(debug_assertions) {
+        // println!("{} lines:", lines.len());
+        // for line in &lines {
+        //     println!("  + {:?}", std::str::from_utf8(line));
+        // }
+
+        println!("{} parents:", parents.len());
+        for parent in &parents {
+            println!("  + {:?}", std::str::from_utf8(parent));
+        }
+        println!();
+    }
+
+    parents.sort();
+
+    if cfg!(debug_assertions) {
+        println!("children:");
+    }
+    // seek the orphan.
+    for line in lines {
+        if cfg!(debug_assertions) {
+            println!("  + {:?}", std::str::from_utf8(line));
+        }
+
+        // For each line, parse the children.
+        // Since these children have a parent, they can't be the root.
+        let mut start = 0;
+        for end in memchr_iter(b',', line) {
+            let child = &line[start..end];
+            if cfg!(debug_assertions) {
+                println!("    + {:?}", std::str::from_utf8(child));
+            }
+            if let Ok(i) = parents.binary_search(&child) {
+                parents.remove(i);
+            }
+            start = end + 2;
+        }
+        {
+            let child = &line[start..];
+            if cfg!(debug_assertions) {
+                println!("    + {:?}", std::str::from_utf8(child));
+            }
+            if let Ok(i) = parents.binary_search(&child) {
+                parents.remove(i);
+            }
+        }
+    }
+
+    if cfg!(debug_assertions) {
+        println!("{} parents:", parents.len());
+        for parent in &parents {
+            println!("  + {:?}", std::str::from_utf8(parent));
+        }
+    }
+
+    debug_assert_eq!(parents.len(), 1);
+
+    std::str::from_utf8(parents[0]).unwrap().to_string()
+}
+
 #[cfg(test)]
 mod test {
     use std::time::Duration;
@@ -319,12 +420,13 @@ cntj (57)
     #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1, part1_lum)]
+        #[values(part1, part1_lum, part1_orphan_seeker)]
         p: impl FnOnce(&str) -> String,
         #[case] expected: impl ToString,
         #[case] input: &str,
     ) {
         let input = input.trim();
+        println!("{input}");
         assert_eq!(p(input), expected.to_string());
     }
 

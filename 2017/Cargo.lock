@@ -49,6 +49,7 @@ dependencies = [
  "bitmask-enum",
  "itertools",
  "log",
+ "memchr",
  "pretty_assertions",
  "rstest",
  "ultraviolet",
