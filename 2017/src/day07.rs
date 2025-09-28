@@ -12,7 +12,7 @@ pub struct Info<'a> {
 pub type Tree<'a> = HashMap<&'a str, Info<'a>>;
 
 // Note: Cannot use aoc_generator with lifetimes in types :(
-fn parse<'a>(input: &'a str) -> Tree<'a> {
+fn parse<'a>(input: &'a str, build_weights: bool) -> Tree<'a> {
     let mut tree: Tree = Tree::new();
 
     // Read everyone into the tree first
@@ -58,34 +58,36 @@ fn parse<'a>(input: &'a str) -> Tree<'a> {
         tree.get_mut(name).unwrap().children = children;
     }
 
-    // The *only* node without a parent is the root.
-    let (root, _info) = tree
-        .iter()
-        .find(|(_name, info)| info.parent.is_none())
-        .unwrap();
+    if build_weights {
+        // The *only* node without a parent is the root.
+        let (root, _info) = tree
+            .iter()
+            .find(|(_name, info)| info.parent.is_none())
+            .unwrap();
 
-    fn build_weights(name: &str, tree: &mut Tree) -> i64 {
-        let info = &tree[name];
-        if info.total_weight > 0 {
-            return info.total_weight;
+        fn build_weights(name: &str, tree: &mut Tree) -> i64 {
+            let info = &tree[name];
+            if info.total_weight > 0 {
+                return info.total_weight;
+            }
+
+            let mut total_weight = info.weight;
+            let mut children = info.children.clone();
+            for &child in &children {
+                total_weight += build_weights(child, tree);
+            }
+
+            // Since the children are now fully weighted, we can sort them to simplify later checks
+            children.sort_by_key(|c| tree[c].total_weight);
+
+            let info: &mut Info = tree.get_mut(name).unwrap();
+            info.total_weight = total_weight;
+            info.children = children;
+
+            total_weight
         }
-
-        let mut total_weight = info.weight;
-        let mut children = info.children.clone();
-        for &child in &children {
-            total_weight += build_weights(child, tree);
-        }
-
-        // Since the children are now fully weighted, we can sort them to simplify later checks
-        children.sort_by_key(|c| tree[c].total_weight);
-
-        let info: &mut Info = tree.get_mut(name).unwrap();
-        info.total_weight = total_weight;
-        info.children = children;
-
-        total_weight
+        build_weights(root, &mut tree);
     }
-    build_weights(root, &mut tree);
 
     if cfg!(debug_assertions) {
         for (name, info) in &tree {
@@ -102,7 +104,7 @@ fn parse<'a>(input: &'a str) -> Tree<'a> {
 // Part1 ========================================================================
 #[aoc(day7, part1)]
 pub fn part1(input: &str) -> String {
-    let tree: Tree = parse(input);
+    let tree: Tree = parse(input, false);
     tree.iter()
         .find(|(_name, info)| info.parent.is_none())
         .map(|(name, _info)| name.to_string())
@@ -132,7 +134,7 @@ fn overweight_child<'a>(name: &'_ str, tree: &'a Tree) -> Option<(&'a str, i64)>
 
 #[aoc(day7, part2)]
 pub fn part2(input: &str) -> i64 {
-    let tree: Tree = parse(input);
+    let tree: Tree = parse(input, true);
     let name = tree
         .keys()
         .filter(|name| !is_balanced(name, &tree))
@@ -153,7 +155,7 @@ pub struct Info2 {
 
 type Tree2<'a> = LookupMap<&'a str, Info2>;
 
-fn parse_lum<'a>(input: &'a str) -> Tree2<'a> {
+fn parse_lum<'a>(input: &'a str, build_weights: bool) -> Tree2<'a> {
     let mut tree: Tree2 = Tree2::new();
 
     // Read everyone into the tree first
@@ -190,35 +192,38 @@ fn parse_lum<'a>(input: &'a str) -> Tree2<'a> {
         tree.entry(id).value.children = children;
     }
 
-    // The *only* node without a parent is the root.
-    let root = tree
-        .entries()
-        .find(|e| e.value.parent.is_none())
-        .map(|e| e.id)
-        .unwrap();
+    if build_weights {
+        // The *only* node without a parent is the root.
+        let root = tree
+            .entries()
+            .find(|e| e.value.parent.is_none())
+            .map(|e| e.id)
+            .unwrap();
 
-    fn build_weights(id: KeyId, tree: &mut Tree2) -> i64 {
-        let info: &Info2 = &tree.entry(id).value;
-        if info.total_weight > 0 {
-            return info.total_weight;
+        fn build_weights(id: KeyId, tree: &mut Tree2) -> i64 {
+            let info: &Info2 = &tree.entry(id).value;
+            if info.total_weight > 0 {
+                return info.total_weight;
+            }
+
+            let mut total_weight = info.weight;
+            let mut children = info.children.clone();
+            for &child in &children {
+                total_weight += build_weights(child, tree);
+            }
+
+            // Since the children are now fully weighted, we can sort them to simplify later checks
+            children.sort_by_key(|&c| tree.entry(c).value.total_weight);
+
+            let info: &mut Info2 = &mut tree.entry(id).value;
+            info.total_weight = total_weight;
+            info.children = children;
+
+            total_weight
         }
 
-        let mut total_weight = info.weight;
-        let mut children = info.children.clone();
-        for &child in &children {
-            total_weight += build_weights(child, tree);
-        }
-
-        // Since the children are now fully weighted, we can sort them to simplify later checks
-        children.sort_by_key(|&c| tree.entry(c).value.total_weight);
-
-        let info: &mut Info2 = &mut tree.entry(id).value;
-        info.total_weight = total_weight;
-        info.children = children;
-
-        total_weight
+        build_weights(root, &mut tree);
     }
-    build_weights(root, &mut tree);
 
     if cfg!(debug_assertions) {
         for entry in tree.entries() {
@@ -237,7 +242,7 @@ fn parse_lum<'a>(input: &'a str) -> Tree2<'a> {
 
 #[aoc(day7, part1, lum)]
 pub fn part1_lum(input: &str) -> String {
-    let tree = parse_lum(input);
+    let tree = parse_lum(input, false);
     let root = tree
         .entries()
         .find(|&e| e.value.parent.is_none())
@@ -269,7 +274,7 @@ fn overweight_child_lum(id: KeyId, tree: &Tree2) -> Option<(KeyId, i64)> {
 
 #[aoc(day7, part2, lum)]
 pub fn part2_lum(input: &str) -> i64 {
-    let tree = parse_lum(input);
+    let tree = parse_lum(input, true);
     let id = tree
         .ids()
         .filter(|&id| !is_balanced_lum(id, &tree))
