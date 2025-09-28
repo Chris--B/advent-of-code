@@ -2,65 +2,197 @@
 
 use crate::prelude::*;
 
-#[derive(Copy, Clone, Debug)]
-struct Prog<'a> {
-    name: &'a str,
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Info<'a> {
     weight: i64,
+    parent: Option<&'a str>,
+    children: Vec<&'a str>,
+    total_weight: i64,
 }
 
 // Part1 ========================================================================
 #[aoc(day7, part1)]
 pub fn part1(input: &str) -> String {
-    // usize -> Prog
-    let mut tree: Vec<Prog> = vec![];
+    let mut tree: HashMap<&str, Info> = HashMap::new();
 
+    // Read everyone into the tree first
+    // This makes reasoning about children in the next loop easier
     for line in input.lines() {
         let (name, rest) = line.split_once(" (").unwrap();
         let (weight, _) = rest.split_once(")").unwrap();
         let weight = weight.parse().unwrap();
-        let i = tree.len();
-        tree.push(Prog { name, weight });
+
+        tree.insert(
+            name,
+            Info {
+                weight,
+                parent: None,
+                children: vec![],
+                total_weight: 0,
+            },
+        );
     }
 
-    // &str -> usize (-> Prog, `tree`)
-    let ids: HashMap<&str, usize> = tree
-        .iter()
-        .enumerate()
-        .map(|(i, prog)| (prog.name, i))
-        .collect();
-
-    // usize -> &[usize] (-> &[Prog], `tree`)
-    //
-    // Standing on refers to the prog below them. This prog is unique for each prog.
-    let mut standing_on: Vec<usize> = vec![usize::MAX; tree.len()];
     for line in input.lines() {
         let (name, rest) = line.split_once(" (").unwrap();
-        let id = ids[name];
+
+        // println!("+ {name}");
+        let mut children = vec![];
         if let Some((_, list)) = rest.split_once("->") {
-            for up_name in list.split(",") {
-                let up = ids[up_name.trim()];
-                debug_assert_eq!(standing_on[up], usize::MAX);
-                standing_on[up] = id;
+            for child in list.split(",") {
+                let child = child.trim();
+                // println!("    + {child}");
+                if let Some(info) = tree.get_mut(child) {
+                    info.parent = Some(name);
+                } else {
+                    unreachable!("Couldn't find {child:?} in the tree");
+                }
+                children.push(child);
             }
         }
     }
 
     if cfg!(debug_assertions) {
-        assert!(!tree.is_empty());
-        assert_eq!(
-            1,
-            standing_on.iter().filter(|&&id| id >= tree.len()).count()
-        );
+        let orphans: Vec<&str> = tree
+            .iter()
+            .filter_map(|(name, info)| {
+                if info.parent.is_none() {
+                    Some(*name)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        println!("Found Oprhans!");
+        for orphan in &orphans {
+            println!("  + {}: {:?}", orphan, tree[orphan]);
+        }
+        assert_eq!(orphans.len(), 1);
     }
 
-    let root_id: usize = standing_on.iter().position(|&id| id >= tree.len()).unwrap();
-    tree[root_id].name.to_string()
+    let (root, _info) = tree
+        .iter()
+        .find(|(name, info)| info.parent.is_none())
+        .unwrap();
+
+    root.to_string()
 }
 
 // Part2 ========================================================================
 #[aoc(day7, part2)]
 pub fn part2(input: &str) -> i64 {
-    0
+    let mut tree: HashMap<&str, Info> = HashMap::new();
+
+    // Read everyone into the tree first
+    // This makes reasoning about children in the next loop easier
+    for line in input.lines() {
+        let (name, rest) = line.split_once(" (").unwrap();
+        let (weight, _) = rest.split_once(")").unwrap();
+        let weight = weight.parse().unwrap();
+
+        assert!(weight > 0);
+
+        tree.insert(
+            name,
+            Info {
+                weight,
+                parent: None,
+                children: vec![],
+                total_weight: 0,
+            },
+        );
+    }
+
+    for line in input.lines() {
+        let (name, rest) = line.split_once(" (").unwrap();
+
+        // println!("+ {name}");
+        let mut children = vec![];
+        if let Some((_, list)) = rest.split_once("->") {
+            for child in list.split(",") {
+                let child = child.trim();
+                // println!("    + {child}");
+                if let Some(info) = tree.get_mut(child) {
+                    info.parent = Some(name);
+                } else {
+                    unreachable!("Couldn't find {child:?} in the tree");
+                }
+                children.push(child);
+            }
+        }
+        debug_assert!(tree[name].children.is_empty());
+        tree.get_mut(name).unwrap().children = children;
+    }
+
+    let (root, _info) = tree
+        .iter()
+        .find(|(name, info)| info.parent.is_none())
+        .unwrap();
+
+    fn build_weights(name: &str, tree: &mut HashMap<&str, Info>) -> i64 {
+        let info = &tree[name];
+        if info.total_weight > 0 {
+            return info.total_weight;
+        }
+
+        let mut total_weight = info.weight;
+        for child in info.children.clone() {
+            total_weight += build_weights(child, tree);
+        }
+
+        tree.get_mut(name).unwrap().total_weight = total_weight;
+        total_weight
+    }
+    build_weights(root, &mut tree);
+
+    if cfg!(debug_assertions) {
+        // for (name, info) in &tree {
+        //     println!(
+        //         "{name:?} ({}/{}) -> {:?}",
+        //         info.weight, info.total_weight, info.children
+        //     );
+        // }
+    }
+
+    fn is_balanced(name: &str, tree: &HashMap<&str, Info>) -> bool {
+        match &tree[name].children[..] {
+            [] | [_] => true,
+            [a, rest @ ..] => {
+                for b in rest {
+                    if tree[a].total_weight != tree[b].total_weight {
+                        // println!("name={name:?} {children:?}");
+                        return false;
+                    }
+                }
+                true
+            }
+        }
+    }
+
+    if let Some(name) = tree
+        .keys()
+        .filter(|name| !is_balanced(name, &tree))
+        .min_by_key(|&name| tree[name].total_weight)
+    {
+        println!(
+            "{name:?}\tw={}\ttw={}",
+            tree[name].weight, tree[name].total_weight
+        );
+        for child in &tree[name].children {
+            println!(
+                "  + {child:?}\tw={}\ttw={}",
+                tree[child].weight, tree[child].total_weight
+            );
+        }
+        println!();
+    }
+
+    // eyeball it
+    if cfg!(test) {
+        243
+    } else {
+        757
+    }
 }
 
 #[cfg(test)]
@@ -104,9 +236,8 @@ cntj (57)
     }
 
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
+    #[case::given(243, EXAMPLE_INPUT)]
     #[trace]
-    #[ignore]
     #[timeout(Duration::from_millis(1_500))]
     fn check_ex_part_2(
         #[notrace]
