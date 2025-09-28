@@ -28,6 +28,8 @@ pub mod day08;
 // pub mod day24;
 // pub mod day25;
 
+mod lookup_map;
+
 aoc_lib! { year = 2017 }
 
 #[allow(non_upper_case_globals)]
@@ -40,6 +42,7 @@ pub mod prelude {
     pub use ultraviolet::IVec2;
 
     pub use std::collections::*;
+    pub use std::fmt::{self, Debug, Display};
 
     pub use crate::Cardinal;
     pub const Norð: Cardinal = Cardinal::Norð;
@@ -47,6 +50,7 @@ pub mod prelude {
     pub const East: Cardinal = Cardinal::East;
     pub const West: Cardinal = Cardinal::West;
 
+    pub use crate::lookup_map::*;
     pub use crate::print_with_focus;
 }
 
