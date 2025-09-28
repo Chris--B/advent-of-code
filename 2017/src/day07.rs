@@ -11,8 +11,11 @@ pub struct Info<'a> {
 
 pub type Tree<'a> = HashMap<&'a str, Info<'a>>;
 
+#[derive(Copy, Clone, Debug)]
+struct BuildWeights(pub bool);
+
 // Note: Cannot use aoc_generator with lifetimes in types :(
-fn parse<'a>(input: &'a str, build_weights: bool) -> Tree<'a> {
+fn parse<'a>(input: &'a str, build_weights: BuildWeights) -> Tree<'a> {
     let mut tree: Tree = Tree::new();
 
     // Read everyone into the tree first
@@ -58,7 +61,7 @@ fn parse<'a>(input: &'a str, build_weights: bool) -> Tree<'a> {
         tree.get_mut(name).unwrap().children = children;
     }
 
-    if build_weights {
+    if build_weights.0 {
         // The *only* node without a parent is the root.
         let (root, _info) = tree
             .iter()
@@ -104,7 +107,7 @@ fn parse<'a>(input: &'a str, build_weights: bool) -> Tree<'a> {
 // Part1 ========================================================================
 #[aoc(day7, part1)]
 pub fn part1(input: &str) -> String {
-    let tree: Tree = parse(input, false);
+    let tree: Tree = parse(input, BuildWeights(false));
     tree.iter()
         .find(|(_name, info)| info.parent.is_none())
         .map(|(name, _info)| name.to_string())
@@ -134,7 +137,7 @@ fn overweight_child<'a>(name: &'_ str, tree: &'a Tree) -> Option<(&'a str, i64)>
 
 #[aoc(day7, part2)]
 pub fn part2(input: &str) -> i64 {
-    let tree: Tree = parse(input, true);
+    let tree: Tree = parse(input, BuildWeights(true));
     let name = tree
         .keys()
         .filter(|name| !is_balanced(name, &tree))
@@ -155,7 +158,7 @@ pub struct Info2 {
 
 type Tree2<'a> = LookupMap<&'a str, Info2>;
 
-fn parse_lum<'a>(input: &'a str, build_weights: bool) -> Tree2<'a> {
+fn parse_lum<'a>(input: &'a str, build_weights: BuildWeights) -> Tree2<'a> {
     let mut tree: Tree2 = Tree2::new();
 
     // Read everyone into the tree first
@@ -192,7 +195,7 @@ fn parse_lum<'a>(input: &'a str, build_weights: bool) -> Tree2<'a> {
         tree.entry(id).value.children = children;
     }
 
-    if build_weights {
+    if build_weights.0 {
         // The *only* node without a parent is the root.
         let root = tree
             .entries()
@@ -242,7 +245,7 @@ fn parse_lum<'a>(input: &'a str, build_weights: bool) -> Tree2<'a> {
 
 #[aoc(day7, part1, lum)]
 pub fn part1_lum(input: &str) -> String {
-    let tree = parse_lum(input, false);
+    let tree = parse_lum(input, BuildWeights(false));
     let root = tree
         .entries()
         .find(|&e| e.value.parent.is_none())
@@ -274,7 +277,7 @@ fn overweight_child_lum(id: KeyId, tree: &Tree2) -> Option<(KeyId, i64)> {
 
 #[aoc(day7, part2, lum)]
 pub fn part2_lum(input: &str) -> i64 {
-    let tree = parse_lum(input, true);
+    let tree = parse_lum(input, BuildWeights(true));
     let id = tree
         .ids()
         .filter(|&id| !is_balanced_lum(id, &tree))
