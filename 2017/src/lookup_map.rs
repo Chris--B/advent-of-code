@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// - Finding a KeyId from a Key is linear time
 #[derive(Clone, Default)]
 pub struct LookupMap<Key, Value> {
-    keys: Vec<Key>,
+    keys: Vec<(KeyId, Key)>,
     entries: Vec<Entry<Key, Value>>,
 }
 
@@ -37,7 +37,7 @@ pub struct Entry<Key, Value> {
 
 impl<Key, Value> LookupMap<Key, Value>
 where
-    Key: PartialEq,
+    Key: PartialEq + Ord,
     Value: Default,
 {
     // "inherent associated types are unstable"
@@ -88,32 +88,29 @@ where
     }
 
     pub fn id(&mut self, key: &Key) -> Option<KeyId> {
-        self.keys.iter().position(|k| k == key).map(KeyId)
+        self.keys
+            .binary_search_by_key(&key, |(_id, k)| k)
+            .ok()
+            .map(|idx| self.keys[idx].0)
     }
 }
 
 impl<Key, Value> LookupMap<Key, Value>
 where
-    Key: PartialEq + Debug + Clone,
+    Key: PartialEq + Ord + Debug + Clone,
     Value: Default,
 {
     // Note: When cfg!(debug_assertions), this does an O(n) check for duplicate entries
     // This is O(1) otherwise.
     pub fn insert(&mut self, key: impl Into<Key>) -> KeyId {
         let key = key.into();
+        let id = KeyId(self.keys.len());
 
-        if cfg!(debug_assertions) {
-            if let Some(id) = self.id(&key) {
-                unreachable!(
-                    "Trying to insert key={key:?}, but it already exists at {} (len={})",
-                    id,
-                    self.len()
-                );
-            }
+        match self.keys.binary_search_by_key(&&key, |(_id, k)| k) {
+            Err(idx) => self.keys.insert(idx, (id, key.clone())),
+            Ok(idx) => unreachable!("Inserting {key:?} but is already in the map at {id:?}"),
         }
 
-        let id = KeyId(self.keys.len());
-        self.keys.push(key.clone());
         self.entries.push(Entry {
             id,
             key,
