@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -63,7 +61,7 @@ fn parse<'a>(input: &'a str) -> Tree<'a> {
     // The *only* node without a parent is the root.
     let (root, _info) = tree
         .iter()
-        .find(|(name, info)| info.parent.is_none())
+        .find(|(_name, info)| info.parent.is_none())
         .unwrap();
 
     fn build_weights(name: &str, tree: &mut Tree) -> i64 {
@@ -104,32 +102,11 @@ fn parse<'a>(input: &'a str) -> Tree<'a> {
 // Part1 ========================================================================
 #[aoc(day7, part1)]
 pub fn part1(input: &str) -> String {
-    let mut tree: Tree = parse(input);
-
-    if cfg!(debug_assertions) {
-        let orphans: Vec<&str> = tree
-            .iter()
-            .filter_map(|(name, info)| {
-                if info.parent.is_none() {
-                    Some(*name)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        println!("Found Oprhans!");
-        for orphan in &orphans {
-            println!("  + {}: {:?}", orphan, tree[orphan]);
-        }
-        assert_eq!(orphans.len(), 1);
-    }
-
-    let (root, _info) = tree
-        .iter()
-        .find(|(name, info)| info.parent.is_none())
-        .unwrap();
-
-    root.to_string()
+    let tree: Tree = parse(input);
+    tree.iter()
+        .find(|(_name, info)| info.parent.is_none())
+        .map(|(name, _info)| name.to_string())
+        .unwrap()
 }
 
 // Part2 ========================================================================
@@ -156,33 +133,13 @@ fn overweight_child<'a>(name: &'_ str, tree: &'a Tree) -> Option<(&'a str, i64)>
 #[aoc(day7, part2)]
 pub fn part2(input: &str) -> i64 {
     let tree: Tree = parse(input);
-
-    let Some(name) = tree
+    let name = tree
         .keys()
         .filter(|name| !is_balanced(name, &tree))
         .min_by_key(|&name| tree[name].total_weight)
-    else {
-        unreachable!("Failed to find an unbalanced node");
-    };
+        .expect("Failed to find an unbalanced node");
 
-    if cfg!(debug_assertions) {
-        println!(
-            "{name:?}\tw={}\ttw={}",
-            tree[name].weight, tree[name].total_weight
-        );
-        for child in &tree[name].children {
-            println!(
-                "  + {child:?}\tw={}\ttw={}",
-                tree[child].weight, tree[child].total_weight
-            );
-        }
-        println!();
-    }
-
-    let Some((bad_apple, diff)) = overweight_child(name, &tree) else {
-        unreachable!("No unbalanced child found under {name}");
-    };
-
+    let (bad_apple, diff) = overweight_child(name, &tree).unwrap();
     tree[bad_apple].weight - diff
 }
 
@@ -236,7 +193,7 @@ fn parse_lum<'a>(input: &'a str) -> Tree2<'a> {
     // The *only* node without a parent is the root.
     let root = tree
         .entries()
-        .find(|(e)| e.value.parent.is_none())
+        .find(|e| e.value.parent.is_none())
         .map(|e| e.id)
         .unwrap();
 
@@ -281,8 +238,6 @@ fn parse_lum<'a>(input: &'a str) -> Tree2<'a> {
 #[aoc(day7, part1, lum)]
 pub fn part1_lum(input: &str) -> String {
     let tree = parse_lum(input);
-
-    // The *only* node without a parent is the root.
     let root = tree
         .entries()
         .find(|&e| e.value.parent.is_none())
@@ -315,17 +270,16 @@ fn overweight_child_lum(id: KeyId, tree: &Tree2) -> Option<(KeyId, i64)> {
 #[aoc(day7, part2, lum)]
 pub fn part2_lum(input: &str) -> i64 {
     let tree = parse_lum(input);
-
     let id = tree
         .ids()
         .filter(|&id| !is_balanced_lum(id, &tree))
         .min_by_key(|&id| tree.value(id).total_weight)
-        .unwrap();
+        .expect("Failed to find an unbalanced node");
 
     let (bad_apple, diff) = overweight_child_lum(id, &tree).unwrap();
-
     tree.value(bad_apple).weight - diff
 }
+
 #[cfg(test)]
 mod test {
     use std::time::Duration;
