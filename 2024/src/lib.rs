@@ -92,7 +92,7 @@ pub mod prelude {
     pub use scan_fmt::scan_fmt;
     pub use smallvec::smallvec;
     pub use smallvec::SmallVec;
-    pub use ultraviolet::{IVec2, IVec3};
+    pub use ultraviolet::{IVec2, IVec3, UVec2};
 
     pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;

@@ -1,4 +1,6 @@
-use aoc24::framebuffer::Framebuffer;
+use aoc24::day12::*;
+use aoc24::prelude::*;
+
 use image::Rgb;
 
 fn main() {
@@ -7,17 +9,38 @@ fn main() {
 
     println!("Trying to load data from {input_path}");
     let input = std::fs::read_to_string(input_path).unwrap();
-    let plots = Framebuffer::parse_grid(&input, |c| c as u8);
+    let mut plots = Framebuffer::parse_grid_char(&input);
+    plots.set_border_color(Some('@'));
 
     let target = 1024.;
     let actual = plots.width().max(plots.height()) as f32;
     let scale = target / actual;
 
-    let img = plots.make_image(scale.round() as _, |&plot| Rgb(make_color(plot, 26)));
+    {
+        let img = plots.make_image(scale.round() as _, |&plot| Rgb(make_color(plot as u8, 26)));
+        let out_path = "target/day12.png";
+        img.save(out_path).unwrap();
+        println!("Saving to {out_path}");
+    }
 
-    let out_path = "target/day12.png";
-    img.save(out_path).unwrap();
-    println!("Saving to {out_path}");
+    {
+        let mut edges = plots.clone();
+        for p in edges.iter_coords() {
+            if !is_edge(&plots, p.into()) {
+                edges[p] = '.';
+            }
+        }
+        let img = edges.make_image(scale.round() as _, |&plot| {
+            if plot == '.' {
+                Rgb([0_u8, 0, 0])
+            } else {
+                Rgb(make_color(plot as u8, 26))
+            }
+        });
+        let out_path = "target/day12_edges.png";
+        img.save(out_path).unwrap();
+        println!("Saving to {out_path}");
+    }
 }
 
 fn make_color(i: u8, n: usize) -> [u8; 3] {

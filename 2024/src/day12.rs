@@ -88,6 +88,18 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
+pub fn is_edge(grid: &Framebuffer<char>, p: IVec2) -> bool {
+    if !grid.in_bounds(p) {
+        return false;
+    }
+    let here = grid[p];
+
+    (grid[p + Norð.into()] != here)
+        || (grid[p + Souð.into()] != here)
+        || (grid[p + East.into()] != here)
+        || (grid[p + West.into()] != here)
+}
+
 #[aoc(day12, part2)]
 pub fn part2(input: &str) -> i64 {
     0
