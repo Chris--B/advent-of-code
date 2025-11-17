@@ -265,11 +265,11 @@ impl Iterator for Parsedi64s<'_> {
 }
 
 pub trait IntParsable {
-    fn i64s(&self) -> Parsedi64s;
+    fn i64s(&self) -> Parsedi64s<'_>;
 }
 
 impl IntParsable for &'_ str {
-    fn i64s(&self) -> Parsedi64s {
+    fn i64s(&self) -> Parsedi64s<'_> {
         Parsedi64s {
             bytes: self.as_bytes(),
         }
@@ -277,13 +277,13 @@ impl IntParsable for &'_ str {
 }
 
 impl IntParsable for &'_ [u8] {
-    fn i64s(&self) -> Parsedi64s {
+    fn i64s(&self) -> Parsedi64s<'_> {
         Parsedi64s { bytes: self }
     }
 }
 
 impl IntParsable for str {
-    fn i64s(&self) -> Parsedi64s {
+    fn i64s(&self) -> Parsedi64s<'_> {
         Parsedi64s {
             bytes: self.as_bytes(),
         }
@@ -291,7 +291,7 @@ impl IntParsable for str {
 }
 
 impl IntParsable for [u8] {
-    fn i64s(&self) -> Parsedi64s {
+    fn i64s(&self) -> Parsedi64s<'_> {
         Parsedi64s { bytes: self }
     }
 }

@@ -230,11 +230,11 @@ impl<T> Framebuffer<T> {
         }
     }
 
-    pub fn flatten(&self) -> std::slice::Iter<T> {
+    pub fn flatten(&self) -> std::slice::Iter<'_, T> {
         self.buf.iter()
     }
 
-    pub fn flatten_mut(&mut self) -> std::slice::IterMut<T> {
+    pub fn flatten_mut(&mut self) -> std::slice::IterMut<'_, T> {
         self.buf.iter_mut()
     }
 

@@ -21,7 +21,7 @@ fn after_blinks_slow(input: &str, times: u32) -> i64 {
     fn half_digits(x: i64) -> Option<(i64, i64)> {
         const LUT: [i64; 7] = [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000];
         let n_digits = 1 + x.ilog(10) as usize;
-        if n_digits % 2 == 0 {
+        if n_digits.is_multiple_of(2) {
             let idx = n_digits / 2 - 1;
             Some((x / LUT[idx], x % LUT[idx]))
         } else {
@@ -78,7 +78,7 @@ fn after_blinks(input: &str, times: u32) -> i64 {
     fn half_digits(x: usize) -> Option<(usize, usize)> {
         const LUT: [usize; 7] = [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000];
         let n_digits = 1 + x.ilog(10) as usize;
-        if n_digits % 2 == 0 {
+        if n_digits.is_multiple_of(2) {
             let idx = n_digits / 2 - 1;
             Some((x / LUT[idx], x % LUT[idx]))
         } else {

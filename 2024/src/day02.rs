@@ -4,12 +4,12 @@ fn report_is_safe(report: impl Iterator<Item = i32> + Clone) -> bool {
     let inc = report
         .clone()
         .tuple_windows()
-        .map(|(a, b)| (b - a))
+        .map(|(a, b)| b - a)
         .all(|diff| [1, 2, 3].contains(&diff));
 
     let dec = report
         .tuple_windows()
-        .map(|(a, b)| (b - a))
+        .map(|(a, b)| b - a)
         .all(|diff| [1, 2, 3].contains(&-diff));
 
     inc || dec
