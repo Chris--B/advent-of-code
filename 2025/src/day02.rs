@@ -2,45 +2,110 @@
 
 use crate::prelude::*;
 
-fn is_invalid_id(id: i64) -> bool {
-    let mut x = 10;
-    for _ in 0.. {
-        let Some(xx) = x.checked_mul(&x) else {
-            break;
-        };
+fn hex_to_dec(mut x: i64) -> i64 {
+    let mut d = 0;
+    let mut m = 1;
 
-        if (id > x * x / 10) {
-            if id % x == id / x {
-                return true;
-            }
-        }
-
-        let Some(xx) = x.checked_mul(10) else {
-            break;
-        };
-
-        x = xx;
+    while x > 0 {
+        assert!((x & 0xf) < 10, "{} not a dec digit", x & 0xf);
+        d += (x & 0xf) * m;
+        m *= 10;
+        x >>= 4;
     }
 
-    false
+    d
 }
 
 // Part1 ========================================================================
 #[aoc(day2, part1)]
 pub fn part1(input: &str) -> i64 {
+    fn invalid(id: i64) -> bool {
+        {
+            let mut idx = id;
+            while idx > 0 {
+                if idx & 0xf > 0x9 {
+                    return false;
+                }
+                idx >>= 4;
+            }
+        }
+
+        let mut shift = 4;
+        loop {
+            if 2 * shift > 63 {
+                break;
+            }
+
+            let mask: i64 = (1 << shift) - 1;
+
+            if id > (1 << (2 * shift - 4)) {
+                if (id & mask) == (id >> shift) {
+                    return true;
+                }
+            }
+
+            shift += 4;
+        }
+
+        false
+    }
+
     input
-        .i64s()
+        .split(",")
+        .flat_map(|ab| ab.split("-").map(|x| i64::from_str_radix(x, 16).unwrap()))
         .tuples()
-        .flat_map(|(lo, hi)| lo..=(-hi))
-        .filter(|&id| is_invalid_id(id))
-        // .inspect(|id| println!("{id:?}"))
+        // .inspect(|x| println!("{x:x?}"))
+        .flat_map(|(lo, hi)| lo..=(hi))
+        .filter(|&id| invalid(id))
+        .map(hex_to_dec)
+        // .inspect(|id| println!("{id:x?}"))
         .sum()
 }
 
 // Part2 ========================================================================
 #[aoc(day2, part2)]
 pub fn part2(input: &str) -> i64 {
-    0
+    fn invalid(id: i64) -> bool {
+        {
+            let mut idx = id;
+            while idx > 0 {
+                if idx & 0xf > 0x9 {
+                    return false;
+                }
+                idx >>= 4;
+            }
+        }
+
+        let mut shift = 4;
+        loop {
+            if 2 * shift > 63 {
+                break;
+            }
+
+            let mask: i64 = (1 << shift) - 1;
+
+            if id > (1 << (2 * shift - 4)) {
+                if (id & mask) == (id >> shift) {
+                    return true;
+                }
+            }
+
+            shift += 4;
+        }
+
+        false
+    }
+
+    input
+        .split(",")
+        .flat_map(|ab| ab.split("-").map(|x| i64::from_str_radix(x, 16).unwrap()))
+        .tuples()
+        // .inspect(|x| println!("{x:x?}"))
+        .flat_map(|(lo, hi)| lo..=(hi))
+        .filter(|&id| invalid(id))
+        .map(hex_to_dec)
+        // .inspect(|id| println!("{id:x?}"))
+        .sum()
 }
 
 #[cfg(test)]
@@ -51,10 +116,16 @@ mod test {
     use rstest::*;
 
     const EXAMPLE_INPUT: &str = r"
-11-22,95-115,998-1012,1188511880-1188511890,222220-222224,
-1698522-1698528,446443-446449,38593856-38593862,565653-565659,
-824824821-824824827,2121212118-2121212124
+11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124
 ";
+
+    #[rstest]
+    #[case(0x1, 1)]
+    #[case(0x12, 12)]
+    #[case(0x1234, 1234)]
+    fn check_hex_to_dec(#[case] hex: i64, #[case] dec: i64) {
+        assert_eq!(hex_to_dec(hex), dec);
+    }
 
     #[rstest]
     #[case::given(1227775554, EXAMPLE_INPUT)]
@@ -73,8 +144,7 @@ mod test {
     }
 
     #[rstest]
-    #[case::given(999_999, EXAMPLE_INPUT)]
-    #[ignore]
+    #[case::given(4174379265, EXAMPLE_INPUT)]
     #[trace]
     fn check_ex_part_2(
         #[notrace]
