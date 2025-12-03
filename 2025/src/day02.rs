@@ -2,29 +2,31 @@
 
 use crate::prelude::*;
 
+fn same_digits(id: i64, base: i64) -> bool {
+    let (a, b) = id.div_rem(&base);
+    if b < (base / 10) {
+        return false;
+    }
+    if a == b {
+        return true;
+    }
+
+    false
+}
+
 // Part1 ========================================================================
 #[aoc(day2, part1)]
 pub fn part1(input: &str) -> i64 {
     fn invalid(id: i64) -> bool {
-        // Largest ID I saw was 10 digits
-        type Id = [u8; 10];
-
-        let mut text = [0_u8; 10];
-        let mut k = 0_usize;
-        {
-            let mut id = id;
-            while id > 0 {
-                text[k] = (id % 10) as u8;
-                k += 1;
-                id /= 10;
-            }
-        }
-
-        if k.is_multiple_of(2) {
-            let k = k.div_ceil(2);
-            if text[0..k] == text[k..(2 * k)] {
+        let mut b = 10;
+        loop {
+            if same_digits(id, b) {
                 return true;
             }
+            let Some(bb) = b.checked_mul(10) else {
+                break;
+            };
+            b = bb;
         }
 
         false
@@ -35,7 +37,11 @@ pub fn part1(input: &str) -> i64 {
         .tuples()
         .flat_map(|(lo, hi)| lo..=(-hi))
         .filter(|&id| invalid(id))
-        // .inspect(|id| println!("{id:?}"))
+        .inspect(|id| {
+            if cfg!(test) {
+                println!("{id:?}")
+            }
+        })
         .sum()
 }
 
