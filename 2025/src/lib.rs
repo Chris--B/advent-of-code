@@ -23,6 +23,7 @@ use aoc_runner_derive::aoc_lib;
 
 pub mod day01;
 pub mod day02;
+pub mod day03;
 
 aoc_lib! { year = 2025 }
 
@@ -89,6 +90,7 @@ pub mod prelude {
 
     // pub use crate::utils::*;
 
+    pub use crate::first_max;
     pub use crate::init_logging;
     pub use crate::just_str;
     pub use crate::parse_list;
@@ -175,6 +177,20 @@ impl From<Cardinal> for IVec2 {
 #[track_caller]
 pub fn just_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).unwrap()
+}
+
+/// Returns the first index of the maximum value
+///
+/// Iterator::max() returns the LAST maximum value in the iterator, which is sometimes not what's desired.
+pub fn first_max<T, I>(iter: I) -> Option<usize>
+where
+    T: Ord,
+    I: IntoIterator<Item = T>,
+    I::IntoIter: Clone,
+{
+    let mut iter = iter.into_iter();
+    let max = iter.clone().max()?;
+    iter.position(|b| b == max)
 }
 
 pub struct Parsedi64s<'a> {
