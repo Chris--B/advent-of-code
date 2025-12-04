@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::prelude::*;
 
 fn joltage(mut bat: &[u8], mut count: usize) -> i64 {
@@ -7,7 +5,7 @@ fn joltage(mut bat: &[u8], mut count: usize) -> i64 {
 
     while count > 0 {
         let n = bat.len() - count + 1;
-        let i = first_max(&bat[..n]).unwrap();
+        let i = bat[..n].iter().first_position_max().unwrap();
 
         ans = 10 * ans + (bat[i] - b'0') as i64;
         bat = &bat[(i + 1)..];

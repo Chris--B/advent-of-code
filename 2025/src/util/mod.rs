@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+use std::cmp::{Ord, Reverse};
 use std::str::FromStr;
 
 pub mod cardinal;
@@ -13,18 +14,33 @@ pub fn just_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).unwrap()
 }
 
-/// Returns the first index of the maximum value
-///
-/// Iterator::max() returns the LAST maximum value in the iterator, which is sometimes not what's desired.
-pub fn first_max<T, I>(iter: I) -> Option<usize>
+pub trait AocIteratorExt: Iterator + DoubleEndedIterator {
+    fn first_position_max(self) -> Option<usize>
+    where
+        Self::Item: Ord;
+
+    fn first_position_min(self) -> Option<usize>
+    where
+        Self::Item: Ord;
+}
+
+impl<T> AocIteratorExt for T
 where
-    T: Ord,
-    I: IntoIterator<Item = T>,
-    I::IntoIter: Clone,
+    T: DoubleEndedIterator,
 {
-    let mut iter = iter.into_iter();
-    let max = iter.clone().max()?;
-    iter.position(|b| b == max)
+    fn first_position_max(self) -> Option<usize>
+    where
+        Self::Item: Ord,
+    {
+        self.map(Reverse).position_min_by(Ord::cmp)
+    }
+
+    fn first_position_min(self) -> Option<usize>
+    where
+        Self::Item: Ord,
+    {
+        self.map(Reverse).position_max_by(Ord::cmp)
+    }
 }
 
 pub trait Tally<T>
@@ -48,6 +64,7 @@ where
     }
 }
 
+#[track_caller]
 pub fn parse_or_fail<T: FromStr>(s: impl AsRef<str>) -> T {
     let s: &str = s.as_ref();
     match s.parse() {
