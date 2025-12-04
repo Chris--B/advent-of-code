@@ -82,11 +82,10 @@ pub fn part1_only_invalid(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-#[allow(unused)]
 // #[aoc(day2, part2)]
-pub fn part2(input: &str) -> i64 {
-    0
-}
+// pub fn part2(input: &str) -> i64 {
+//     0
+// }
 
 #[aoc(day2, part2, only_invalid)]
 pub fn part2_only_invalid(input: &str) -> i64 {

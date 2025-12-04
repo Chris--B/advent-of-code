@@ -6,8 +6,17 @@ use std::str::FromStr;
 pub mod cardinal;
 pub use cardinal::*;
 
+pub mod fixed_bitset;
+pub use fixed_bitset::*;
+
+pub mod framebuffer;
+pub use framebuffer::*;
+
 pub mod parse;
 pub use parse::*;
+
+pub mod vec_n_ext;
+pub use vec_n_ext::*;
 
 #[track_caller]
 pub fn just_str(bytes: &[u8]) -> &str {
