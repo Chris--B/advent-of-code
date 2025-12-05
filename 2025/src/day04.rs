@@ -30,47 +30,32 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day4, part2)]
 pub fn part2(input: &str) -> i64 {
-    let mut map: Framebuffer<char> = Framebuffer::parse_grid_char(input);
-    map.set_border_color(Some('.'));
-    if cfg!(test) {
-        println!("Initial State");
-        map.just_print();
-    }
-
-    let mut next: Framebuffer<char> = Framebuffer::new_matching_size(&map);
-    next.set_border_color(Some('.'));
+    let mut map: Framebuffer<_> = Framebuffer::parse_grid_u8(input);
+    map.set_border_color(Some(b'.'));
 
     let mut total = 0;
 
     loop {
-        next.clear('.');
-
         let mut removed = 0;
-
-        for here in map.iter_coords() {
-            if map[here] != '@' {
+        for here @ (x, y) in map.iter_coords() {
+            if map[here] != b'@' {
                 continue;
             }
 
-            if IVec2::new(here.0, here.1)
+            let neighor_rolls = IVec2::new(x, y)
                 .full_neighbors()
                 .into_iter()
-                .filter(|p| map[p] == '@')
-                .count()
-                < 4
-            {
-                next[here] = '.';
+                .filter(|p| map[p] == b'@')
+                .count();
+
+            // Note: Typically, cellular automata like this need to double buffer to read the right state.
+            // However, we can skip this because the only state we care about is neighbor counts, and it's monotonicly decreasing.
+            if neighor_rolls < 4 {
+                map[here] = b'.';
                 removed += 1;
             } else {
-                next[here] = '@';
+                map[here] = b'@';
             }
-        }
-
-        std::mem::swap(&mut map, &mut next);
-        if cfg!(test) {
-            println!("Removed {removed} rolls");
-            map.just_print();
-            println!();
         }
 
         if removed == 0 {
