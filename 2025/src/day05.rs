@@ -5,17 +5,19 @@ use crate::prelude::*;
 // Part1 ========================================================================
 #[aoc(day5, part1)]
 pub fn part1(input: &str) -> i64 {
-    let ranges_count = input.lines().take_while(|l| l.trim() != "").count();
+    let input = input.as_bytes();
+    let n = memmem::find(input, b"\n\n").expect("Couldn't find \\n\\n");
+    let (ranges_text, ids_text) = input.split_at(n);
 
-    let mut ranges: Vec<(i64, i64)> = input
+    let mut ranges: Vec<(i64, i64)> = ranges_text
         .i64s()
         .tuples()
         .map(|(a, b)| (a, -b))
-        .take(ranges_count)
         .collect();
     ranges.sort();
+    let ranges = merge_ranges(ranges);
 
-    let ids: Vec<i64> = input.i64s().skip(2 * ranges_count).collect();
+    let ids: Vec<i64> = ids_text.i64s().collect();
 
     if cfg!(test) {
         println!("{:>8}={:?}", "ranges", ranges);
@@ -36,14 +38,11 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day5, part2)]
 pub fn part2(input: &str) -> i64 {
-    let ranges_count: usize = input.lines().take_while(|l| l.trim() != "").count();
+    let input = input.as_bytes();
+    let n = memmem::find(input, b"\n\n").expect("Couldn't find \\n\\n");
+    let input = &input[..n];
 
-    let mut ranges: Vec<_> = input
-        .i64s()
-        .tuples()
-        .map(|(a, b)| (a, -b))
-        .take(ranges_count)
-        .collect();
+    let mut ranges: Vec<(i64, i64)> = input.i64s().tuples().map(|(a, b)| (a, -b)).collect();
     ranges.sort();
 
     merge_ranges(ranges)
@@ -77,6 +76,7 @@ mod test {
 10-20
 20-30
 
+1
 ";
 
     const SUPERSET_BOUNDS: &str = r"
@@ -84,7 +84,7 @@ mod test {
 10-20
 20-30
 
-";
+1";
 
     #[rstest]
     #[case::given(3, EXAMPLE_INPUT)]
