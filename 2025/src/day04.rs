@@ -67,6 +67,84 @@ pub fn part2(input: &str) -> i64 {
     total
 }
 
+#[aoc(day4, part2, flat)]
+pub fn part2_flat(input: &str) -> i64 {
+    let mut map: Vec<u8> = input.as_bytes().to_vec();
+
+    let width: usize = memchr(b'\n', &map).expect("No newline?");
+    let n = width * (width + 1) - 1; // include newline, but not a trailing newline
+
+    let down = Wrapping(width + 1);
+    let right = Wrapping(1);
+    let up = Wrapping(usize::MAX) - down + Wrapping(1);
+    let left = Wrapping(usize::MAX) - right + Wrapping(1);
+    let dirs: [Wrapping<usize>; 8] = [
+        up + left,
+        up,
+        up + right,
+        left,
+        right,
+        down + left,
+        down,
+        down + right,
+    ];
+
+    if cfg!(test) {
+        println!("Initial State");
+        let map = Framebuffer::parse_grid_char(just_str(&map));
+        map.just_print();
+        println!();
+    }
+
+    let mut total = 0;
+    loop {
+        let mut removed = 0;
+
+        for i in 0..n {
+            if map[i] != b'@' {
+                continue;
+            }
+
+            let i: Wrapping<usize> = Wrapping(i);
+            let mut count = 0;
+            for dir in dirs {
+                if map.get((i + dir).0) == Some(&b'@') {
+                    count += 1;
+                    if count >= 4 {
+                        break;
+                    }
+                }
+            }
+
+            if count < 4 {
+                map[i.0] = b'#';
+                removed += 1;
+            }
+        }
+
+        if cfg!(test) {
+            println!("Removed {removed} rolls");
+            let map = Framebuffer::parse_grid_char(just_str(&map));
+            map.just_print();
+            println!();
+        }
+
+        if removed == 0 {
+            break;
+        }
+        total += removed;
+    }
+
+    if cfg!(test) {
+        println!("Final State");
+        let map = Framebuffer::parse_grid_char(just_str(&map));
+        map.just_print();
+        println!();
+    }
+
+    total
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -108,7 +186,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_flat)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
