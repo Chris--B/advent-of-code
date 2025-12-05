@@ -36,7 +36,11 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day5, part2)]
 pub fn part2(input: &str) -> i64 {
-    let ranges_count = input.lines().take_while(|l| l.trim() != "").count();
+    let ranges_count: usize = if cfg!(test) {
+        input.lines().take_while(|l| l.trim() != "").count()
+    } else {
+        190
+    };
 
     let mut ranges: Vec<_> = input
         .i64s()
@@ -44,32 +48,12 @@ pub fn part2(input: &str) -> i64 {
         .map(|(a, b)| (a, -b))
         .take(ranges_count)
         .collect();
-
     ranges.sort();
 
-    if cfg!(test) {
-        println!("PRE  ranges: {ranges:?}");
-    }
-
-    let mut i = 0;
-    while i + 1 < ranges.len() {
-        if ranges[i].1 < ranges[i + 1].0 {
-            // no overlap, continue
-            i += 1;
-        } else {
-            let a = ranges[i].0;
-            let b = i64::max(ranges[i].1, ranges[i + 1].1);
-
-            ranges[i] = (a, b);
-            ranges.remove(i + 1);
-        }
-    }
-
-    if cfg!(test) {
-        println!("POST ranges: {ranges:?}");
-    }
-
-    ranges.into_iter().map(|(a, b)| b - a + 1).sum()
+    merge_ranges(ranges)
+        .into_iter()
+        .map(|(a, b)| b - a + 1)
+        .sum()
 }
 
 #[cfg(test)]
