@@ -36,11 +36,7 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day5, part2)]
 pub fn part2(input: &str) -> i64 {
-    let ranges_count: usize = if cfg!(test) {
-        input.lines().take_while(|l| l.trim() != "").count()
-    } else {
-        190
-    };
+    let ranges_count: usize = input.lines().take_while(|l| l.trim() != "").count();
 
     let mut ranges: Vec<_> = input
         .i64s()

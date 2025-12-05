@@ -89,36 +89,19 @@ pub fn parse_or_fail<T: FromStr>(s: impl AsRef<str>) -> T {
 pub fn merge_ranges(mut rs: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
     debug_assert!(rs.is_sorted(), "Ranges must be sorted to be merged");
 
-    let n = merge_ranges_in_place(&mut rs);
-    debug_assert!(n < rs.len());
-
-    rs.resize(n, (0, 0));
-    rs
-}
-
-#[track_caller]
-pub fn merge_ranges_in_place(rs: &mut [(i64, i64)]) -> usize {
-    debug_assert!(rs.is_sorted(), "Ranges must be sorted to be merged");
-
-    let mut i = 0; // trying to merge INTO
-    let mut j = 1; // trying to merge FROM (and ultimately "remove")
-
-    while j < rs.len() {
-        if i == j {
-            j = i + 1;
-        }
-
-        if rs[i].1 < rs[j].0 {
+    let mut i = 0;
+    while i + 1 < rs.len() {
+        if rs[i].1 < rs[i + 1].0 {
             // no overlap, cannot merge, continue
             i += 1;
         } else {
             // we have some overlap, let's try and merge
-            rs[i] = (rs[i].0, i64::max(rs[i].1, rs[j].1));
-            j += 1;
+            rs[i] = (rs[i].0, i64::max(rs[i].1, rs[i + 1].1));
+            rs.remove(i + 1);
         }
     }
 
-    i + 1
+    rs
 }
 
 #[cfg(test)]
