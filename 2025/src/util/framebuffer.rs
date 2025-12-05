@@ -250,7 +250,7 @@ impl<T> Framebuffer<T> {
         y_start..y_end
     }
 
-    pub fn iter_coords(&self) -> impl Iterator<Item = (i32, i32)> {
+    pub fn iter_coords(&self) -> impl Iterator<Item = (i32, i32)> + 'static {
         let xs = self.range_x();
         let ys = self.range_y();
 
