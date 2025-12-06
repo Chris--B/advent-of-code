@@ -25,11 +25,11 @@ pub fn part1(input: &str) -> i64 {
     for i in 0..ops.len() {
         let op = ops[i];
         let mut partial = if op == "*" { 1 } else { 0 };
-        for j in 0..rows.len() {
+        for r in &rows {
             if op == "*" {
-                partial *= rows[j][i];
+                partial *= r[i];
             } else {
-                partial += rows[j][i];
+                partial += r[i];
             }
         }
         sum += partial;
@@ -41,7 +41,48 @@ pub fn part1(input: &str) -> i64 {
 // Part2 ========================================================================
 #[aoc(day6, part2)]
 pub fn part2(input: &str) -> i64 {
-    0
+    let n = memrchr(b'\n', input.as_bytes()).unwrap();
+
+    let math = &input[..n];
+    let mut grid: Framebuffer<char> = Framebuffer::parse_grid(math, |c| match c {
+        '0'..='9' | ' ' => c,
+        _ => unreachable!("Expected 0-9, not {c:?}"),
+    });
+    grid.set_border_color(Some(' '));
+    if cfg!(test) {
+        grid.just_print();
+    }
+
+    let mut sum = 0;
+
+    let ops_line = &input.as_bytes()[(n + 1)..];
+    let ops_pos = memchr2_iter(b'*', b'+', ops_line)
+        .chain([ops_line.len() + 3]) // ????
+        .collect_vec();
+    for (curr_x, next) in ops_pos.into_iter().tuple_windows() {
+        let op = ops_line[curr_x] as char;
+
+        let mut partial = if op == '*' { 1 } else { 0 };
+
+        for x in curr_x..next {
+            let mut num = String::new();
+            for y in (0..grid.height()).rev() {
+                num.push(grid[(x, y)] as char);
+            }
+            if !num.trim().is_empty() {
+                let n: i64 = num.trim().parse().unwrap();
+                if op == '*' {
+                    partial *= n;
+                } else {
+                    partial += n;
+                }
+            }
+        }
+
+        sum += partial;
+    }
+
+    sum
 }
 
 #[cfg(test)]
