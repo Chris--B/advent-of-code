@@ -9,11 +9,7 @@ pub fn part1(input: &str) -> i64 {
     let n = memmem::find(input, b"\n\n").expect("Couldn't find \\n\\n");
     let (ranges_text, ids_text) = input.split_at(n);
 
-    let mut ranges: Vec<(i64, i64)> = ranges_text
-        .i64s()
-        .tuples()
-        .map(|(a, b)| (a, -b))
-        .collect();
+    let mut ranges: Vec<(i64, i64)> = ranges_text.i64s().tuples().map(|(a, b)| (a, -b)).collect();
     ranges.sort();
     let ranges = merge_ranges(ranges);
 
@@ -49,6 +45,40 @@ pub fn part2(input: &str) -> i64 {
         .into_iter()
         .map(|(a, b)| b - a + 1)
         .sum()
+}
+
+#[aoc(day5, part2, flat)]
+pub fn part2_flat(input: &str) -> i64 {
+    let input = input.as_bytes();
+    let n = memmem::find(input, b"\n\n").expect("Couldn't find \\n\\n");
+    let input = &input[..n];
+
+    let mut ranges: Vec<_> = input.i64s().collect();
+    ranges.sort_unstable_by_key(|x| (x.abs(), -x.signum()));
+
+    let mut start = 0;
+    let mut stack = 0;
+    let mut sum = 0;
+    for x in ranges {
+        debug_assert!(x != 0);
+
+        // Start a range if we have none
+        if start == 0 {
+            debug_assert!(x > 0);
+            start = x;
+        }
+
+        // Start or end a range, depending on the sign value
+        stack += x.signum();
+
+        if stack == 0 {
+            debug_assert!(x < 0);
+            sum += -x - start + 1;
+            start = 0;
+        }
+    }
+
+    sum
 }
 
 #[cfg(test)]
@@ -110,7 +140,7 @@ mod test {
     #[trace]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_flat)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
