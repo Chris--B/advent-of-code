@@ -2,6 +2,15 @@ use num::traits::*;
 
 use std::ops;
 
+pub type Bitset128 = FixedBitset<u128>;
+pub type Bitset64 = FixedBitset<u64>;
+pub type Bitset32 = FixedBitset<u32>;
+pub type Bitset16 = FixedBitset<u16>;
+pub type Bitset8 = FixedBitset<u8>;
+
+// No longer built-in types
+pub type Bitset256 = FixedBitset<U256>;
+
 /// (╯°□°)╯︵ ┻━┻
 pub trait Backing:
     num::PrimInt
@@ -21,13 +30,17 @@ impl Backing for u64 {}
 impl Backing for u128 {}
 
 #[derive(Copy, Clone, Default)]
-pub struct FixedBitset<N: Backing> {
+pub struct FixedBitset<N> {
     bits: N,
 }
 
 impl<N: Backing> FixedBitset<N> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn inner(&self) -> N {
+        self.bits
     }
 
     #[track_caller]
@@ -97,6 +110,146 @@ impl<N: Backing> FixedBitset<N> {
     }
 }
 
+use std::ops::{BitAnd, BitOr, Not, Shl};
+
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
+pub struct U256(pub [u128; 2]);
+
+impl U256 {
+    pub const ONE: Self = Self([0, 1]);
+    pub const ZERO: Self = Self([0, 0]);
+
+    pub fn count_ones(self) -> u32 {
+        self.0[0].count_ones() + self.0[1].count_ones()
+    }
+
+    pub fn bit_width() -> u32 {
+        256
+    }
+}
+
+impl Shl<usize> for U256 {
+    type Output = Self;
+
+    fn shl(self, n: usize) -> Self::Output {
+        use std::num::Wrapping;
+
+        let Self([a, b]) = self;
+        let mut a = Wrapping(a);
+        let mut b = Wrapping(b);
+
+        a <<= n;
+        a |= b >> (256 - n);
+
+        b <<= n;
+
+        Self([a.0, b.0])
+    }
+}
+
+impl BitAnd for U256 {
+    type Output = Self;
+
+    fn bitand(self, U256(rhs): U256) -> Self::Output {
+        let U256(this) = self;
+        U256([this[0] & rhs[0], this[1] & rhs[1]])
+    }
+}
+
+impl BitOr for U256 {
+    type Output = Self;
+
+    fn bitor(self, U256(rhs): U256) -> Self::Output {
+        let U256(this) = self;
+        U256([this[0] | rhs[0], this[1] | rhs[1]])
+    }
+}
+
+impl Not for U256 {
+    type Output = Self;
+
+    fn not(self) -> Self {
+        let U256(this) = self;
+        U256([!this[0], !this[1]])
+    }
+}
+
+impl FixedBitset<U256> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn inner(&self) -> U256 {
+        self.bits
+    }
+
+    #[track_caller]
+    pub fn contains<Elem>(&self, item: Elem) -> bool
+    where
+        Elem: num::PrimInt + core::fmt::Display,
+    {
+        let idx: usize = Self::idx_of(item);
+
+        (self.bits & (U256::ONE << idx)) != U256::ZERO
+    }
+
+    #[track_caller]
+    pub fn insert<Elem>(&mut self, item: Elem) -> bool
+    where
+        Elem: num::PrimInt + core::fmt::Display,
+    {
+        let idx: usize = Self::idx_of(item);
+
+        let old = (self.bits & (U256::ONE << idx)) != U256::ZERO;
+        self.bits = self.bits | (U256::ONE << idx);
+        old
+    }
+
+    #[track_caller]
+    pub fn remove<Elem>(&mut self, item: Elem) -> bool
+    where
+        Elem: num::PrimInt + core::fmt::Display,
+    {
+        let idx: usize = Self::idx_of(item);
+
+        let old = (self.bits & (U256::ONE << idx)) != U256::ZERO;
+        self.bits = self.bits & !(U256::ONE << idx);
+        old
+    }
+
+    pub fn len(&self) -> usize {
+        self.bits.count_ones() as usize
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = u32> + '_ {
+        (0..Self::bit_width()).filter(|&i| self.contains(i))
+    }
+
+    fn bit_width() -> u32 {
+        U256::bit_width()
+    }
+
+    #[track_caller]
+    fn idx_of<T: num::PrimInt + core::fmt::Display>(t: T) -> usize {
+        if let Some(i) = t.to_u32() {
+            if i < Self::bit_width() {
+                i as usize
+            } else {
+                panic!(
+                    "Failed to convert \"{t}\" to an 8-bit int because it's out of bounds (valid is 0..<{bits}).",
+                    bits = Self::bit_width()
+                );
+            }
+        } else {
+            panic!("Failed to convert \"{t}\" to an 8-bit int");
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct FixedBitsetIter {
     // All bitset sizes route to this because IDGAF
@@ -131,12 +284,6 @@ impl<N: Backing> IntoIterator for FixedBitset<N> {
         FixedBitsetIter { bits, i: 0 }
     }
 }
-
-pub type Bitset128 = FixedBitset<u128>;
-pub type Bitset64 = FixedBitset<u64>;
-pub type Bitset32 = FixedBitset<u32>;
-pub type Bitset16 = FixedBitset<u16>;
-pub type Bitset8 = FixedBitset<u8>;
 
 #[cfg(test)]
 mod test {
