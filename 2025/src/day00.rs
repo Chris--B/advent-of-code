@@ -32,6 +32,7 @@ mod test {
     #[rstest]
     #[case::given(999_999, EXAMPLE_INPUT)]
     #[trace]
+    #[timeout(Duration::from_millis(1))]
     fn check_ex_part_1(
         #[notrace]
         #[values(part1)]
@@ -49,6 +50,7 @@ mod test {
     #[case::given(999_999, EXAMPLE_INPUT)]
     #[ignore]
     #[trace]
+    #[timeout(Duration::from_millis(1))]
     fn check_ex_part_2(
         #[notrace]
         #[values(part2)]
