@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use indicatif::ProgressBar;
 use ultraviolet::Vec2;
 
 use crate::prelude::*;
@@ -78,6 +79,7 @@ pub fn part2(input: &str) -> i64 {
         .tuples()
         .map(|(x, y)| [x as _, y as _].into())
         .collect_vec();
+    let n = verts.len();
 
     let mut all_edges = build_dists_heap(&verts);
 
@@ -93,7 +95,10 @@ pub fn part2(input: &str) -> i64 {
         let cid_a = labels[ai];
         let cid_b = labels[bi];
         if cid_a != cid_b {
-            edges.push(e);
+            // this removes exactly one edge LOL
+            if (e.a.x == e.b.x || e.a.y == e.b.y) {
+                edges.push(e);
+            }
             let new = usize::min(cid_a, cid_b);
             let old = usize::max(cid_a, cid_b);
 
@@ -108,9 +113,89 @@ pub fn part2(input: &str) -> i64 {
         }
     }
 
-    let mut area = 0;
+    println!("Found {} edges", edges.len());
 
-    assert!(area < 4570351616);
+    // Find all areas, and see if they intersect any edges
+    let pb = ProgressBar::new(n as u64);
+
+    use rayon::prelude::*;
+    let i_idx: Vec<usize> = (0..n).collect_vec();
+    let areas: Vec<_> = i_idx
+        .par_iter()
+        .map(|&i| {
+            let mut area = 0;
+
+            for j in (i + 1)..n {
+                let a: IVec2 = verts[i];
+                let b: IVec2 = verts[j];
+                let this_area = (1 + (b.y - a.y).abs() as i64) * (1 + (b.x - a.x).abs() as i64);
+
+                if (this_area as f64) < (0.75 * 4755278336.) {
+                    continue;
+                }
+
+                // only consider this area if it's within the bigger polygon
+                let x0 = i32::min(a.x, b.x) + 1;
+                let x1 = i32::max(a.x, b.x) - 1;
+
+                let y0 = i32::min(a.y, b.y) + 1;
+                let y1 = i32::max(a.y, b.y) - 1;
+
+                let mut ok = true;
+                // check along x axis (for both ys)
+                'edge_check: for y in [y0, y1] {
+                    for x in x0..=x1 {
+                        for &e in &edges {
+                            // check if we intersect the x-axis of this edge
+                            if e.a.x == e.b.x {
+                                let yy0 = i32::min(e.a.y, e.b.y);
+                                let yy1 = i32::max(e.a.y, e.b.y);
+                                if (e.a.x == x) && ((yy0..=yy1).contains(&y)) {
+                                    ok = false;
+                                    break 'edge_check;
+                                }
+                            }
+                            // check if we intersect the y-axis of this edge instead
+                        }
+                    }
+                }
+
+                // check along y axis (for both xs)
+                'edge_check: for x in [x0, x1] {
+                    for y in y0..=y1 {
+                        for &e in &edges {
+                            // check if we intersect the x-axis of this edge
+                            if e.a.x == e.b.x {
+                                let yy0 = i32::min(e.a.y, e.b.y);
+                                let yy1 = i32::max(e.a.y, e.b.y);
+                                if (e.a.x == x) && ((yy0..=yy1).contains(&y)) {
+                                    ok = false;
+                                    break 'edge_check;
+                                }
+                            }
+                            // check if we intersect the y-axis of this edge instead
+                        }
+                    }
+                }
+
+                if ok {
+                    let this_area = (1 + (b.y - a.y).abs() as i64) * (1 + (b.x - a.x).abs() as i64);
+                    area = area.max(this_area);
+                }
+            }
+
+            pb.inc(1);
+
+            area
+        })
+        .collect();
+
+    dbg!(&areas);
+
+    let area: i64 = areas.into_iter().max().unwrap();
+
+    assert!(area < 4570351616, "area={area}");
+    assert!(area < 4755278336, "area={area}");
 
     area
 }
