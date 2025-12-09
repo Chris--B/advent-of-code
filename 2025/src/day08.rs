@@ -1,9 +1,26 @@
 use crate::prelude::*;
 
+use std::collections::BinaryHeap;
+
+const ITER_COUNT: usize = if cfg!(test) { 10 } else { 1000 };
+
+fn build_dists_heap(pts: &[[i32; 3]]) -> BinaryHeap<(Reverse<i64>, u16, u16)> {
+    let mut dists = BinaryHeap::with_capacity(pts.len());
+
+    for (i, &a) in pts.iter().enumerate() {
+        for (j, &b) in pts[i + 1..].iter().enumerate() {
+            let j = i + 1 + j;
+            let diff: [i32; 3] = std::array::from_fn(|ii| a[ii] - b[ii]);
+            let dist: i64 = diff.map(|x| (x as i64) * (x as i64)).iter().sum();
+            dists.push((Reverse(dist), i as u16, j as u16));
+        }
+    }
+
+    dists
+}
 // Part1 ========================================================================
 #[aoc(day8, part1)]
 pub fn part1(input: &str) -> i64 {
-    const ITER_COUNT: usize = if cfg!(test) { 10 } else { 1000 };
     let points: Vec<IVec3> = input
         .i64s()
         .tuples()
@@ -87,6 +104,48 @@ pub fn part1(input: &str) -> i64 {
         .product()
 }
 
+#[aoc(day8, part1, more_vec)]
+pub fn part1_more_vec(input: &str) -> i64 {
+    let pts: Vec<[i32; 3]> = input
+        .i64s()
+        .tuples()
+        .map(|(x, y, z)| [x as _, y as _, z as _])
+        .collect_vec();
+
+    let mut dists = build_dists_heap(&pts);
+
+    let mut id_to_cid: Vec<usize> = (0..pts.len()).collect_vec();
+    for _ in 0..ITER_COUNT {
+        let Some((Reverse(_dist), a, b)) = dists.pop() else {
+            break;
+        };
+        let a = a as usize;
+        let b = b as usize;
+
+        let cid_a = id_to_cid[a];
+        let cid_b = id_to_cid[b];
+        if cid_a != cid_b {
+            let new = usize::min(cid_a, cid_b);
+            let old = usize::max(cid_a, cid_b);
+
+            for cid in &mut id_to_cid {
+                if *cid == old {
+                    *cid = new;
+                }
+            }
+        }
+    }
+
+    let counts = id_to_cid.into_iter().tally();
+    let mut counts: BinaryHeap<_> = counts.values().copied().collect();
+    let mut ans = 1;
+    ans *= counts.pop().unwrap_or(0);
+    ans *= counts.pop().unwrap_or(0);
+    ans *= counts.pop().unwrap_or(0);
+
+    ans as i64
+}
+
 // Part2 ========================================================================
 #[aoc(day8, part2)]
 pub fn part2(input: &str) -> i64 {
@@ -154,6 +213,47 @@ pub fn part2(input: &str) -> i64 {
     unreachable!()
 }
 
+#[aoc(day8, part2, more_vec)]
+pub fn part2_more_vec(input: &str) -> i64 {
+    let pts: Vec<[i32; 3]> = input
+        .i64s()
+        .tuples()
+        .map(|(x, y, z)| [x as _, y as _, z as _])
+        .collect_vec();
+
+    let mut dists = build_dists_heap(&pts);
+
+    let mut id_to_cid: Vec<usize> = (0..pts.len()).collect_vec();
+    let mut cid_0_count = 1;
+    loop {
+        let Some((Reverse(_dist), a, b)) = dists.pop() else {
+            break;
+        };
+
+        let cid_a = id_to_cid[a as usize];
+        let cid_b = id_to_cid[b as usize];
+        if cid_a != cid_b {
+            let new = usize::min(cid_a, cid_b);
+            let old = usize::max(cid_a, cid_b);
+
+            for cid in &mut id_to_cid {
+                if *cid == old {
+                    *cid = new;
+                    if new == 0 {
+                        cid_0_count += 1;
+                    }
+                }
+            }
+
+            if cid_0_count == id_to_cid.len() {
+                return pts[a as usize][0] as i64 * pts[b as usize][0] as i64;
+            }
+        }
+    }
+
+    unreachable!()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -190,7 +290,7 @@ mod test {
     #[timeout(Duration::from_millis(2))]
     fn check_ex_part_1(
         #[notrace]
-        #[values(part1)]
+        #[values(part1, part1_more_vec)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
@@ -207,7 +307,7 @@ mod test {
     #[timeout(Duration::from_millis(2))]
     fn check_ex_part_2(
         #[notrace]
-        #[values(part2)]
+        #[values(part2, part2_more_vec)]
         p: impl FnOnce(&str) -> i64,
         #[case] expected: i64,
         #[case] input: &str,
