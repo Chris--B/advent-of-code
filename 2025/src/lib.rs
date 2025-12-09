@@ -73,7 +73,7 @@ pub mod prelude {
     pub use ultraviolet::{IVec2, IVec3, UVec2};
 
     pub use std::cmp::Reverse;
-    pub use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+    pub use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet, VecDeque};
     pub use std::num::Wrapping;
     pub use std::time::Duration;
 

@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-use std::collections::BinaryHeap;
-
 const ITER_COUNT: usize = if cfg!(test) { 10 } else { 1000 };
 
 fn build_dists_heap(pts: &[[i32; 3]]) -> BinaryHeap<(Reverse<i64>, u16, u16)> {
@@ -18,6 +16,7 @@ fn build_dists_heap(pts: &[[i32; 3]]) -> BinaryHeap<(Reverse<i64>, u16, u16)> {
 
     dists
 }
+
 // Part1 ========================================================================
 #[aoc(day8, part1)]
 pub fn part1(input: &str) -> i64 {
