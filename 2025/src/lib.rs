@@ -6,6 +6,7 @@
     clippy::identity_op,
     clippy::inconsistent_digit_grouping,
     clippy::iter_nth_zero,
+    clippy::needless_range_loop,
     clippy::nonminimal_bool,
     clippy::redundant_pattern_matching,
     clippy::single_element_loop
