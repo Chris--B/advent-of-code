@@ -149,43 +149,52 @@ pub fn part2(input: &str) -> i64 {
 
     assert!(!is_inside([0, 0].into(), &verts, &edges));
 
-    let pb = ProgressBar::new(n as _);
+    let pb = ProgressBar::new((n * n / 2) as _);
+
     use rayon::prelude::*;
-    let area: i64 = (0..n).into_par_iter().map(|i| -> i64 {
-        let mut area = 0;
-        for j in (i + 1)..n {
-            let [x0, y0] = verts[i].as_array();
-            let [x1, y1] = verts[j].as_array();
+    let area: i64 = (0..n)
+        .into_par_iter()
+        .map(|i| -> i64 {
+            let mut area = 0;
+            for j in (i + 1)..n {
+                pb.inc(1);
+                let [x0, y0] = verts[i].as_array();
+                let [x1, y1] = verts[j].as_array();
 
-            if x0 == x1 || y0 == y1 {
-                continue;
-            }
+                if x0 == x1 || y0 == y1 {
+                    continue;
+                }
 
-            if is_inside(IVec2::new(x0, y0), &verts, &edges)
-                && is_inside(IVec2::new(x0, y1), &verts, &edges)
-                && is_inside(IVec2::new(x1, y0), &verts, &edges)
-                && is_inside(IVec2::new(x1, y1), &verts, &edges)
-            {
                 let dx = (x1 as i64) - (x0 as i64);
                 let dy = (y1 as i64) - (y0 as i64);
-
                 let this_area = (1 + dx.abs()) * (1 + dy.abs());
-                if cfg!(test) {
-                    println!(
-                        "Found rect: [{x0:>2},{y0:>2}]x[{x1:>2},{y1:>2}] == {this_area:>3} {}x{}",
-                        (1 + (y1 - y0).abs()),
-                        (1 + (x1 - x0).abs())
-                    );
+                if this_area < area {
+                    // Not possible to be the best, ignore it.
+                    continue;
                 }
-                area = area.max(this_area);
+
+                if is_inside(IVec2::new(x0, y0), &verts, &edges)
+                    && is_inside(IVec2::new(x0, y1), &verts, &edges)
+                    && is_inside(IVec2::new(x1, y0), &verts, &edges)
+                    && is_inside(IVec2::new(x1, y1), &verts, &edges)
+                {
+                    if cfg!(test) {
+                        println!(
+                            "Found rect: [{x0:>2},{y0:>2}]x[{x1:>2},{y1:>2}] == {this_area:>3} {}x{}",
+                            (1 + (y1 - y0).abs()),
+                            (1 + (x1 - x0).abs())
+                        );
+                    }
+                    area = area.max(this_area);
+                }
             }
-        }
-        pb.inc(1);
 
-                assert!(area < 4000000000, "area < 4000000000; area = {area}");
+            area
+        })
+        .max()
+        .unwrap();
 
-        area
-}).max().unwrap();
+    pb.finish();
 
     if !cfg!(test) {
         assert!(area > 163561216, "area > 163561216; area = {area}");
