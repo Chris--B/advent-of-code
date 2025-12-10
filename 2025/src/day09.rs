@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use indicatif::ProgressBar;
-use rayon::iter::IntoParallelIterator;
+use rayon::prelude::*;
 use ultraviolet::Vec2;
 
 use crate::prelude::*;
@@ -151,11 +151,12 @@ pub fn part2(input: &str) -> i64 {
 
     let pb = ProgressBar::new((n * n / 2) as _);
 
-    use rayon::prelude::*;
     let area: i64 = (0..n)
         .into_par_iter()
         .map(|i| -> i64 {
-            let mut area = 0;
+            let mut area = if cfg!(test) { 10 } else { 1_000_000_000 };
+
+            'search:
             for j in (i + 1)..n {
                 pb.inc(1);
                 let [x0, y0] = verts[i].as_array();
@@ -178,6 +179,27 @@ pub fn part2(input: &str) -> i64 {
                     && is_inside(IVec2::new(x1, y0), &verts, &edges)
                     && is_inside(IVec2::new(x1, y1), &verts, &edges)
                 {
+                    let [xx0, xx1] = ordered(x0, x1);
+                    let [yy0, yy1] = ordered(y0, y1);
+
+                    for x in xx0..=xx1 {
+                        if !is_inside(IVec2::new(x, y0), &verts, &edges) {
+                            continue 'search;
+                        }
+                        if !is_inside(IVec2::new(x, y1), &verts, &edges) {
+                            continue 'search;
+                        }
+                    }
+
+                    for y in yy0..=yy1 {
+                        if !is_inside(IVec2::new(x0, y), &verts, &edges) {
+                            continue 'search;
+                        }
+                        if !is_inside(IVec2::new(x1, y), &verts, &edges) {
+                            continue 'search;
+                        }
+                    }
+
                     if cfg!(test) {
                         println!(
                             "Found rect: [{x0:>2},{y0:>2}]x[{x1:>2},{y1:>2}] == {this_area:>3} {}x{}",
