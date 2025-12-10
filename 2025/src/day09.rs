@@ -39,6 +39,11 @@ fn ordered(a: i32, b: i32) -> [i32; 2] {
 
 // Part2 ========================================================================
 fn is_inside(pt: IVec2, verts: &[IVec2], edges: &[(IVec2, IVec2)]) -> bool {
+    debug_assert!(
+        verts.iter().all(|v| v.x > 0 && v.y > 0),
+        "Vertices must be positive"
+    );
+
     fn is_on_line(pt: IVec2, (a, b): (IVec2, IVec2)) -> bool {
         if a.x == b.x && a.x == pt.x {
             // Vertical Edge, check that y is in bounds
@@ -73,6 +78,7 @@ fn is_inside(pt: IVec2, verts: &[IVec2], edges: &[(IVec2, IVec2)]) -> bool {
                 here.x = i32::max(edge.0.x, edge.1.x) + 1;
                 // println!("  + now x={}", here.x);
 
+                // TODO: Handle saddles
                 if edge.0.x == edge.1.x {
                     inside = !inside;
                 }
@@ -108,7 +114,9 @@ pub fn part2(input: &str) -> i64 {
     let n = verts.len();
 
     if cfg!(test) {
-        let mut grid = Framebuffer::new(20, 10);
+        let nx = verts.iter().map(|v| v.x).max().unwrap() as u32;
+        let ny = verts.iter().map(|v| v.y).max().unwrap() as u32;
+        let mut grid = Framebuffer::new(nx + 2, ny + 2);
         grid.clear('.');
 
         for (a, b) in &edges {
@@ -165,7 +173,7 @@ pub fn part2(input: &str) -> i64 {
     let area: i64 = jobs
         .into_par_iter()
         .map(|(i, j)| -> i64 {
-            let mut area = if cfg!(test) { 10 } else { 1_000_000_000 };
+            let mut a = if cfg!(test) { 10 } else { 1_000_000_000 };
 
             pb.inc(1);
             let [x0, y0] = verts[i].as_array();
@@ -178,7 +186,7 @@ pub fn part2(input: &str) -> i64 {
             let dx = (x1 as i64) - (x0 as i64);
             let dy = (y1 as i64) - (y0 as i64);
             let this_area = (1 + dx.abs()) * (1 + dy.abs());
-            if this_area < area {
+            if this_area < a {
                 // Not possible to be the best, ignore it.
                 return 0;
             }
@@ -216,10 +224,10 @@ pub fn part2(input: &str) -> i64 {
                         (1 + (x1 - x0).abs())
                     );
                 }
-                area = area.max(this_area);
+                a = a.max(this_area);
             }
 
-            area
+            a
         })
         .max()
         .unwrap();
@@ -264,6 +272,34 @@ mod test {
 2,5
 2,3
 7,3
+";
+
+    const EXAMPLE_INPUT_BUT_HUMP_TRANSPOSE: &str = r"
+1,7
+1,11
+7,11
+7,9
+5,9
+5,5
+7,5
+7,2
+5,2
+3,2
+3,7
+";
+
+    const EXAMPLE_INPUT_BUT_HUMP_INV: &str = r"
+8,10
+4,10
+4,4
+6,4
+6,6
+10,6
+10,4
+13,4
+13,6
+13,8
+8,8
 ";
 
     #[rstest]
@@ -313,6 +349,7 @@ mod test {
     #[rstest]
     #[case::given(24, EXAMPLE_INPUT)]
     #[case::given_hump(24, EXAMPLE_INPUT_BUT_HUMP)]
+    #[case::given_hump_inv(24, EXAMPLE_INPUT_BUT_HUMP_INV)]
     #[trace]
     #[timeout(Duration::from_millis(1000))]
     fn check_ex_part_2(
