@@ -149,67 +149,74 @@ pub fn part2(input: &str) -> i64 {
 
     assert!(!is_inside([0, 0].into(), &verts, &edges));
 
-    let pb = ProgressBar::new((n * n / 2) as _);
-    let pool = rayon::ThreadPoolBuilder::new().num_threads(64).build().unwrap();
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(64)
+        .build()
+        .unwrap();
 
-    let area: i64 = (0..n)
+    let mut jobs = vec![];
+    for i in 0..n {
+        for j in (i + 1)..n {
+            jobs.push((i, j));
+        }
+    }
+    let pb = ProgressBar::new(jobs.len() as _);
+
+    let area: i64 = jobs
         .into_par_iter()
-        .map(|i| -> i64 {
+        .map(|(i, j)| -> i64 {
             let mut area = if cfg!(test) { 10 } else { 1_000_000_000 };
 
-            'search:
-            for j in (i + 1)..n {
-                pb.inc(1);
-                let [x0, y0] = verts[i].as_array();
-                let [x1, y1] = verts[j].as_array();
+            pb.inc(1);
+            let [x0, y0] = verts[i].as_array();
+            let [x1, y1] = verts[j].as_array();
 
-                if x0 == x1 || y0 == y1 {
-                    continue;
+            if x0 == x1 || y0 == y1 {
+                return 0;
+            }
+
+            let dx = (x1 as i64) - (x0 as i64);
+            let dy = (y1 as i64) - (y0 as i64);
+            let this_area = (1 + dx.abs()) * (1 + dy.abs());
+            if this_area < area {
+                // Not possible to be the best, ignore it.
+                return 0;
+            }
+
+            if is_inside(IVec2::new(x0, y0), &verts, &edges)
+                && is_inside(IVec2::new(x0, y1), &verts, &edges)
+                && is_inside(IVec2::new(x1, y0), &verts, &edges)
+                && is_inside(IVec2::new(x1, y1), &verts, &edges)
+            {
+                let [xx0, xx1] = ordered(x0, x1);
+                let [yy0, yy1] = ordered(y0, y1);
+
+                for x in xx0..=xx1 {
+                    if !is_inside(IVec2::new(x, y0), &verts, &edges) {
+                        return 0;
+                    }
+                    if !is_inside(IVec2::new(x, y1), &verts, &edges) {
+                        return 0;
+                    }
                 }
 
-                let dx = (x1 as i64) - (x0 as i64);
-                let dy = (y1 as i64) - (y0 as i64);
-                let this_area = (1 + dx.abs()) * (1 + dy.abs());
-                if this_area < area {
-                    // Not possible to be the best, ignore it.
-                    continue;
+                for y in yy0..=yy1 {
+                    if !is_inside(IVec2::new(x0, y), &verts, &edges) {
+                        return 0;
+                    }
+                    if !is_inside(IVec2::new(x1, y), &verts, &edges) {
+                        return 0;
+                    }
                 }
 
-                if is_inside(IVec2::new(x0, y0), &verts, &edges)
-                    && is_inside(IVec2::new(x0, y1), &verts, &edges)
-                    && is_inside(IVec2::new(x1, y0), &verts, &edges)
-                    && is_inside(IVec2::new(x1, y1), &verts, &edges)
-                {
-                    let [xx0, xx1] = ordered(x0, x1);
-                    let [yy0, yy1] = ordered(y0, y1);
-
-                    for x in xx0..=xx1 {
-                        if !is_inside(IVec2::new(x, y0), &verts, &edges) {
-                            continue 'search;
-                        }
-                        if !is_inside(IVec2::new(x, y1), &verts, &edges) {
-                            continue 'search;
-                        }
-                    }
-
-                    for y in yy0..=yy1 {
-                        if !is_inside(IVec2::new(x0, y), &verts, &edges) {
-                            continue 'search;
-                        }
-                        if !is_inside(IVec2::new(x1, y), &verts, &edges) {
-                            continue 'search;
-                        }
-                    }
-
-                    if cfg!(test) {
-                        println!(
-                            "Found rect: [{x0:>2},{y0:>2}]x[{x1:>2},{y1:>2}] == {this_area:>3} {}x{}",
-                            (1 + (y1 - y0).abs()),
-                            (1 + (x1 - x0).abs())
-                        );
-                    }
-                    area = area.max(this_area);
+                if cfg!(test) {
+                    println!(
+                        "Found rect: [{x0:>2},{y0:>2}]x[{x1:>2},{y1:>2}] == {this_area:>3} {}x{}",
+                        (1 + (y1 - y0).abs()),
+                        (1 + (x1 - x0).abs())
+                    );
                 }
+                area = area.max(this_area);
             }
 
             area
