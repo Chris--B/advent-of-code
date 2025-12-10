@@ -150,6 +150,7 @@ pub fn part2(input: &str) -> i64 {
     assert!(!is_inside([0, 0].into(), &verts, &edges));
 
     let pb = ProgressBar::new((n * n / 2) as _);
+    let pool = rayon::ThreadPoolBuilder::new().num_threads(64).build().unwrap();
 
     let area: i64 = (0..n)
         .into_par_iter()
