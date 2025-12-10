@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use indicatif::ProgressBar;
+use rayon::iter::IntoParallelIterator;
 use ultraviolet::Vec2;
 
 use crate::prelude::*;
@@ -24,178 +25,172 @@ pub fn part1(input: &str) -> i64 {
     area
 }
 
+fn intersects(a: [IVec2; 2], b: [IVec2; 2]) -> Option<IVec2> {
+    debug_assert_ne!(a, b, "Don't check if a line intersects itself");
+
+    None
+}
+
+fn ordered(a: i32, b: i32) -> [i32; 2] {
+    let mut xs = [a, b];
+    xs.sort();
+    xs
+}
+
 // Part2 ========================================================================
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct Edge {
-    a: IVec2,
-    ai: usize,
-
-    b: IVec2,
-    bi: usize,
-}
-
-impl Edge {
-    fn new(a: IVec2, ai: usize, b: IVec2, bi: usize) -> Self {
-        Self { a, ai, b, bi }
-    }
-
-    fn length(&self) -> i64 {
-        let d = (self.a - self.b).abs();
-        d.x as i64 + d.y as i64
-    }
-}
-
-impl PartialOrd for Edge {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Edge {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.length().cmp(&other.length())
-    }
-}
-
-fn build_dists_heap(verts: &[IVec2]) -> BinaryHeap<Reverse<Edge>> {
-    let mut dists = BinaryHeap::with_capacity(verts.len());
-
-    for (i, &a) in verts.iter().enumerate() {
-        for (j, &b) in verts[i + 1..].iter().enumerate() {
-            let j = j + i + 1;
-            let diff: [i32; 2] = std::array::from_fn(|ii| (a[ii] - b[ii]).abs());
-            let dist: i32 = diff.iter().sum();
-            dists.push(Reverse(Edge::new(a, i, b, j)));
+fn is_inside(pt: IVec2, verts: &[IVec2], edges: &[(IVec2, IVec2)]) -> bool {
+    fn is_on_line(pt: IVec2, (a, b): (IVec2, IVec2)) -> bool {
+        if a.x == b.x && a.x == pt.x {
+            // Vertical Edge, check that y is in bounds
+            let [y0, y1] = ordered(a.y, b.y);
+            y0 <= pt.y && pt.y <= y1
+        } else if a.y == b.y && a.y == pt.y {
+            // Horiztonal Edge, check that x is in bounds
+            let [x0, x1] = ordered(a.x, b.x);
+            x0 <= pt.x && pt.x <= x1
+        } else {
+            false
         }
     }
 
-    dists
+    // Walk intersections until we find our point
+    let mut inside = false;
+    for &edge in edges {
+        if is_on_line(pt, edge) {
+            return true;
+        }
+    }
+
+    // We're not ON an edge, but we might be inside of the shape still.
+    // Ray trace in from the side and count the edges we hit?
+
+    let mut here = IVec2::new(0, pt.y);
+    'search: while here.x < pt.x {
+        for &edge in edges {
+            if is_on_line(here, edge) {
+                // println!("[pt={pt:?}] Hitting edge={edge:?}");
+                // println!("  + was x={}", here.x);
+                here.x = i32::max(edge.0.x, edge.1.x) + 1;
+                // println!("  + now x={}", here.x);
+
+                if edge.0.x == edge.1.x {
+                    inside = !inside;
+                }
+                continue 'search;
+            }
+        }
+        // println!();
+
+        // Find the shortest distance we could possibly move without crossing an edge
+        let mut dist = i32::MAX;
+        for &v in verts {
+            dist = dist.min((here - v).abs().component_max() / 10).max(1);
+        }
+        here.x += dist;
+    }
+
+    inside
 }
 
 #[aoc(day9, part2)]
 pub fn part2(input: &str) -> i64 {
-    let mut verts: Vec<IVec2> = input
+    let verts: Vec<IVec2> = input
         .i64s()
         .tuples()
         .map(|(x, y)| [x as _, y as _].into())
         .collect_vec();
+    let edges: Vec<(IVec2, IVec2)> = verts
+        .iter()
+        .chain(&[verts[0]])
+        .copied()
+        .tuple_windows()
+        .collect_vec();
     let n = verts.len();
 
-    let mut all_edges = build_dists_heap(&verts);
+    if cfg!(test) {
+        let mut grid = Framebuffer::new(20, 10);
+        grid.clear('.');
 
-    let mut labels: Vec<usize> = (0..verts.len()).collect_vec();
-    let mut label_0_count = 1;
-
-    let mut edges = vec![];
-    while label_0_count != labels.len() {
-        let Some(Reverse(e @ Edge { a, ai, b, bi })) = all_edges.pop() else {
-            break;
-        };
-
-        let cid_a = labels[ai];
-        let cid_b = labels[bi];
-        if cid_a != cid_b {
-            // this removes exactly one edge LOL
-            if (e.a.x == e.b.x || e.a.y == e.b.y) {
-                edges.push(e);
-            }
-            let new = usize::min(cid_a, cid_b);
-            let old = usize::max(cid_a, cid_b);
-
-            for cid in &mut labels {
-                if *cid == old {
-                    *cid = new;
-                    if new == 0 {
-                        label_0_count += 1;
-                    }
+        for (a, b) in &edges {
+            if a.x == b.x {
+                let x = a.x;
+                let [y0, y1] = ordered(a.y, b.y);
+                for y in y0..y1 {
+                    grid[(x, y)] = 'x';
                 }
+            } else if a.y == b.y {
+                let y = a.y;
+                let [x0, x1] = ordered(a.x, b.x);
+                for x in x0..x1 {
+                    grid[(x, y)] = 'x';
+                }
+            } else {
+                grid.just_print();
+                unreachable!("Invalid edges");
             }
         }
+
+        for (i, &v) in verts.iter().enumerate() {
+            if i < 10 {
+                grid[v] = (i as u8 + b'0') as char;
+            } else {
+                grid[v] = '#';
+            }
+        }
+
+        grid.just_print();
     }
 
+    println!("Have  {} verts", verts.len());
     println!("Found {} edges", edges.len());
+    let min_x = verts.iter().map(|&v| v.x).min().unwrap();
+    let min_y = verts.iter().map(|&v| v.y).min().unwrap();
+    println!("Min axes: x={min_x}, y={min_y}");
 
-    // Find all areas, and see if they intersect any edges
-    let pb = ProgressBar::new(n as u64);
+    assert!(!is_inside([0, 0].into(), &verts, &edges));
 
+    let pb = ProgressBar::new(n as _);
     use rayon::prelude::*;
-    let i_idx: Vec<usize> = (0..n).collect_vec();
-    let areas: Vec<_> = i_idx
-        .par_iter()
-        .map(|&i| {
-            let mut area = 0;
+    let area: i64 = (0..n).into_par_iter().map(|i| -> i64 {
+        let mut area = 0;
+        for j in (i + 1)..n {
+            let [x0, y0] = verts[i].as_array();
+            let [x1, y1] = verts[j].as_array();
 
-            for j in (i + 1)..n {
-                let a: IVec2 = verts[i];
-                let b: IVec2 = verts[j];
-                let this_area = (1 + (b.y - a.y).abs() as i64) * (1 + (b.x - a.x).abs() as i64);
-
-                if (this_area as f64) < (0.75 * 4755278336.) {
-                    continue;
-                }
-
-                // only consider this area if it's within the bigger polygon
-                let x0 = i32::min(a.x, b.x) + 1;
-                let x1 = i32::max(a.x, b.x) - 1;
-
-                let y0 = i32::min(a.y, b.y) + 1;
-                let y1 = i32::max(a.y, b.y) - 1;
-
-                let mut ok = true;
-                // check along x axis (for both ys)
-                'edge_check: for y in [y0, y1] {
-                    for x in x0..=x1 {
-                        for &e in &edges {
-                            // check if we intersect the x-axis of this edge
-                            if e.a.x == e.b.x {
-                                let yy0 = i32::min(e.a.y, e.b.y);
-                                let yy1 = i32::max(e.a.y, e.b.y);
-                                if (e.a.x == x) && ((yy0..=yy1).contains(&y)) {
-                                    ok = false;
-                                    break 'edge_check;
-                                }
-                            }
-                            // check if we intersect the y-axis of this edge instead
-                        }
-                    }
-                }
-
-                // check along y axis (for both xs)
-                'edge_check: for x in [x0, x1] {
-                    for y in y0..=y1 {
-                        for &e in &edges {
-                            // check if we intersect the x-axis of this edge
-                            if e.a.x == e.b.x {
-                                let yy0 = i32::min(e.a.y, e.b.y);
-                                let yy1 = i32::max(e.a.y, e.b.y);
-                                if (e.a.x == x) && ((yy0..=yy1).contains(&y)) {
-                                    ok = false;
-                                    break 'edge_check;
-                                }
-                            }
-                            // check if we intersect the y-axis of this edge instead
-                        }
-                    }
-                }
-
-                if ok {
-                    let this_area = (1 + (b.y - a.y).abs() as i64) * (1 + (b.x - a.x).abs() as i64);
-                    area = area.max(this_area);
-                }
+            if x0 == x1 || y0 == y1 {
+                continue;
             }
 
-            pb.inc(1);
+            if is_inside(IVec2::new(x0, y0), &verts, &edges)
+                && is_inside(IVec2::new(x0, y1), &verts, &edges)
+                && is_inside(IVec2::new(x1, y0), &verts, &edges)
+                && is_inside(IVec2::new(x1, y1), &verts, &edges)
+            {
+                let dx = (x1 as i64) - (x0 as i64);
+                let dy = (y1 as i64) - (y0 as i64);
 
-            area
-        })
-        .collect();
+                let this_area = (1 + dx.abs()) * (1 + dy.abs());
+                if cfg!(test) {
+                    println!(
+                        "Found rect: [{x0:>2},{y0:>2}]x[{x1:>2},{y1:>2}] == {this_area:>3} {}x{}",
+                        (1 + (y1 - y0).abs()),
+                        (1 + (x1 - x0).abs())
+                    );
+                }
+                area = area.max(this_area);
+            }
+        }
+        pb.inc(1);
 
-    dbg!(&areas);
+                assert!(area < 4000000000, "area < 4000000000; area = {area}");
 
-    let area: i64 = areas.into_iter().max().unwrap();
+        area
+}).max().unwrap();
 
-    assert!(area < 4570351616, "area={area}");
-    assert!(area < 4755278336, "area={area}");
+    if !cfg!(test) {
+        assert!(area > 163561216, "area > 163561216; area = {area}");
+        assert!(area < 4000000000, "area < 4000000000; area = {area}");
+    }
 
     area
 }
@@ -218,6 +213,47 @@ mod test {
 7,3
 ";
 
+    const EXAMPLE_INPUT_BUT_HUMP: &str = r"
+7,1
+11,1
+11,7
+9,7
+9,5
+5,5
+5,7
+2,7
+2,5
+2,3
+7,3
+";
+
+    #[rstest]
+    #[case::some_edge_1_3([1,3], false)]
+    #[case::some_edge_2_3([2,3], true)]
+    #[case::some_edge_3_3([3,3], true)]
+    #[case::some_edge_7_3([7,3], true)]
+    #[case::inside_9_3([9,3], true)]
+    #[timeout(Duration::from_millis(100))]
+    fn check_is_inside(#[case] pt: [i32; 2], #[case] inside: bool) {
+        let input = EXAMPLE_INPUT;
+        let verts: Vec<IVec2> = input
+            .i64s()
+            .tuples()
+            .map(|(x, y)| [x as _, y as _].into())
+            .collect_vec();
+        let edges: Vec<(IVec2, IVec2)> = verts
+            .iter()
+            .chain(&[verts[0]])
+            .copied()
+            .tuple_windows()
+            .collect_vec();
+
+        println!("Have  {} verts", verts.len());
+        println!("Found {} edges", edges.len());
+
+        assert_eq!(is_inside(pt.into(), &verts, &edges), inside);
+    }
+
     #[rstest]
     #[case::given(50, EXAMPLE_INPUT)]
     #[trace]
@@ -235,20 +271,21 @@ mod test {
         assert_eq!(p(input), expected);
     }
 
-    // #[rstest]
-    // #[case::given(24, EXAMPLE_INPUT)]
-    // #[trace]
-    // #[timeout(Duration::from_millis(1000))]
-    // fn check_ex_part_2(
-    //     #[notrace]
-    //     #[values(part2)]
-    //     p: impl FnOnce(&str) -> i64,
-    //     #[case] expected: i64,
-    //     #[case] input: &str,
-    // ) {
-    //     init_logging();
+    #[rstest]
+    #[case::given(24, EXAMPLE_INPUT)]
+    #[case::given_hump(24, EXAMPLE_INPUT_BUT_HUMP)]
+    #[trace]
+    #[timeout(Duration::from_millis(1000))]
+    fn check_ex_part_2(
+        #[notrace]
+        #[values(part2)]
+        p: impl FnOnce(&str) -> i64,
+        #[case] expected: i64,
+        #[case] input: &str,
+    ) {
+        init_logging();
 
-    //     let input = input.trim();
-    //     assert_eq!(p(input), expected);
-    // }
+        let input = input.trim();
+        assert_eq!(p(input), expected);
+    }
 }
