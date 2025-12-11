@@ -37,6 +37,31 @@ fn invert<'a>(map: &'_ HashMap<&'a str, Path<'a>>) -> HashMap<&'a str, Path<'a>>
     inv_map
 }
 
+fn reachable_from<'a>(
+    name: &str,
+    map: &'_ HashMap<&'a str, Path<'a>>,
+    from: impl IntoIterator<Item = &'a str>,
+) -> HashSet<&'a str> {
+    let mut seen = HashSet::new();
+    let from = from.into_iter().collect_vec();
+
+    println!("[{name}] Nodes reachable from {from:?}");
+
+    let mut queue = from.clone();
+    while let Some(curr) = queue.pop() {
+        seen.insert(curr);
+        for &to in &map[curr] {
+            if !seen.contains(to) {
+                queue.push(to);
+            }
+        }
+    }
+
+    println!("  + Found {} nodes", seen.len());
+    println!();
+    seen
+}
+
 fn find_all_paths<'a>(
     map: &'_ HashMap<&'a str, Path<'a>>,
     from: impl IntoIterator<Item = &'a str>,
@@ -48,12 +73,12 @@ fn find_all_paths<'a>(
     let mut queue: Vec<_> = from.iter().map(|&e| vec![e]).collect();
     let mut all_paths = HashSet::new();
 
+    println!("Searching for all paths");
+    println!("  + from {from:?}");
+    println!("  + to   {to:?}");
+
     while let Some(path) = queue.pop() {
         let here = *path.last().unwrap();
-
-        if path.len() > 10 {
-            continue;
-        }
 
         if to.contains(&here) {
             // if cfg!(test) {
@@ -68,8 +93,12 @@ fn find_all_paths<'a>(
 
         if !map.contains_key(here) {
             println!("Cannot find {here:?}");
+            continue;
         }
         for node in &map[here] {
+            if !map.contains_key(node) {
+                continue;
+            }
             let mut next = path.clone();
             next.push(node);
 
@@ -79,9 +108,8 @@ fn find_all_paths<'a>(
         }
     }
 
-    println!("Found {} paths", all_paths.len());
-    println!("  + from {from:?}");
-    println!("  + to   {to:?}");
+    println!("  + {} paths", all_paths.len());
+    println!();
 
     all_paths
 }
@@ -104,10 +132,66 @@ pub fn part1(input: &str) -> i64 {
     all_paths.len() as i64
 }
 
+fn write_dot(filename: &str, map: &HashMap<&'_ str, Path<'_>>) {
+    let mut lines: Vec<String> = vec![
+        "digraph world {".into(),                               // .
+        "".into(),                                              // .
+        "    rank = same;".into(),                              // .
+        "    node [fillcolor=white, style=\"filled\"];".into(), //.
+        "    svr [fillcolor=red];".into(),                      // .
+        "    dac [fillcolor=red];".into(),                      // .
+        "    fft [fillcolor=red];".into(),                      // .
+        "    out [fillcolor=red];".into(),                      // .
+        "".into(),                                              // .
+    ];
+
+    for (from, tos) in map {
+        for to in tos {
+            lines.push(format!("    \"{from}\" -> {{ \"{to}\"; }}"));
+        }
+    }
+    lines.push("}".into());
+
+    std::fs::write(filename, lines.join("\n")).unwrap();
+}
+
 // Part2 ========================================================================
 #[aoc(day11, part2)]
 pub fn part2(input: &str) -> i64 {
-0
+    let fwd = parse(input);
+    let bak = invert(&fwd);
+
+    if !cfg!(test) {
+        let filename = "day11-graph.dot";
+        write_dot(filename, &fwd);
+    }
+
+    let reaches_dac = reachable_from("forward", &fwd, ["dac"]);
+    let dac_reachs = reachable_from("backward", &bak, ["dac"]);
+    let good_dac: HashSet<_> = reaches_dac.union(&dac_reachs).copied().collect();
+
+    let reaches_fft = reachable_from("forward", &fwd, ["fft"]);
+    let fft_reachs = reachable_from("backward", &bak, ["fft"]);
+    let good_fft: HashSet<_> = reaches_fft.union(&fft_reachs).copied().collect();
+
+    let good: HashSet<&str> = good_dac.intersection(&good_fft).copied().collect();
+
+    let fwd: HashMap<&str, _> = fwd
+        .into_iter()
+        .filter(|(node, _tos)| good.contains(node))
+        .collect();
+    let bak: HashMap<&str, _> = bak
+        .into_iter()
+        .filter(|(node, _tos)| good.contains(node))
+        .collect();
+
+    println!("Reduced to {} nodes", fwd.len());
+
+    let svr_to_fft = find_all_paths(&fwd, ["svr"], ["fft"]);
+    let fft_to_dac = find_all_paths(&fwd, ["fft"], ["dac"]);
+    let dac_to_out = find_all_paths(&bak, ["out"], ["dac"]);
+
+    (svr_to_fft.len() as i64) * (fft_to_dac.len() as i64) * (dac_to_out.len() as i64)
 }
 
 #[cfg(test)]
@@ -166,7 +250,6 @@ hhh: out
     #[rstest]
     #[case::given(2, EXAMPLE_INPUT_P2)]
     #[trace]
-    #[ignore]
     #[timeout(Duration::from_millis(100))]
     fn check_ex_part_2(
         #[notrace]
