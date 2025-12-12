@@ -45,7 +45,9 @@ fn reachable_from<'a>(
     let mut seen = HashSet::new();
     let from = from.into_iter().collect_vec();
 
-    println!("[{name}] Nodes reachable from {from:?}");
+    if cfg!(test) {
+        println!("[{name}] Nodes reachable from {from:?}");
+    }
 
     let mut queue = from.clone();
     while let Some(curr) = queue.pop() {
@@ -57,8 +59,11 @@ fn reachable_from<'a>(
         }
     }
 
-    println!("  + Found {} nodes", seen.len());
-    println!();
+    if cfg!(test) {
+        println!("  + Found {} nodes", seen.len());
+        println!();
+    }
+
     seen
 }
 
@@ -73,9 +78,11 @@ fn find_all_paths<'a>(
     let mut queue: Vec<_> = from.iter().map(|&e| vec![e]).collect();
     let mut all_paths = HashSet::new();
 
-    println!("Searching for all paths");
-    println!("  + from {from:?}");
-    println!("  + to   {to:?}");
+    if cfg!(test) {
+        println!("Searching for all paths");
+        println!("  + from {from:?}");
+        println!("  + to   {to:?}");
+    }
 
     while let Some(path) = queue.pop() {
         let here = *path.last().unwrap();
@@ -85,14 +92,13 @@ fn find_all_paths<'a>(
             //     println!("Found path: {path:?}");
             // }
             all_paths.insert(path);
-            if cfg!(test) {
-                println!("Found {} paths", all_paths.len());
-            }
             continue;
         }
 
         if !map.contains_key(here) {
-            println!("Cannot find {here:?}");
+            if cfg!(test) {
+                println!("Cannot find {here:?}");
+            }
             continue;
         }
         for node in &map[here] {
@@ -108,8 +114,10 @@ fn find_all_paths<'a>(
         }
     }
 
-    println!("  + {} paths", all_paths.len());
-    println!();
+    if cfg!(test) {
+        println!("  + {} paths", all_paths.len());
+        println!();
+    }
 
     all_paths
 }
@@ -161,11 +169,6 @@ pub fn part2(input: &str) -> i64 {
     let fwd = parse(input);
     let bak = invert(&fwd);
 
-    if !cfg!(test) {
-        let filename = "day11-graph.dot";
-        write_dot(filename, &fwd);
-    }
-
     let reaches_dac = reachable_from("forward", &fwd, ["dac"]);
     let dac_reachs = reachable_from("backward", &bak, ["dac"]);
     let good_dac: HashSet<_> = reaches_dac.union(&dac_reachs).copied().collect();
@@ -185,11 +188,23 @@ pub fn part2(input: &str) -> i64 {
         .filter(|(node, _tos)| good.contains(node))
         .collect();
 
-    println!("Reduced to {} nodes", fwd.len());
+    if cfg!(test) {
+        println!("Reduced to {} nodes", fwd.len());
+    }
 
+    print!("Searching sub-graph: svr -> fft");
     let svr_to_fft = find_all_paths(&fwd, ["svr"], ["fft"]);
+    println!(" {} nodes", svr_to_fft.len());
+
+    print!("Searching sub-graph: fft -> dac");
     let fft_to_dac = find_all_paths(&fwd, ["fft"], ["dac"]);
+    println!(" {} nodes", fft_to_dac.len());
+
+    print!("Searching sub-graph: out -> dac");
     let dac_to_out = find_all_paths(&bak, ["out"], ["dac"]);
+    println!(" {} nodes", dac_to_out.len());
+
+    println!();
 
     (svr_to_fft.len() as i64) * (fft_to_dac.len() as i64) * (dac_to_out.len() as i64)
 }
