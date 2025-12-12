@@ -84,9 +84,84 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-// #[aoc(day10, part2)]
-pub fn part2(_input: &str) -> i64 {
-    0
+#[aoc(day10, part2)]
+pub fn part2(input: &str) -> i64 {
+    let input = input.as_bytes();
+
+    // Dedicated function to remove it from the parsing nonsense
+    fn solve(buttons: &[[u8; 10]], goal: &[u8]) -> i64 {
+        #![allow(unused)]
+        let mut min_presses = i64::MAX;
+
+        if cfg!(test) {
+            println!("Buttons:");
+            for btn in buttons {
+                let btn = btn
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, n)| if *n != 0 { Some(i.to_string()) } else { None })
+                    .collect_vec();
+                println!("  + ({})", btn.join(","));
+            }
+
+            let goal = goal
+                .iter()
+                .filter_map(|(n)| if *n != 0 { Some(n.to_string()) } else { None })
+                .collect_vec();
+            println!("Goal: {{{goal}}}", goal = goal.join(","));
+        }
+
+        debug_assert!(min_presses != i64::MAX);
+        min_presses
+    }
+
+    let mut total_presses = 0;
+    let mut line_start = 0;
+    for i in memchr_iter(b'\n', input).chain([input.len()]) {
+        // "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"
+        let mut line: &[u8] = &input[line_start..i];
+
+        // skip "[.##.]"
+
+        // " (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"
+        let mut buttons = [[0u8; 10]; 30];
+        let mut botton_idx = 0;
+        {
+            let mut s = 0;
+            let mut e = 0;
+            for j in memchr2_iter(b'(', b')', line) {
+                if line[j] == b'(' {
+                    s = j;
+                } else {
+                    for &b in &line[s..j] {
+                        if let b'0'..=b'9' = b {
+                            buttons[botton_idx][(b - b'0') as usize] = 1;
+                        }
+                    }
+                    botton_idx += 1;
+                    e = j;
+                }
+            }
+            line = &line[e + 1..];
+        }
+
+        // " {3,5,4,7}"
+        let mut goal = [0u8; 10];
+        let mut goal_idx = 0;
+        {
+            for n in just_str(line).i64s() {
+                goal[goal_idx] = n as u8;
+                goal_idx += 1;
+            }
+        }
+
+        // Solve
+        total_presses += solve(&buttons[..botton_idx], &goal[..goal_idx]);
+
+        line_start = i + 1;
+    }
+
+    total_presses
 }
 
 #[cfg(test)]
@@ -124,11 +199,10 @@ mod test {
 
     #[rstest]
     // #[case::given(10+12+11, EXAMPLE_INPUT)]
-    #[case::given_1(10, "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}")]
+    // #[case::given_1(10, "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}")]
     // #[case::given_2(12, "[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}")]
-    // #[case::given_3(11, "[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}")]
+    #[case::given_3(11, "[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}")]
     #[trace]
-    #[ignore]
     #[timeout(Duration::from_millis(100))]
     fn check_ex_part_2(
         #[notrace]
