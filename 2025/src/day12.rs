@@ -2,15 +2,17 @@
 
 use crate::prelude::*;
 
-
 // Part1 ========================================================================
 #[aoc(day12, part1)]
 pub fn part1(input: &str) -> i64 {
-    input
-        .lines()
+    let mut input = input.as_bytes();
+    let mut s = 0;
+    memchr_iter(b'\n', input)
         .skip(30)
-        .filter(|line| {
-            let nums: SmallVec<[i64;7]> = line.i64s().collect();
+        .filter(|&i| {
+            let line = &input[s..i];
+            s = i + 1;
+            let nums: SmallVec<[i64; 7]> = line.i64s().collect();
             ((nums[0] / 3) * (nums[1] / 3)) > (nums[2] + nums[3] + nums[4] + nums[5] + nums[6])
         })
         .count() as i64
