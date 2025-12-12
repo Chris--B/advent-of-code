@@ -8,7 +8,7 @@ pub fn part1(input: &str) -> i64 {
     fn solve(buttons: &[u16], goal: u16) -> i64 {
         let mut min_presses = i64::MAX;
 
-        for mut bits in 0..(1 << buttons.len()) {
+        for mut bits in (1 << (buttons.len() - 1))..(1 << buttons.len()) {
             let mut state = 0;
             let mut presses = 0;
 
