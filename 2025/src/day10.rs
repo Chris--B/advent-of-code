@@ -89,7 +89,7 @@ pub fn part2(input: &str) -> i64 {
     let input = input.as_bytes();
 
     // Dedicated function to remove it from the parsing nonsense
-    fn solve(buttons: &[[u8; 10]], goal: &[u8]) -> i64 {
+    fn solve(buttons: &[[u8; 10]], goal: &[u16]) -> i64 {
         #![allow(unused)]
         let mut min_presses = i64::MAX;
 
@@ -146,11 +146,11 @@ pub fn part2(input: &str) -> i64 {
         }
 
         // " {3,5,4,7}"
-        let mut goal = [0u8; 10];
+        let mut goal = [0_u16; 10];
         let mut goal_idx = 0;
         {
             for n in just_str(line).i64s() {
-                goal[goal_idx] = n as u8;
+                goal[goal_idx] = n as u16;
                 goal_idx += 1;
             }
         }
@@ -202,7 +202,10 @@ mod test {
     // #[case::given_1(10, "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}")]
     // #[case::given_2(12, "[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}")]
     #[case::given_3(11, "[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}")]
-    // #[case::rando_online(332, " [#....##.#.] (5,6,8) (0,2,5,6,7,9) (1,3,5,6,7,9) (1,2,7,9) (1,2,4,5,6,7,8,9) (2,8) (0,2,3,5,6,7,8,9) (0,4,5,9) (4,5,8) (4,5) (0,2,3,4,5,7,8,9) (0) (1,2,3,4,5,6,7,8) {49,233,86,233,57,297,253,271,72,271}")]
+    // #[case::rando_online(
+    //     332,
+    //     "[#....##.#.] (5,6,8) (0,2,5,6,7,9) (1,3,5,6,7,9) (1,2,7,9) (1,2,4,5,6,7,8,9) (2,8) (0,2,3,5,6,7,8,9) (0,4,5,9) (4,5,8) (4,5) (0,2,3,4,5,7,8,9) (0) (1,2,3,4,5,6,7,8) {49,233,86,233,57,297,253,271,72,271}"
+    // )]
     #[trace]
     #[timeout(Duration::from_millis(100))]
     fn check_ex_part_2(
