@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::prelude::*;
 
 #[aoc(day10, part1)]
@@ -90,8 +92,8 @@ pub fn part2(input: &str) -> i64 {
 
     // Dedicated function to remove it from the parsing nonsense
     fn solve(buttons: &[[u8; 10]], goal: &[u16]) -> i64 {
-        #![allow(unused)]
-        let mut min_presses = i64::MAX;
+        use minilp::ComparisonOp::*;
+        use minilp::{OptimizationDirection, Problem, Variable};
 
         if cfg!(test) {
             println!("Buttons:");
@@ -104,15 +106,64 @@ pub fn part2(input: &str) -> i64 {
                 println!("  + ({})", btn.join(","));
             }
 
-            let goal = goal
-                .iter()
-                .filter_map(|(n)| if *n != 0 { Some(n.to_string()) } else { None })
-                .collect_vec();
+            let goal = goal.iter().map(|n| n.to_string()).collect_vec();
             println!("Goal: {{{goal}}}", goal = goal.join(","));
         }
 
-        debug_assert!(min_presses != i64::MAX);
-        min_presses
+        let mut problem = Problem::new(OptimizationDirection::Minimize);
+
+        let n = goal.len();
+        let mut vars: Vec<Variable> = vec![];
+        for _ in 0..buttons.len() {
+            vars.push(problem.add_var(1., (0., f64::INFINITY)));
+        }
+
+        if cfg!(test) {
+            println!("Have {} vars", vars.len());
+        }
+
+        for (i, &eq_to) in goal.iter().enumerate() {
+            if cfg!(test) {
+                println!("  + [{i}] Constraining equal to {eq_to}");
+                for (j, button) in buttons.iter().enumerate() {
+                    let btn = button
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, n)| if *n != 0 { Some(i.to_string()) } else { None })
+                        .collect_vec();
+                    println!("    + ({})", btn.join(","));
+                }
+            }
+
+            let mut expr: Vec<(Variable, f64)> = vec![];
+            for (j, button) in buttons.iter().enumerate() {
+                expr.push((vars[j], button[i] as f64));
+            }
+
+            problem.add_constraint(expr, Eq, eq_to as f64);
+        }
+
+        let solution = problem.solve().expect("No solution?");
+
+        if cfg!(test) {
+            println!("Solution:");
+            println!("  + objective = {}", solution.objective());
+            for (i, v) in vars.iter().enumerate() {
+                println!("  [{i}] {}", solution[*v]);
+            }
+        }
+
+        // Sanity check that our solution even works
+        let mut sums = [0; 10];
+        for (i, btn) in buttons.iter().enumerate() {
+            let n = solution[vars[i]].round() as u16;
+            for (j, b) in btn.iter().enumerate() {
+                sums[j] += n * (*b as u16);
+            }
+        }
+        assert_eq!(&sums[..goal.len()], goal);
+
+        solution.objective().round() as i64
     }
 
     let mut total_presses = 0;
@@ -121,11 +172,13 @@ pub fn part2(input: &str) -> i64 {
         // "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"
         let mut line: &[u8] = &input[line_start..i];
 
+        println!("{}", just_str(line));
+
         // skip "[.##.]"
 
         // " (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"
         let mut buttons = [[0u8; 10]; 30];
-        let mut botton_idx = 0;
+        let mut button_idx = 0;
         {
             let mut s = 0;
             let mut e = 0;
@@ -135,13 +188,14 @@ pub fn part2(input: &str) -> i64 {
                 } else {
                     for &b in &line[s..j] {
                         if let b'0'..=b'9' = b {
-                            buttons[botton_idx][(b - b'0') as usize] = 1;
+                            buttons[button_idx][(b - b'0') as usize] = 1;
                         }
                     }
-                    botton_idx += 1;
+                    button_idx += 1;
                     e = j;
                 }
             }
+
             line = &line[e + 1..];
         }
 
@@ -156,9 +210,17 @@ pub fn part2(input: &str) -> i64 {
         }
 
         // Solve
-        total_presses += solve(&buttons[..botton_idx], &goal[..goal_idx]);
+        total_presses += solve(&buttons[..button_idx], &goal[..goal_idx]);
 
         line_start = i + 1;
+    }
+
+    if !cfg!(test) {
+        assert!(
+            total_presses > 19186,
+            "total_presses must be > 19186, but was {total_presses}"
+        );
+        assert_ne!(total_presses, 19190);
     }
 
     total_presses
@@ -198,14 +260,22 @@ mod test {
     }
 
     #[rstest]
-    // #[case::given(10+12+11, EXAMPLE_INPUT)]
-    // #[case::given_1(10, "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}")]
-    // #[case::given_2(12, "[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}")]
+    #[case::given(10+12+11, EXAMPLE_INPUT)]
+    #[case::given_1(10, "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}")]
+    #[case::given_2(12, "[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}")]
     #[case::given_3(11, "[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}")]
-    // #[case::rando_online(
-    //     332,
-    //     "[#....##.#.] (5,6,8) (0,2,5,6,7,9) (1,3,5,6,7,9) (1,2,7,9) (1,2,4,5,6,7,8,9) (2,8) (0,2,3,5,6,7,8,9) (0,4,5,9) (4,5,8) (4,5) (0,2,3,4,5,7,8,9) (0) (1,2,3,4,5,6,7,8) {49,233,86,233,57,297,253,271,72,271}"
-    // )]
+    #[case::rando_online(
+        332,
+        "[#....##.#.] (5,6,8) (0,2,5,6,7,9) (1,3,5,6,7,9) (1,2,7,9) (1,2,4,5,6,7,8,9) (2,8) (0,2,3,5,6,7,8,9) (0,4,5,9) (4,5,8) (4,5) (0,2,3,4,5,7,8,9) (0) (1,2,3,4,5,6,7,8) {49,233,86,233,57,297,253,271,72,271}"
+    )]
+    #[case::but_why(
+        97,
+        "[###.#####] (0,5) (0,2,3,4,5,7,8) (0,2,3,4,6,7,8) (0,1,2,3,5,7,8) (0,1,3,4,7,8) (4,6,7,8) (1,2,5,6,8) (0,6,8) (3,4,5,6) {72,32,43,50,51,56,40,62,74}"
+    )]
+    #[case::broke(
+        0,
+        "[.#.##] (0,1,3) (3,4) (0,1,2,3) (0,1,2,4) (1) (1,2,4) (1,4) {29,62,39,28,57}"
+    )]
     #[trace]
     #[timeout(Duration::from_millis(100))]
     fn check_ex_part_2(

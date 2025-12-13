@@ -45,6 +45,7 @@ scan_fmt = "0.2"
 smallvec = "1"
 ultraviolet = { version = "0.10", features = ["int"] }
 bytemuck = { version = "1.24.0", features = ["derive"] }
+minilp = "0.2.2"
 
 # Enable aggressive optimizations for all dependencies all of the time
 [profile.dev.package."*"]
