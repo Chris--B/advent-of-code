@@ -2,6 +2,15 @@
 
 use crate::prelude::*;
 
+fn btn_to_str(btn: &[u8; 10]) -> String {
+    let btn = btn
+        .iter()
+        .enumerate()
+        .filter_map(|(i, n)| if *n != 0 { Some(i.to_string()) } else { None })
+        .collect_vec();
+    format!("({})", btn.join(","))
+}
+
 #[aoc(day10, part1)]
 pub fn part1(input: &str) -> i64 {
     let input = input.as_bytes();
@@ -86,74 +95,62 @@ pub fn part1(input: &str) -> i64 {
 }
 
 // Part2 ========================================================================
-#[aoc(day10, part2)]
-pub fn part2(input: &str) -> i64 {
-    let input = input.as_bytes();
 
-    // Dedicated function to remove it from the parsing nonsense
-    fn solve(buttons: &[[u8; 10]], goal: &[u16]) -> i64 {
-        use minilp::ComparisonOp::*;
-        use minilp::{OptimizationDirection, Problem, Variable};
+// Dedicated function to remove it from the parsing nonsense
+fn solve(buttons: &[[u8; 10]], goal: &[u16]) -> i64 {
+    use microlp::ComparisonOp::*;
+    use microlp::{OptimizationDirection, Problem, Variable};
 
+    if cfg!(test) {
+        println!("Buttons:");
+        for btn in buttons {
+            println!("  + {}", btn_to_str(btn));
+        }
+
+        let goal = goal.iter().map(|n| n.to_string()).collect_vec();
+        println!("Goal: {{{goal}}}", goal = goal.join(","));
+    }
+
+    let mut problem = Problem::new(OptimizationDirection::Minimize);
+
+    let n = goal.len();
+    let mut vars: Vec<Variable> = vec![];
+    for _ in 0..buttons.len() {
+        vars.push(problem.add_integer_var(1., (0, 1000)));
+    }
+
+    if cfg!(test) {
+        println!("Have {} vars", vars.len());
+    }
+
+    for (i, &eq_to) in goal.iter().enumerate() {
         if cfg!(test) {
-            println!("Buttons:");
-            for btn in buttons {
-                let btn = btn
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, n)| if *n != 0 { Some(i.to_string()) } else { None })
-                    .collect_vec();
-                println!("  + ({})", btn.join(","));
-            }
-
-            let goal = goal.iter().map(|n| n.to_string()).collect_vec();
-            println!("Goal: {{{goal}}}", goal = goal.join(","));
-        }
-
-        let mut problem = Problem::new(OptimizationDirection::Minimize);
-
-        let n = goal.len();
-        let mut vars: Vec<Variable> = vec![];
-        for _ in 0..buttons.len() {
-            vars.push(problem.add_var(1., (0., f64::INFINITY)));
-        }
-
-        if cfg!(test) {
-            println!("Have {} vars", vars.len());
-        }
-
-        for (i, &eq_to) in goal.iter().enumerate() {
-            if cfg!(test) {
-                println!("  + [{i}] Constraining equal to {eq_to}");
-                for (j, button) in buttons.iter().enumerate() {
-                    let btn = button
-                        .iter()
-                        .enumerate()
-                        .filter_map(|(i, n)| if *n != 0 { Some(i.to_string()) } else { None })
-                        .collect_vec();
-                    println!("    + ({})", btn.join(","));
-                }
-            }
-
-            let mut expr: Vec<(Variable, f64)> = vec![];
-            for (j, button) in buttons.iter().enumerate() {
-                expr.push((vars[j], button[i] as f64));
-            }
-
-            problem.add_constraint(expr, Eq, eq_to as f64);
-        }
-
-        let solution = problem.solve().expect("No solution?");
-
-        if cfg!(test) {
-            println!("Solution:");
-            println!("  + objective = {}", solution.objective());
-            for (i, v) in vars.iter().enumerate() {
-                println!("  [{i}] {}", solution[*v]);
+            println!("  + [{i}] Constraining equal to {eq_to}");
+            for button in buttons {
+                println!("  + {}", btn_to_str(button));
             }
         }
 
-        // Sanity check that our solution even works
+        let mut expr: Vec<(Variable, f64)> = vec![];
+        for (j, button) in buttons.iter().enumerate() {
+            expr.push((vars[j], button[i] as f64));
+        }
+
+        problem.add_constraint(expr, Eq, eq_to as f64);
+    }
+
+    let solution = problem.solve().expect("No solution?");
+
+    if cfg!(test) {
+        println!("Solution:");
+        println!("  + objective = {}", solution.objective());
+        for (i, v) in vars.iter().enumerate() {
+            println!("  [{i}] {}", solution[*v]);
+        }
+    }
+
+    // Sanity check that our solution even works
+    if cfg!(debug_assertions) {
         let mut sums = [0; 10];
         for (i, btn) in buttons.iter().enumerate() {
             let n = solution[vars[i]].round() as u16;
@@ -162,17 +159,20 @@ pub fn part2(input: &str) -> i64 {
             }
         }
         assert_eq!(&sums[..goal.len()], goal);
-
-        solution.objective().round() as i64
     }
+
+    solution.objective().round() as i64
+}
+
+#[aoc(day10, part2)]
+pub fn part2(input: &str) -> i64 {
+    let input = input.as_bytes();
 
     let mut total_presses = 0;
     let mut line_start = 0;
     for i in memchr_iter(b'\n', input).chain([input.len()]) {
         // "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"
         let mut line: &[u8] = &input[line_start..i];
-
-        println!("{}", just_str(line));
 
         // skip "[.##.]"
 
@@ -213,14 +213,6 @@ pub fn part2(input: &str) -> i64 {
         total_presses += solve(&buttons[..button_idx], &goal[..goal_idx]);
 
         line_start = i + 1;
-    }
-
-    if !cfg!(test) {
-        assert!(
-            total_presses > 19186,
-            "total_presses must be > 19186, but was {total_presses}"
-        );
-        assert_ne!(total_presses, 19190);
     }
 
     total_presses
@@ -273,7 +265,7 @@ mod test {
         "[###.#####] (0,5) (0,2,3,4,5,7,8) (0,2,3,4,6,7,8) (0,1,2,3,5,7,8) (0,1,3,4,7,8) (4,6,7,8) (1,2,5,6,8) (0,6,8) (3,4,5,6) {72,32,43,50,51,56,40,62,74}"
     )]
     #[case::broke(
-        0,
+        74,
         "[.#.##] (0,1,3) (3,4) (0,1,2,3) (0,1,2,4) (1) (1,2,4) (1,4) {29,62,39,28,57}"
     )]
     #[trace]
