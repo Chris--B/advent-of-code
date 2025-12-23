@@ -13,7 +13,51 @@ pub fn part1(input: &str) -> i64 {
             let line = &input[s..i];
             s = i + 1;
             let nums: SmallVec<[i64; 7]> = line.i64s().collect();
-            ((nums[0] / 3) * (nums[1] / 3)) > (nums[2] + nums[3] + nums[4] + nums[5] + nums[6])
+
+            let a = (nums[0] / 3) * (nums[1] / 3);
+            let b = nums[2] + nums[3] + nums[4] + nums[5] + nums[6];
+            a > b
+        })
+        .count() as i64
+}
+
+#[aoc(day12, part1, hard_coded)]
+pub fn part1_hard_coded(input: &str) -> i64 {
+    fn num_at(bytes: &[u8], i: usize) -> i64 {
+        debug_assert!(
+            bytes[i].is_ascii_digit(),
+            "bytes[{i}] == {}, not a digit",
+            bytes[i] as char
+        );
+        debug_assert!(
+            bytes[i + 1].is_ascii_digit(),
+            "bytes[{}] == {}, not a digit",
+            i + 1,
+            bytes[i + 1] as char
+        );
+
+        10 * (bytes[i] - b'0') as i64 + (bytes[i + 1] - b'0') as i64
+    }
+
+    let mut input = &input.as_bytes()[96..];
+    let mut s = 0;
+    memchr_iter(b'\n', input)
+        .filter(|&i| {
+            let line = &input[s..i];
+            s = i + 1;
+
+            // "36x45: 40 40 46 51 34 42"
+            let width = num_at(line, 0);
+            let height = num_at(line, 3);
+
+            let a = ((width / 3) * (height / 3));
+            let b = num_at(line, 7)
+                + num_at(line, 10)
+                + num_at(line, 13)
+                + num_at(line, 16)
+                + num_at(line, 19);
+            // + num_at(line, 22);
+            a > b
         })
         .count() as i64
 }

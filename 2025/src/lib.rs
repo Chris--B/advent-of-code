@@ -9,7 +9,8 @@
     clippy::needless_range_loop,
     clippy::nonminimal_bool,
     clippy::redundant_pattern_matching,
-    clippy::single_element_loop
+    clippy::single_element_loop,
+    clippy::erasing_op
 )]
 #![warn(
     clippy::overly_complex_bool_expr,
